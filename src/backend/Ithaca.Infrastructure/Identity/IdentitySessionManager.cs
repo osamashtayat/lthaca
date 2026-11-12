@@ -3,7 +3,10 @@ using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
 using Ithaca.Domain.Common;
 using Microsoft.AspNetCore.Authentication;
+using Ithaca.Infrastructure.Persistence.Configurations;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Ithaca.Infrastructure.Identity;
 
@@ -24,7 +27,20 @@ internal sealed class IdentitySessionManager(
             CreatedAt = now,
         };
 
-        var created = await users.CreateAsync(user, password);
+        IdentityResult created;
+        try
+        {
+            created = await users.CreateAsync(user, password);
+        }
+        catch (DbUpdateException e) when (e.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: ApplicationUserConfiguration.NormalizedEmailIndex,
+        })
+        {
+            // Two sign-ups with the same email at once: Identity's uniqueness check passed for both, the index caught one.
+            return AuthErrors.EmailTaken;
+        }
+
         if (!created.Succeeded)
         {
             return ToError(created);
@@ -40,6 +56,7 @@ internal sealed class IdentitySessionManager(
         var user = await users.FindByEmailAsync(email);
         if (user is null)
         {
+            HashAnyway(password);
             return AuthErrors.InvalidCredentials;
         }
 
@@ -47,6 +64,11 @@ internal sealed class IdentitySessionManager(
         var result = await signIn.PasswordSignInAsync(user, password, isPersistent: true, lockoutOnFailure: true);
         if (!result.Succeeded)
         {
+            if (result.IsLockedOut)
+            {
+                HashAnyway(password); // Identity checks lockout before the password; keep the timing of a real check.
+            }
+
             return AuthErrors.InvalidCredentials;
         }
 
@@ -79,6 +101,18 @@ internal sealed class IdentitySessionManager(
     /// <summary>The cookie is written for the response; this request's principal switches too (antiforgery binds to it).</summary>
     private async Task UseUserPrincipalAsync(ApplicationUser user) =>
         signIn.Context.User = await signIn.CreateUserPrincipalAsync(user);
+
+    /// <summary>
+    /// Spends the same work as a password check when there is no hash to check against, so response time doesn't tell
+    /// an unknown or locked account from a wrong password (ADR-0023).
+    /// </summary>
+    private void HashAnyway(string password)
+    {
+        var dummy = new ApplicationUser();
+        _ = users.PasswordHasher.VerifyHashedPassword(dummy, _dummyHash ??= users.PasswordHasher.HashPassword(dummy, "not a real password"), password);
+    }
+
+    private static string? _dummyHash;
 
     private static Error ToError(IdentityResult result)
     {

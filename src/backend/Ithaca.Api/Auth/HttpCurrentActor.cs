@@ -16,7 +16,7 @@ public sealed class HttpCurrentActor(IHttpContextAccessor accessor) : ICurrentAc
                 return null;
             }
 
-            if (!principal.HasClaim(ActorClaims.Kind, ActorClaims.GuestKind))
+            if (!principal.IsGuest())
             {
                 return new Actor(PrincipalKind.User, id, null, null);
             }

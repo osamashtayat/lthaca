@@ -1,5 +1,4 @@
 using Ithaca.Api.Errors;
-using Ithaca.Application.Auth;
 using Ithaca.Domain.Errors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
@@ -19,7 +18,7 @@ public sealed class GuestAwareAuthorizationResultHandler : IAuthorizationMiddlew
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(authorizeResult);
-        if (authorizeResult.Forbidden && context.User.HasClaim(ActorClaims.Kind, ActorClaims.GuestKind))
+        if (authorizeResult.Forbidden && context.User.IsGuest())
         {
             context.Items[ProblemDetailsSetup.CodeItemKey] = ErrorCodes.AuthUnauthenticated;
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;

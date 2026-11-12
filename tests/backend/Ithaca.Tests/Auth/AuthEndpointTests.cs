@@ -52,7 +52,7 @@ public sealed class AuthEndpointTests(PostgresFixture postgres) : IAsyncLifetime
         session.ShouldContain("samesite=lax");
         session.ShouldContain("path=/");
         session.ShouldContain("expires=");
-        session.ShouldNotContain("secure"); // Development over plain HTTP (ADR-0009); Production: SessionCookie_IsSecureInProduction
+        session.ShouldNotContain("secure"); // Development over plain HTTP (ADR-0009); Production: AuthSetupTests
         BrowserClient.SetCookie(registered, "XSRF-TOKEN")!.ToLowerInvariant().ShouldNotContain("httponly");
 
         var me = await client.GetFromJsonAsync<JsonElement>(Me, Ct);
@@ -71,6 +71,17 @@ public sealed class AuthEndpointTests(PostgresFixture postgres) : IAsyncLifetime
         using var response = await second.PostAsJsonAsync(Register, new { email = email.ToUpperInvariant(), password = Password, displayName = "Bea" }, Ct);
 
         await ShouldBeProblemAsync(response, HttpStatusCode.Conflict, "auth.email_taken");
+    }
+
+    [Fact]
+    public async Task Register_BlankDisplayName_IsValidationOnDisplayName()
+    {
+        var client = await BrowserClient.StartAsync(_factory, Ct);
+
+        using var response = await client.PostAsJsonAsync(Register, new { email = BrowserClient.UniqueEmail(), password = Password, displayName = "   " }, Ct);
+
+        var problem = await ShouldBeProblemAsync(response, HttpStatusCode.BadRequest, "validation");
+        problem.GetProperty("errors").TryGetProperty("displayName", out _).ShouldBeTrue(problem.ToString());
     }
 
     [Fact]
@@ -130,14 +141,29 @@ public sealed class AuthEndpointTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Me_Anonymous_Is401Json_AndStillIssuesAnXsrfToken()
+    public async Task SignOut_WithoutASession_IsStill204()
+    {
+        var client = await BrowserClient.StartAsync(_factory, Ct);
+
+        using var response = await client.PostAsync(SignOut, null, Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task Me_Anonymous_Is401Json_AndIssuesTheAntiforgeryCookies()
     {
         using var client = _factory.CreateClient();
 
         using var response = await client.GetAsync(Me, Ct);
 
         await ShouldBeProblemAsync(response, HttpStatusCode.Unauthorized, "auth.unauthenticated");
-        BrowserClient.SetCookie(response, "XSRF-TOKEN").ShouldNotBeNull();
+        var readable = BrowserClient.SetCookie(response, "XSRF-TOKEN")!.ToLowerInvariant();
+        readable.ShouldNotContain("httponly");
+        readable.ShouldContain("samesite=lax");
+        var antiforgery = BrowserClient.SetCookie(response, "ithaca_af")!.ToLowerInvariant();
+        antiforgery.ShouldContain("httponly");
+        antiforgery.ShouldContain("samesite=lax");
     }
 
     [Fact]
@@ -195,6 +221,31 @@ public sealed class AuthEndpointTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task XsrfToken_IsReboundOnSignIn_AndOnSignOut()
+    {
+        var email = await RegisterAsync();
+        using var client = _factory.CreateClient();
+        var anonymousToken = await XsrfFromAsync(await client.GetAsync(Me, Ct));
+
+        using var signIn = await SendAsync(client, SignIn, anonymousToken, new { email, password = Password });
+        signIn.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var userToken = await XsrfFromAsync(signIn);
+
+        using (var stale = await SendAsync(client, SignOut, anonymousToken))
+        {
+            await ShouldBeProblemAsync(stale, HttpStatusCode.BadRequest, "auth.antiforgery_failed");
+        }
+
+        using var signOut = await SendAsync(client, SignOut, userToken);
+        signOut.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        using var afterSignOut = await SendAsync(client, SignIn, userToken, new { email, password = Password });
+        await ShouldBeProblemAsync(afterSignOut, HttpStatusCode.BadRequest, "auth.antiforgery_failed");
+        using var withNewToken = await SendAsync(client, SignIn, await XsrfFromAsync(signOut), new { email, password = Password });
+        withNewToken.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task Guest_IsSignedInForOneRoom_AndIsNotAUser()
     {
         // Guests' sessions skip Identity's security-stamp check, which would otherwise reject them on every request here.
@@ -206,12 +257,14 @@ public sealed class AuthEndpointTests(PostgresFixture postgres) : IAsyncLifetime
 
         var me = await client.GetFromJsonAsync<JsonElement>(Me, Ct);
         using var userOnly = await client.GetAsync(new Uri("/api/library/summary", UriKind.Relative), Ct);
+        using var createRoom = await client.PostAsJsonAsync(new Uri("/api/rooms", UriKind.Relative), new { name = "Club", mode = "justSwipe", startsAt = (string?)null }, Ct);
 
         me.GetProperty("kind").GetString().ShouldBe("guest");
         me.GetProperty("displayName").GetString().ShouldBe("Omar");
         me.GetProperty("roomCode").GetString().ShouldBe("POP-428");
         me.GetProperty("email").ValueKind.ShouldBe(JsonValueKind.Null);
         await ShouldBeProblemAsync(userOnly, HttpStatusCode.Unauthorized, "auth.unauthenticated");
+        await ShouldBeProblemAsync(createRoom, HttpStatusCode.Unauthorized, "auth.unauthenticated");
     }
 
     [Fact]
@@ -240,6 +293,20 @@ public sealed class AuthEndpointTests(PostgresFixture postgres) : IAsyncLifetime
         var client = await BrowserClient.StartAsync(_factory, Ct);
         (await client.PostAsJsonAsync(Register, new { email, password = Password, displayName = "Ada" }, Ct)).EnsureSuccessStatusCode();
         return email;
+    }
+
+    /// <summary>The URL-decoded <c>XSRF-TOKEN</c> a response set (disposes the response).</summary>
+    private static Task<string> XsrfFromAsync(HttpResponseMessage response)
+    {
+        var cookie = BrowserClient.SetCookie(response, "XSRF-TOKEN") ?? throw new InvalidOperationException("No XSRF-TOKEN cookie.");
+        return Task.FromResult(Uri.UnescapeDataString(cookie["XSRF-TOKEN=".Length..].Split(';')[0]));
+    }
+
+    private static Task<HttpResponseMessage> SendAsync(HttpClient client, Uri uri, string xsrfToken, object? body = null)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, uri) { Content = body is null ? null : JsonContent.Create(body) };
+        request.Headers.Add("X-XSRF-TOKEN", xsrfToken);
+        return client.SendAsync(request, Ct);
     }
 
     /// <summary>The 401 body without its per-request traceId, for comparing failures.</summary>

@@ -33,7 +33,8 @@ public sealed class AuthSetupTests
         session.ExpireTimeSpan.ShouldBe(TimeSpan.FromDays(30));
         session.SlidingExpiration.ShouldBeTrue();
         antiforgery.Cookie.SecurePolicy.ShouldBe(expected);
+        antiforgery.Cookie.HttpOnly.ShouldBeTrue();
+        antiforgery.Cookie.SameSite.ShouldBe(SameSiteMode.Lax);
         antiforgery.HeaderName.ShouldBe("X-XSRF-TOKEN");
-        provider.GetRequiredService<XsrfCookieOptions>().SecurePolicy.ShouldBe(expected);
     }
 }

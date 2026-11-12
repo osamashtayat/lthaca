@@ -42,7 +42,7 @@ public static class AuthSetup
             options.Events.OnRedirectToAccessDenied = context => SetStatus(context.Response, StatusCodes.Status403Forbidden);
             // Users: Identity re-checks the security stamp periodically. Guests have no Identity account to check against.
             options.Events.OnValidatePrincipal = context =>
-                context.Principal?.HasClaim(ActorClaims.Kind, ActorClaims.GuestKind) == true
+                context.Principal.IsGuest()
                     ? Task.CompletedTask
                     : SecurityStampValidator.ValidatePrincipalAsync(context);
         });
@@ -56,12 +56,11 @@ public static class AuthSetup
             options.Cookie.SecurePolicy = secure;
             options.Cookie.Path = "/";
         });
-        services.AddSingleton(new XsrfCookieOptions(secure));
 
         services.AddAuthorizationBuilder()
             .AddPolicy(AuthPolicies.User, policy => policy
                 .RequireAuthenticatedUser()
-                .RequireAssertion(context => !context.User.HasClaim(ActorClaims.Kind, ActorClaims.GuestKind)));
+                .RequireAssertion(context => !context.User.IsGuest()));
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, GuestAwareAuthorizationResultHandler>();
 
         services.AddHttpContextAccessor();
@@ -82,6 +81,3 @@ public static class AuthPolicies
     /// <summary>A signed-in <c>User</c>. Anonymous callers and guests get 401 <c>auth.unauthenticated</c>.</summary>
     public const string User = "user";
 }
-
-/// <summary>The Secure policy of the readable <c>XSRF-TOKEN</c> cookie (same as the session cookie's).</summary>
-public sealed record XsrfCookieOptions(CookieSecurePolicy SecurePolicy);

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Options;
 
 namespace Ithaca.Api.Auth;
 
@@ -48,14 +49,10 @@ public sealed class IssueXsrfTokenAttribute : Attribute, IAsyncActionFilter
 
         var http = context.HttpContext;
         var tokens = http.RequestServices.GetRequiredService<IAntiforgery>().GetAndStoreTokens(http);
-        var secure = http.RequestServices.GetRequiredService<XsrfCookieOptions>().SecurePolicy;
-        http.Response.Cookies.Append(AuthSetup.XsrfTokenCookieName, tokens.RequestToken!, new CookieOptions
-        {
-            HttpOnly = false,
-            SameSite = SameSiteMode.Lax,
-            Secure = secure == CookieSecurePolicy.Always || (secure == CookieSecurePolicy.SameAsRequest && http.Request.IsHttps),
-            Path = "/",
-        });
+        // Same flags as the antiforgery cookie (SameSite, Secure policy), except that the SPA must be able to read it.
+        var cookie = http.RequestServices.GetRequiredService<IOptions<AntiforgeryOptions>>().Value.Cookie.Build(http);
+        cookie.HttpOnly = false;
+        http.Response.Cookies.Append(AuthSetup.XsrfTokenCookieName, tokens.RequestToken!, cookie);
     }
 }
 
