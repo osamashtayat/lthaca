@@ -480,6 +480,16 @@ lint, test, build.
 - **Scope:** in: phone viewport, Fake providers: register → Just swipe → swipe 3 cards → film details. Out: rooms (later).
 - **Acceptance:** green in CI with no external network.
 
+### OPS-04 — Mood input guard: decision and contract (ADR-0022) · `In progress`
+- **Objective:** decide how unclear, off-topic and injected mood text is handled, end to end, before BE-09 / FE-06.
+- **Deps:** OPS-01. **Modules:** `docs/decisions/0022-mood-input-guard.md`, `docs/api-contract.md`, `docs/ai.md`,
+  `docs/backlog.md`.
+- **Contract:** §2 (`mood.unclear`), §5 (`MoodQueryDto.textIgnored`), §6 (`PUT /api/rooms/{code}/mood` → `RoomMoodDto`).
+- **Scope:** in: ADR, design contract, AI doc, new task BE-09a, scope of BE-09 / BE-11 / FE-06 / FE-10. Out: code (BE-09a,
+  BE-09).
+- **Acceptance:** the four rows of ADR-0022's table are in the contract; FE-06 / FE-10 depend on BE-09a.
+- **Tests:** none (docs).
+
 ### BE-17 — Remove the contract-stub plumbing · `Todo`
 - **Objective:** no stubs left. **Deps:** BE-12, BE-14, BE-15, BE-16. **Modules:** `ErrorCodes.cs`,
   `ErrorStatusCodes.cs`, `problem.ts`, stub test.
