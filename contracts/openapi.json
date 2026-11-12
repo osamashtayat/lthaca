@@ -973,7 +973,7 @@
         ],
         "parameters": [
           {
-            "name": "Search",
+            "name": "search",
             "in": "query",
             "schema": {
               "maxLength": 100,
@@ -981,7 +981,7 @@
             }
           },
           {
-            "name": "Genre",
+            "name": "genre",
             "in": "query",
             "schema": {
               "maxLength": 50,
@@ -989,14 +989,14 @@
             }
           },
           {
-            "name": "MaxRuntime",
+            "name": "maxRuntime",
             "in": "query",
             "schema": {
               "$ref": "#/components/schemas/RuntimeLimit"
             }
           },
           {
-            "name": "MinVoteAverage",
+            "name": "minVoteAverage",
             "in": "query",
             "schema": {
               "maximum": 10,
@@ -1006,21 +1006,21 @@
             }
           },
           {
-            "name": "HideSeen",
+            "name": "hideSeen",
             "in": "query",
             "schema": {
               "type": "boolean"
             }
           },
           {
-            "name": "Sort",
+            "name": "sort",
             "in": "query",
             "schema": {
               "$ref": "#/components/schemas/FilmSort"
             }
           },
           {
-            "name": "Page",
+            "name": "page",
             "in": "query",
             "schema": {
               "maximum": 10000,
@@ -1030,7 +1030,7 @@
             }
           },
           {
-            "name": "PageSize",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "maximum": 100,
@@ -1360,21 +1360,21 @@
         ],
         "parameters": [
           {
-            "name": "Shelf",
+            "name": "shelf",
             "in": "query",
             "schema": {
               "$ref": "#/components/schemas/LibraryShelf"
             }
           },
           {
-            "name": "Sort",
+            "name": "sort",
             "in": "query",
             "schema": {
               "$ref": "#/components/schemas/LibrarySort"
             }
           },
           {
-            "name": "Genre",
+            "name": "genre",
             "in": "query",
             "schema": {
               "maxLength": 50,
@@ -1382,7 +1382,7 @@
             }
           },
           {
-            "name": "Page",
+            "name": "page",
             "in": "query",
             "schema": {
               "maximum": 10000,
@@ -1392,7 +1392,7 @@
             }
           },
           {
-            "name": "PageSize",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "maximum": 100,
@@ -3929,7 +3929,8 @@
         "enum": [
           "justSwipe",
           "mood"
-        ]
+        ],
+        "type": "string"
       },
       "DeckTopDto": {
         "required": [
@@ -4043,7 +4044,8 @@
           "popular",
           "newest",
           "rating"
-        ]
+        ],
+        "type": "string"
       },
       "FilmSummaryDto": {
         "required": [
@@ -4124,7 +4126,8 @@
           "gore",
           "musicals",
           "sadEndings"
-        ]
+        ],
+        "type": "string"
       },
       "HealthDto": {
         "required": [
@@ -4156,14 +4159,16 @@
           "liked",
           "watchlist",
           "seen"
-        ]
+        ],
+        "type": "string"
       },
       "LibrarySort": {
         "enum": [
           "recent",
           "title",
           "rating"
-        ]
+        ],
+        "type": "string"
       },
       "LibrarySummaryDto": {
         "required": [
@@ -4212,7 +4217,8 @@
           "makeMeFeel",
           "takeMeAway",
           "surprise"
-        ]
+        ],
+        "type": "string"
       },
       "MoodFiltersDto": {
         "required": [
@@ -4401,7 +4407,8 @@
         "enum": [
           "user",
           "guest"
-        ]
+        ],
+        "type": "string"
       },
       "ProblemDetails": {
         "required": [
@@ -4568,7 +4575,8 @@
         "enum": [
           "justSwipe",
           "mood"
-        ]
+        ],
+        "type": "string"
       },
       "RoomPickDto": {
         "required": [
@@ -4704,7 +4712,8 @@
         "enum": [
           "match",
           "compromise"
-        ]
+        ],
+        "type": "string"
       },
       "RoomStatus": {
         "enum": [
@@ -4712,21 +4721,23 @@
           "swiping",
           "result",
           "closed"
-        ]
+        ],
+        "type": "string"
       },
       "RuntimeLimit": {
         "enum": [
           "under90",
           "upTo2h",
           "any"
-        ]
+        ],
+        "type": "string"
       },
       "SeenVerdict": {
         "enum": [
           "loved",
-          "notForMe",
-          null
-        ]
+          "notForMe"
+        ],
+        "type": "string"
       },
       "SetRoomMoodRequest": {
         "required": [
@@ -4780,7 +4791,8 @@
           "right",
           "left",
           "up"
-        ]
+        ],
+        "type": "string"
       },
       "SwipeDto": {
         "required": [
@@ -4876,7 +4888,8 @@
       "TrailerSite": {
         "enum": [
           "YouTube"
-        ]
+        ],
+        "type": "string"
       },
       "UpdateUserFilmRequest": {
         "required": [

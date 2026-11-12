@@ -70,7 +70,7 @@ public static class OpenApiSetup
     private static Task DescribeEnums(OpenApiSchema schema, OpenApiSchemaTransformerContext context, CancellationToken _)
     {
         var type = Nullable.GetUnderlyingType(context.JsonTypeInfo.Type) ?? context.JsonTypeInfo.Type;
-        if (context.JsonPropertyInfo is not null || !type.IsEnum || schema.Enum is null)
+        if (!type.IsEnum || schema.Enum is null)
         {
             return Task.CompletedTask;
         }
