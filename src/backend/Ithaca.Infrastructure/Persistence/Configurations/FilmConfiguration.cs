@@ -34,6 +34,7 @@ internal sealed class FilmConfiguration : IEntityTypeConfiguration<Film>
             .HasColumnType($"vector({Film.EmbeddingDimensions})")
             .HasConversion(v => v == null ? null : new Vector(v), v => v == null ? null : v.ToArray())
             .Metadata.SetValueComparer(EmbeddingComparer);
+        builder.Property(f => f.EmbeddingModel).HasMaxLength(Film.EmbeddingModelMaxLength);
         builder.HasIndex(f => f.Embedding)
             .HasMethod("hnsw")
             .HasOperators("vector_cosine_ops")

@@ -1,6 +1,6 @@
-using Ithaca.Application.Tmdb;
 using Ithaca.Domain.Films;
 using Ithaca.Infrastructure.Persistence;
+using Ithaca.Infrastructure.Tmdb;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,8 +9,8 @@ using Npgsql;
 namespace Ithaca.Infrastructure.Seeding;
 
 /// <summary>
-/// Development only: puts the fake TMDB films into an empty catalog so the reference slice has data
-/// (<c>/films/550</c>). Never runs in Production. A missing database or table is logged, not fatal.
+/// Development only: puts the fake TMDB sample films into an EMPTY catalog so the reference slice has data (<c>/films/550</c>)
+/// without any API key. A real catalog comes from <c>--sync-catalog</c>. A missing database or table is logged, not fatal.
 /// </summary>
 public static partial class DevDataSeeder
 {
@@ -18,7 +18,6 @@ public static partial class DevDataSeeder
     {
         ArgumentNullException.ThrowIfNull(services);
         await using var scope = services.CreateAsyncScope();
-        var tmdb = scope.ServiceProvider.GetRequiredService<ITmdbClient>();
         var time = scope.ServiceProvider.GetRequiredService<TimeProvider>();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(DevDataSeeder));
 
@@ -31,15 +30,10 @@ public static partial class DevDataSeeder
                 return;
             }
 
-            foreach (var summary in await tmdb.GetCatalogPageAsync(1, ct))
+            foreach (var sample in FakeTmdbClient.Films)
             {
-                var details = await tmdb.GetFilmDetailsAsync(summary.TmdbId, ct);
-                var film = Film.Create(summary.TmdbId, summary.Title, time.GetUtcNow());
-                if (details is not null)
-                {
-                    film.UpdateDetails(details.ReleaseYear, details.Overview, details.PosterPath, details.RuntimeMinutes, [.. details.Genres], time.GetUtcNow());
-                }
-
+                var film = Film.Create(sample.TmdbId, sample.Title, time.GetUtcNow());
+                film.UpdateDetails(sample.Title, sample.ReleaseYear, sample.Overview, sample.PosterPath, sample.RuntimeMinutes, [.. sample.Genres], sample.Popularity, time.GetUtcNow());
                 db.Films.Add(film);
             }
 

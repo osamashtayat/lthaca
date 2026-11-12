@@ -20,6 +20,13 @@ public sealed class TmdbOptions : IConfigSection
     [Url]
     public string BaseUrl { get; init; } = "https://api.themoviedb.org/3/";
 
-    /// <summary>Secret: env var / user-secrets only (<c>Tmdb__ApiKey</c>).</summary>
+    /// <summary>TMDB metadata language (titles, overviews).</summary>
+    [Required]
+    public string Language { get; init; } = "en-US";
+
+    /// <summary>
+    /// Secret: env var / user-secrets only (<c>Tmdb__ApiKey</c>). Either the v3 "API Key" or the "API Read Access Token";
+    /// the client detects which (a read access token is a JWT and is sent as a Bearer header).
+    /// </summary>
     public string? ApiKey { get; init; }
 }

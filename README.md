@@ -7,8 +7,9 @@ and vote with friends in real time.
 
 ```bash
 cp .env.example .env
-docker compose up --build        # http://localhost:8080  ·  plumbing check: /dev/status  ·  reference slice: /films/550
+docker compose up --build        # http://localhost:8080  ·  reference slice: /films/550 (plumbing check /dev/status: Vite dev server only)
 ```
 
 Status: architecture skeleton. One reference slice (`GET /api/films/{tmdbId}` → `/films/:tmdbId`) and the plumbing
-(pgvector catalog table, RoomHub, Fake TMDB/LLM/embedding clients, evals). Features are not built yet.
+(pgvector catalog, TMDB sync, Anthropic client with schema-enforced JSON, RoomHub, evals). Features are not built yet.
+This website uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.

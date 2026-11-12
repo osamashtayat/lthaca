@@ -11,8 +11,10 @@ public sealed class Film
 {
     public const int TitleMaxLength = 300;
 
-    /// <summary>Length of every embedding vector. Changing it needs a migration and a re-embed of the catalog.</summary>
-    public const int EmbeddingDimensions = 1536;
+    /// <summary>Length of every embedding vector (Voyage 4-series default, ADR-0013). Changing it needs a migration and a re-embed.</summary>
+    public const int EmbeddingDimensions = 1024;
+
+    public const int EmbeddingModelMaxLength = 100;
 
     private Film(int tmdbId, string title, DateTimeOffset now)
     {
@@ -46,7 +48,13 @@ public sealed class Film
 
     public string[] Genres { get; private set; } = [];
 
+    /// <summary>TMDB popularity at the last sync; used for ordering (e.g. the "Just swipe" sampler).</summary>
+    public double? Popularity { get; private set; }
+
     public float[]? Embedding { get; private set; }
+
+    /// <summary>The model that produced <see cref="Embedding"/>; vectors from different models are never compared.</summary>
+    public string? EmbeddingModel { get; private set; }
 
     public DateTimeOffset SyncedAt { get; private set; }
 
@@ -57,34 +65,50 @@ public sealed class Film
             throw new DomainException(ErrorCodes.Validation, "tmdbId must be positive.", "tmdbId");
         }
 
-        if (string.IsNullOrWhiteSpace(title) || title.Length > TitleMaxLength)
-        {
-            throw new DomainException(ErrorCodes.Validation, $"title must be 1-{TitleMaxLength} characters.", "title");
-        }
-
-        return new Film(tmdbId, title.Trim(), now);
+        return new Film(tmdbId, ValidTitle(title), now);
     }
 
-    /// <summary>Catalog metadata from a TMDB sync. Kept separate from <see cref="Create"/> so a re-sync can update in place.</summary>
-    public void UpdateDetails(int? releaseYear, string? overview, string? posterPath, int? runtimeMinutes, string[] genres, DateTimeOffset now)
+    /// <summary>
+    /// Catalog metadata from a TMDB sync; also refreshes <see cref="SyncedAt"/> (TMDB's 6-month caching limit is counted from it).
+    /// Returns true when the text an embedding is built from (title, genres, overview) changed.
+    /// </summary>
+    public bool UpdateDetails(
+        string title, int? releaseYear, string? overview, string? posterPath, int? runtimeMinutes, string[] genres, double? popularity, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(genres);
+        var validTitle = ValidTitle(title);
+        var textChanged = Title != validTitle || Overview != overview || !Genres.SequenceEqual(genres);
+        Title = validTitle;
         ReleaseYear = releaseYear;
         Overview = overview;
         PosterPath = posterPath;
         RuntimeMinutes = runtimeMinutes;
         Genres = genres;
+        Popularity = popularity;
         SyncedAt = now;
+        return textChanged;
     }
 
-    public void SetEmbedding(float[] embedding)
+    public void SetEmbedding(float[] embedding, string model)
     {
         ArgumentNullException.ThrowIfNull(embedding);
+        ArgumentException.ThrowIfNullOrWhiteSpace(model);
         if (embedding.Length != EmbeddingDimensions)
         {
             throw new DomainException(ErrorCodes.Validation, $"embedding must have {EmbeddingDimensions} dimensions.", "embedding");
         }
 
         Embedding = embedding;
+        EmbeddingModel = model.Length <= EmbeddingModelMaxLength
+            ? model
+            : throw new DomainException(ErrorCodes.Validation, "embedding model name is too long.", "embeddingModel");
     }
+
+    /// <summary>The one title rule: 1–<see cref="TitleMaxLength"/> characters after trimming.</summary>
+    public static bool IsValidTitle(string? title) => !string.IsNullOrWhiteSpace(title) && title.Trim().Length <= TitleMaxLength;
+
+    private static string ValidTitle(string title) =>
+        IsValidTitle(title)
+            ? title.Trim()
+            : throw new DomainException(ErrorCodes.Validation, $"title must be 1-{TitleMaxLength} characters.", "title");
 }

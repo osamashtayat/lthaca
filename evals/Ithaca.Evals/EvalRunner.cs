@@ -29,9 +29,22 @@ internal sealed class EvalRunner(IPromptLibrary prompts, ILlmClient? liveClient)
         var id = ParsePromptId(evalCase.Prompt);
         var prompt = await prompts.RenderAsync(id, evalCase.Variables ?? [], ct);
         var input = evalCase.Candidates is { } candidates ? JsonSerializer.Serialize(candidates) : evalCase.Input;
-        var reply = liveClient is null
-            ? evalCase.RecordedResponse.ToJsonString()
-            : (await liveClient.CompleteAsync(new LlmRequest(prompt, input), ct)).Json;
+        string reply;
+        if (liveClient is null)
+        {
+            reply = evalCase.RecordedResponse.ToJsonString();
+        }
+        else
+        {
+            var result = await liveClient.CompleteAsync(new LlmRequest(prompt, input), ct);
+            if (!result.IsSuccess)
+            {
+                return [$"LLM call failed: {result.Error.Code} ({result.Error.Message})"];
+            }
+
+            reply = result.Value.Json;
+            Console.WriteLine($"      reply ({result.Value.Model}): {reply}");
+        }
 
         return [.. evalCase.Checks.Select(c => EvalChecks.Run(c, evalCase, reply)).OfType<string>()];
     }

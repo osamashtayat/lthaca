@@ -18,6 +18,8 @@ public sealed class AiPlumbingTests
         {
             var prompt = await Library().RenderAsync(id, new Dictionary<string, string>(), TestContext.Current.CancellationToken);
             prompt.Text.ShouldNotBeNullOrWhiteSpace();
+            using var schema = System.Text.Json.JsonDocument.Parse(prompt.OutputSchemaJson);
+            schema.RootElement.GetProperty("additionalProperties").GetBoolean().ShouldBeFalse("structured outputs need closed schemas");
         }
     }
 
@@ -36,7 +38,8 @@ public sealed class AiPlumbingTests
         var prompt = await Library().RenderAsync(Prompts.RankCandidates, new Dictionary<string, string>(), TestContext.Current.CancellationToken);
         var response = await new FakeLlmClient().CompleteAsync(new LlmRequest(prompt, "[550,27205]"), TestContext.Current.CancellationToken);
 
-        var parsed = StructuredOutput.Parse<RankCandidatesOutput>(response);
+        response.IsSuccess.ShouldBeTrue();
+        var parsed = StructuredOutput.Parse<RankCandidatesOutput>(response.Value);
 
         parsed.IsSuccess.ShouldBeTrue();
         parsed.Value.Ranked.Select(r => r.TmdbId).ShouldBe([550, 27205]);
@@ -45,7 +48,7 @@ public sealed class AiPlumbingTests
     [Fact]
     public void StructuredOutput_InvalidJson_IsAnError()
     {
-        var parsed = StructuredOutput.Parse<MoodParseOutput>(new LlmResponse("not json", Prompts.MoodParse));
+        var parsed = StructuredOutput.Parse<MoodParseOutput>(new LlmResponse("not json", Prompts.MoodParse, "fake"));
 
         parsed.IsSuccess.ShouldBeFalse();
         parsed.Error!.Code.ShouldBe(StructuredOutput.InvalidOutputCode);

@@ -11,6 +11,8 @@ namespace Ithaca.Infrastructure.Ai;
 /// </summary>
 internal sealed class FakeEmbeddingClient : IEmbeddingClient
 {
+    public string ModelName => "fake";
+
     public Task<float[]> EmbedAsync(string text, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(text);

@@ -14,4 +14,8 @@ public static class ErrorCodes
     public const string FilmNotFound = "film.not_found";
 
     public const string AiInvalidOutput = "ai.invalid_output";
+    public const string AiUnavailable = "ai.unavailable";
+    public const string AiRefused = "ai.refused";
+
+    public const string TmdbUnavailable = "tmdb.unavailable";
 }

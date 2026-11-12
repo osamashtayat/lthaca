@@ -14,6 +14,5 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/', label: 'Tonight', meta: 'PICK A FILM', inHeader: true },
   { to: '/browse', label: 'Browse', meta: 'SEARCH', inHeader: true },
   { to: '/cinema', label: 'My Cinema', meta: 'SAVED', inHeader: true },
-  { to: '/updates', label: 'Updates', meta: 'NEWS', inHeader: false },
   { to: '/rooms', label: 'Movie nights', meta: 'ROOMS', inHeader: false },
 ]

@@ -47,10 +47,15 @@ services:
       <<: *api-environment
       ASPNETCORE_ENVIRONMENT: ${ITHACA_ENVIRONMENT:-Development}
       Ai__LlmProvider: ${Ai__LlmProvider:-Fake}
-      Ai__EmbeddingProvider: ${Ai__EmbeddingProvider:-Fake}
+      Ai__LlmModel: ${Ai__LlmModel:-claude-opus-5-5}
       Ai__ApiKey: ${Ai__ApiKey:-}
+      Ai__EmbeddingProvider: ${Ai__EmbeddingProvider:-Fake}
+      Ai__EmbeddingApiKey: ${Ai__EmbeddingApiKey:-}
       Tmdb__Client: ${Tmdb__Client:-Fake}
       Tmdb__ApiKey: ${Tmdb__ApiKey:-}
+      CatalogSync__Enabled: ${CatalogSync__Enabled:-false}
+      CatalogSync__Pages: ${CatalogSync__Pages:-50}
+      CatalogSync__EmbedOverviews: ${CatalogSync__EmbedOverviews:-false}
     # No `ports:`: only the web proxy reaches the API (same origin, no CORS).
     depends_on:
       migrate:

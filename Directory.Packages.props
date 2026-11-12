@@ -16,6 +16,8 @@
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <!-- pgvector: the vector column type + EF mapping (ADR-0002). -->
     <PackageVersion Include="Pgvector.EntityFrameworkCore" Version="0.3.0" />
+    <!-- Official Anthropic SDK: the Claude LLM client (docs/ai.md). -->
+    <PackageVersion Include="Anthropic" Version="13.8.0" />
   </ItemGroup>
   <ItemGroup Label="Api">
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />

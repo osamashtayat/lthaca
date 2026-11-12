@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "includeGenres": { "type": "array", "items": { "type": "string" } },
+    "excludeGenres": { "type": "array", "items": { "type": "string" } },
+    "maxRuntimeMinutes": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+    "minReleaseYear": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+    "maxReleaseYear": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+    "keywords": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["includeGenres", "excludeGenres", "maxRuntimeMinutes", "minReleaseYear", "maxReleaseYear", "keywords"],
+  "additionalProperties": false
+}

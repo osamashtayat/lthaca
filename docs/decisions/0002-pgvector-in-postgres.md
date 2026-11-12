@@ -1,6 +1,6 @@
 # ADR-0002: Embeddings stored in PostgreSQL with pgvector
 
-- **Status:** Accepted
+- **Status:** Accepted (vector size amended by ADR-0013: 1024, Voyage)
 - **Date:** 2026-11-12
 
 ## Context

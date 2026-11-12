@@ -132,7 +132,8 @@ jobs:
         run: |
           set -euo pipefail
           base=http://localhost:8080
-          curl -fsS "$base/api/health" | grep -q '"status":"ok"'
+          # `--wait` returns once the api container runs, not once it listens: nginx answers 502 until then.
+          curl -fsS --retry 30 --retry-delay 2 --retry-all-errors "$base/api/health" | grep -q '"status":"ok"'
           curl -fsS "$base/api/films/550" | grep -q '"tmdbId":550'
           test "$(curl -s -o /dev/null -w '%{http_code}' "$base/api/films/1")" = 404
           test "$(curl -s -o /dev/null -w '%{http_code}' "$base/films/550")" = 200

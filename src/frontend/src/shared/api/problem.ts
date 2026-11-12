@@ -12,6 +12,9 @@ export const PROBLEM_MESSAGES = {
   'server.error': 'Something went wrong on our side. Try again in a moment.',
   'film.not_found': "This film isn't in our catalog yet.",
   'ai.invalid_output': "We couldn't come up with picks this time. Try again.",
+  'ai.unavailable': 'Our movie brain is taking a break. Try again in a minute.',
+  'tmdb.unavailable': "We can't load film details right now. Try again in a moment.",
+  'ai.refused': "We can't help with that request. Try describing your mood differently.",
 } as const satisfies Record<string, string>
 
 export type ProblemCode = keyof typeof PROBLEM_MESSAGES

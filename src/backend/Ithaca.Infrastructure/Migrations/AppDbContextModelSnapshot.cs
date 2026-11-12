@@ -31,8 +31,13 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnName("id");
 
                     b.Property<Vector>("Embedding")
-                        .HasColumnType("vector(1536)")
+                        .HasColumnType("vector(1024)")
                         .HasColumnName("embedding");
+
+                    b.Property<string>("EmbeddingModel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("embedding_model");
 
                     b.PrimitiveCollection<string[]>("Genres")
                         .IsRequired()
@@ -42,6 +47,10 @@ namespace Ithaca.Infrastructure.Migrations
                     b.Property<string>("Overview")
                         .HasColumnType("text")
                         .HasColumnName("overview");
+
+                    b.Property<double?>("Popularity")
+                        .HasColumnType("double precision")
+                        .HasColumnName("popularity");
 
                     b.Property<string>("PosterPath")
                         .HasColumnType("text")

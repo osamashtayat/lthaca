@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Ithaca.Application.Ai;
+using Ithaca.Application.Common;
 
 namespace Ithaca.Infrastructure.Ai;
 
@@ -10,7 +11,7 @@ namespace Ithaca.Infrastructure.Ai;
 /// </summary>
 internal sealed class FakeLlmClient : ILlmClient
 {
-    public Task<LlmResponse> CompleteAsync(LlmRequest request, CancellationToken ct)
+    public Task<Result<LlmResponse>> CompleteAsync(LlmRequest request, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
         var id = request.Prompt.Id;
@@ -21,7 +22,7 @@ internal sealed class FakeLlmClient : ILlmClient
             "explain-pick" => """{"explanation":"A fake explanation."}""",
             _ => "{}",
         };
-        return Task.FromResult(new LlmResponse(json, id));
+        return Task.FromResult<Result<LlmResponse>>(new LlmResponse(json, id, "fake"));
     }
 
     /// <summary>Input is a JSON array of candidate TMDB ids.</summary>
