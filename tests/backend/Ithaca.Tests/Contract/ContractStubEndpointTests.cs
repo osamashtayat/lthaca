@@ -100,4 +100,14 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
+
+    [Fact]
+    public async Task RequestWithoutARequiredField_IsRejected()
+    {
+        // No "direction": must be a 400, never a silent default ("right" would be an unintended yes).
+        using var content = new StringContent($$"""{"swipeId":"{{Op}}","deckItemId":"{{Item}}","seenVerdict":null}""", Encoding.UTF8, "application/json");
+        using var response = await _factory.CreateClient().PostAsync(new Uri($"{Deck}/swipes", UriKind.Relative), content, TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
 }

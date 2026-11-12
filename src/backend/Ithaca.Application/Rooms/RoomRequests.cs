@@ -28,7 +28,7 @@ public sealed record SetRoomMoodRequest(
 
 /// <summary><c>POST /api/rooms/{code}/votes</c>. <see cref="VoteId"/> makes retries idempotent (ADR-0015).</summary>
 public sealed record CastVoteRequest(
-    [Required] Guid VoteId,
-    [Required] Guid DeckItemId,
+    Guid VoteId,
+    Guid DeckItemId,
     SwipeDirection Direction,
     SeenVerdict? SeenVerdict);

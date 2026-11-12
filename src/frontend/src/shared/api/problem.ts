@@ -26,7 +26,7 @@ export const PROBLEM_MESSAGES = {
   'room.not_host': 'Only the host can do that.',
   'room.already_voted': 'You already voted on this one.',
   'room.closed': 'This room is closed. Ask the host for a new one.',
-  'room.full': 'This room is full (8 people max).',
+  'room.full': 'This room is full.',
   'room.invalid_state': 'The room has moved on. Refresh to catch up.',
   'room.no_result': "There's no result yet. Keep swiping.",
   'ai.invalid_output': "We couldn't come up with picks this time. Try again.",

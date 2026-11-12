@@ -3,7 +3,7 @@ using Ithaca.Domain.Errors;
 
 namespace Ithaca.Application.Rooms;
 
-/// <summary>The room errors, defined once (api-contract.md §2).</summary>
+/// <summary>The room errors, defined once (api-contract.md §2). A card that isn't in the room's deck is <c>DeckErrors.ItemNotFound</c>.</summary>
 public static class RoomErrors
 {
     public static readonly Error NotFound = Error.NotFound(ErrorCodes.RoomNotFound, "No open or recent room has that code.");
@@ -11,8 +11,6 @@ public static class RoomErrors
     public static readonly Error NotMember = new(ErrorCodes.RoomNotMember, "You are not a member of this room.");
 
     public static readonly Error NotHost = new(ErrorCodes.RoomNotHost, "Only the host can do this.");
-
-    public static readonly Error ItemNotFound = Error.NotFound(ErrorCodes.DeckItemNotFound, "This card isn't in this room's deck.");
 
     public static readonly Error AlreadyVoted = Error.Conflict(ErrorCodes.RoomAlreadyVoted, "You already voted on this card.");
 

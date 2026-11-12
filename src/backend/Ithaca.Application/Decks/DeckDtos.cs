@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using Ithaca.Application.Films;
 using Ithaca.Application.Moods;
 
@@ -9,8 +8,8 @@ public sealed record CreateDeckRequest(DeckSource Source, MoodInput? Mood);
 
 /// <summary><c>POST /api/decks/{deckId}/swipes</c>. <see cref="SwipeId"/> makes retries idempotent; a verdict only with "up".</summary>
 public sealed record SwipeRequest(
-    [Required] Guid SwipeId,
-    [Required] Guid DeckItemId,
+    Guid SwipeId,
+    Guid DeckItemId,
     SwipeDirection Direction,
     SeenVerdict? SeenVerdict);
 

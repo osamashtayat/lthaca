@@ -15,5 +15,8 @@ public static class JsonSetup
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
         // Numbers are numbers: the Web default also accepts "1", which would type every integer as number | string.
         options.NumberHandling = JsonNumberHandling.Strict;
+        // Request records must send every constructor parameter (nullable ones as null), as contracts/openapi.json says:
+        // otherwise a missing "direction" would bind as the first enum value (an unintended yes) and a missing id as Guid.Empty.
+        options.RespectRequiredConstructorParameters = true;
     }
 }
