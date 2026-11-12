@@ -6,11 +6,12 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
 ## Folders
 ```
 src/app/            composition: providers, router, routes.tsx, layout/ (AppShell, AppHeader, MenuSheet, navigation.ts),
-                    pages/ (NotFound), dev/ (plumbing status page), PlaceholderPage
+                    pages/ (NotFound), dev/ (plumbing status `/dev/status`, UI kit gallery `/dev/ui`), PlaceholderPage
 src/shared/api/     client.ts (openapi-fetch; the only fetch), apiError.ts, problem.ts (code → user text), schema.d.ts (generated)
 src/shared/query/   queryClient.ts (the one QueryClient config), queryKeys.ts (every key)
 src/shared/realtime/ events.ts (from contracts/realtime-events.json), roomHub.ts, useRoomHub.ts
-src/shared/ui/      primitives: Wordmark, icons, LoadingState, ErrorState (add shared pieces here, not page-local copies)
+src/shared/ui/      the UI kit (add shared pieces here, not page-local copies): Button, IconButton, Chip/ToggleChip,
+                    SegmentedControl, StubRating, TicketCard, Poster, Sheet, MonoLabel + Wordmark, icons, LoadingState, ErrorState
 src/shared/notify/  notify.ts (toasts), Toaster.tsx — the only files importing sonner
 src/shared/styles/  tokens.css (design tokens), global.css (base styles)
 src/mocks/          MSW mock API for the dev server and Vitest (ADR-0020); src/test/setup.ts starts it in Vitest
@@ -135,6 +136,8 @@ Layout vars: `--header-height` 64px (phones) / `--header-height-lg` 76px, `--con
 `--touch-target` 44px.
 `npm run lint:tokens` rejects hex/rgb literals and Tailwind default palette classes in `.ts/.tsx`.
 
+Use the kit (`@/shared/ui`: `Button`, `IconButton`, `ToggleChip`, `Sheet`…) instead of hand-styled `<button>`s or dialogs; extend a kit piece rather than copying it.
+
 ## Layout and responsiveness
 - Mobile first: write for 375px, add `md:`/`lg:` overrides. Breakpoints: `sm` 30rem, `md` 48rem, `lg` 64rem, `xl` 80rem.
 - Navigation: top header (wordmark · ☰; no bell until notifications exist, ADR-0014). Every page shows the TMDB attribution footer (`AppFooter`). The ☰ opens `MenuSheet` (native modal `<dialog>`); from `lg` the main items
@@ -142,10 +145,14 @@ Layout vars: `--header-height` 64px (phones) / `--header-height-lg` 76px, `--con
 - Deck gestures own the lower screen; toasts sit top-center.
 
 ## Accessibility
-- Real `<button>`/`<a>`; icon-only controls get `aria-label`; visible focus (global pink-text ring); ≥ 44px targets;
+- Real `<button>`/`<a>`; radio-style widgets (SegmentedControl, StubRating) are native `<input type="radio">` (visually
+  hidden) so the browser provides arrow-key selection and the single tab stop; icon-only controls get `aria-label`; visible focus (global pink-text ring); ≥ 44px targets;
   respect `prefers-reduced-motion`; colour pairs at least 4.5:1 (pink `#F04483` is a surface, not a text colour).
 
 ## Tests and checks
 - `npm run typecheck && npm run lint && npm test && npm run build`. Vitest (node environment) for pure logic next to the
-  file (`*.test.ts`), with the MSW node server from `src/test/setup.ts` for anything that calls the API. Add jsdom +
-  Testing Library when the first interactive component needs it (backlog FE-02).
+  file (`*.test.ts`), with the MSW node server from `src/test/setup.ts` for anything that calls the API.
+- Component tests use jsdom + Testing Library (FE-02): put `// @vitest-environment jsdom` on the first line of the
+  `*.test.tsx` file (everything else stays in node) and call `cleanup` in `afterEach`. jsdom has no modal `<dialog>`;
+  `src/test/setup.ts` installs a minimal `showModal`/`close`, so focus trapping isn't covered by tests: check it in the
+  browser at `/dev/ui`.
