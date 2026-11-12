@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Ithaca.Application.Common;
 
 /// <summary>
-/// The Application layer's unit of work (mirrors FlowOps ADR-0007). Only use-case services use it, and they call
+/// The Application layer's unit of work (ADR-0001). Only use-case services use it, and they call
 /// <see cref="SaveChangesAsync"/> exactly once per use case. Entity sets are added as their features land;
 /// there is deliberately no generic repository.
 /// </summary>

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet tool restore)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(dotnet ef migrations list:*)",
+      "Bash(dotnet ef migrations script:*)",
+      "Bash(dotnet ef database update:*)",
+      "Bash(dotnet run --project evals/Ithaca.Evals:*)",
+      "Bash(dotnet run --project src/backend/Ithaca.Api:*)",
+      "Bash(./scripts/export-openapi.sh)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run api:types:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm --prefix src/frontend run:*)",
+      "Bash(docker compose up:*)",
+      "Bash(docker compose ps:*)",
+      "Bash(docker compose logs:*)",
+      "Bash(docker compose build:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./**/.env)",
+      "Read(./.env.local)",
+      "Read(./**/*.local.json)",
+      "Read(./**/secrets/**)",
+      "Read(./**/*.pfx)",
+      "Read(./**/*.key)",
+      "Read(~/.microsoft/usersecrets/**)",
+      "Edit(./.env)",
+      "Bash(cat .env:*)",
+      "Bash(dotnet user-secrets list:*)",
+      "Bash(docker compose down -v:*)",
+      "Bash(git push --force:*)"
+    ]
+  }
+}

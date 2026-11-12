@@ -1,0 +1,24 @@
+# Glossary
+
+Use these names exactly in code (types, tables, routes, UI copy where it fits). Snake_case plural for tables.
+
+| Term | Meaning | Notes |
+|---|---|---|
+| `User` | A registered person. | Auth design not decided yet. |
+| `Guest` | Someone who joined a room from a shared link without an account. | Can vote in that room only. |
+| `Film` | A movie in **our** catalog, synced nightly from TMDB, with an embedding. | Public id is `TmdbId`. Table `films`. Built. |
+| `UserFilm` | A user's relation to a film: liked, watchlist, watching, seen, personal rating. | Powers "My Cinema" (Library). |
+| `Room` | A group session with one shared deck, joined by link or code. | Stored in the DB; real-time via RoomHub. |
+| `RoomMember` | A `User` or `Guest` in a `Room`. | Host is a member with extra rights. |
+| `DeckItem` | One card (a `Film`) at a position in a deck — solo or a room's shared deck. | Group "Just swipe" adds them in batches. |
+| `Vote` | A member's swipe on a `DeckItem`: right (I'd watch it), left (not for me), up (seen it → loved it / not for me). | Same three gestures everywhere. |
+| `TasteProfile` | A user's (or room's) taste vector in the film-embedding space, plus what built it. | Built after a few swipes or from history. |
+| `MoodQuery` | A mood request: tapped moods and/or free text, and the structured filters the LLM parsed from it. | Output of `mood-parse.vN`. |
+| `ImportJob` | A Letterboxd CSV/ZIP import and its progress/result. | Feeds `UserFilm`. |
+
+Other words used in docs and UI:
+- **Deck** — the swipeable stack. **Sampler** — the varied first cards of "Just swipe" before a `TasteProfile` exists.
+- **Just swipe / By mood / By taste** — the three ways to start a deck. **Solo / Group** — alone or in a `Room`.
+- **Match** — every member said yes to the same film. **Best compromise** — the highest-scoring film when there's no match.
+- **Hard no** — a member's explicit exclusion; must never appear in the group result.
+- **My Cinema** — the Library screen. **Tonight** — the home screen.
