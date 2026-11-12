@@ -372,7 +372,7 @@ lint, test, build.
 ### FE-07 — My Cinema screen · `Todo`
 - **Objective:** the "My Cinema" board. **Deps:** BE-01, FE-02, FE-03. **Modules:** `src/features/library/`, `src/mocks/`.
 - **Contract:** §7.
-- **Scope:** in: `/cinema`: counts, shelves Liked / Watchlist / Watching / Seen, genre filter, sort, poster grid, empty
+- **Scope:** in: `/cinema`: counts, shelves Liked / Watchlist / Seen (no Watching tab: A9), genre filter, sort, poster grid, empty
   state ("Nothing on the reel yet"), load more, link to `/import`. Out: import itself, "FROM SAMI" (P-04).
 - **Acceptance:** with mocks, each shelf lists, filters and pages; user-only.
 - **Tests:** shelf switch and empty state.
@@ -458,10 +458,10 @@ lint, test, build.
 - **Objective:** the home screen, direction **A**: "Tonight — Just me" and "Tonight — With friends" (ignore "Direction B
   (refined)"), plus "Desktop — Tonight" at ≥ lg.
 - **Deps:** FE-05, FE-07, FE-09. **Modules:** `src/features/tonight/`, `src/app/routes.tsx`.
-- **Contract:** §4 (`me`), §5, §6, §7 (summary, Watching shelf).
+- **Contract:** §4 (`me`), §5, §6, §7 (summary).
 - **Scope:** in: greeting with day/time, Just me / With friends toggle, hero ticket (Just swipe / Start a room), By mood and
-  By taste tickets (taste disabled until FE-13), keep-watching row, room-code join. Out: "Restart Friday Film Club"
-  (P-04), "42 min left" (A9).
+  By taste tickets (taste disabled until FE-13), room-code join. Out: "Restart Friday Film Club" (P-04), the
+  "Keep watching" row (dropped, A9).
 - **Acceptance:** signed-out visitors can toggle and join by code; everything else leads to `/sign-in`.
 - **Tests:** toggle and navigation targets.
 

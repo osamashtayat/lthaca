@@ -87,6 +87,9 @@ need). Tokens are already in `src/shared/styles/tokens.css` (table below).
 "Film details — Direction B"). Both details boards show "Watch on Mubi / Rent on Apple TV / Open in Letterboxd": that is
 where-to-watch data, **not in scope** (backlog P-01); leave it out.
 
+**Dropped from the boards:** the "Watching" tab on My Cinema and the "Keep watching · 42 min left" row on Tonight
+(owner decision, api-contract A9). Build neither.
+
 **Screen → route map**
 | Board | Route | Backlog |
 |---|---|---|

@@ -247,7 +247,7 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 - **Deck extension** ("Just swipe together", "Swipe 6 more"): the server adds a batch when members near the end and
   publishes `deckExtended`. ⚠ Open (A6): the "Swipe 6 more" and "Tiebreak" buttons on the close-call board are not in
   the first wave.
-- **Result visibility (A7, recommended, owner to confirm):** for the picked films only, the result names who said yes
+- **Result visibility (A7, decided):** for the picked films only, the result names who said yes
   and who has seen it, and gives just the **number** of noes, never who said no. Hard nos and mood answers are never
   shown. Nobody's "no" can be singled out, while the reason a film lost ("one of you has seen it") stays visible.
 - **Hub:** `JoinRoom(code)` / `LeaveRoom(code)` on `/hubs/rooms`, membership checked by a service (ADR-0012); clients
@@ -255,8 +255,8 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 
 ## 7. Library — My Cinema (UserFilm, ADR-0019)
 
-One `UserFilm` per user and film, with independent flags (the Details A board toggles Like, Saved, Seen it; "Watch tonight"
-puts a film in Watching) and a 1–5 rating in ticket stubs.
+One `UserFilm` per user and film, with independent flags (the Details A board toggles Like, Saved, Seen it) and a 1–5
+rating in ticket stubs. There is no "Watching" state (A9, decided: dropped).
 
 | Method & path | Access | Body | Success | Errors |
 |---|---|---|---|---|
@@ -268,18 +268,16 @@ puts a film in Watching) and a 1–5 rating in ticket stubs.
 | `DELETE /api/library/{tmdbId}/watchlist` | user | — | 204 (idempotent remove) | 401, 404 `film.not_found` |
 
 ```ts
-type LibraryShelf = "liked" | "watchlist" | "watching" | "seen"
+type LibraryShelf = "liked" | "watchlist" | "seen"
 type LibrarySort  = "recent" | "title" | "rating"
-type UpdateUserFilmRequest = { liked: boolean; onWatchlist: boolean; watching: boolean; seen: boolean; rating: number | null }  // rating 1–5
+type UpdateUserFilmRequest = { liked: boolean; onWatchlist: boolean; seen: boolean; rating: number | null }  // rating 1–5
 type UserFilmDto = UpdateUserFilmRequest & { film: FilmSummaryDto; updatedAt: string }
-type LibrarySummaryDto = { liked: number; watchlist: number; watching: number; seen: number }
+type LibrarySummaryDto = { liked: number; watchlist: number; seen: number }
 ```
 - `PUT` replaces the whole state (last write wins); all false + `rating: null` deletes the row. The `/watchlist`
   pair changes only that flag, for the deck card's watchlist button, where the client doesn't hold the full state.
 - A rating implies `seen = true` (server rule; A8, decided). `liked` stays a separate flag; the Liked shelf shows the
   rating when there is one.
-- ⚠ Open (A9): Ithaca never plays the film, so it can't know how far someone got ("42 min left" on the Tonight board).
-  Assumed: "Watching" is just a shelf the user puts a film on ("Watch tonight") and takes it off again, with no progress bar.
 - ADR-0019 lands here: referenced films are refreshed by the sync, never purged; FKs to `films` are `ON DELETE RESTRICT`.
 
 ## 8. Film details
@@ -332,9 +330,9 @@ Mirrors FlowOps (ADR-0021):
 | A4 | Routes for deck and top 3 | **Decided:** `/deck/:deckId` and `/deck/:deckId/top`; `/mood` is the picker |
 | A5 | Can a room vote be changed? Does `seenVerdict` in a room update the library? | No and no |
 | A6 | "Swipe 6 more" / "Tiebreak" on the close-call board | Not first wave |
-| A7 | Reveal each member's votes on the result screen? | **Recommended:** name yes and seen, count noes only; picks only |
+| A7 | Reveal each member's votes on the result screen? | **Decided:** name yes and seen, count noes only; picks only |
 | A8 | Rating implies seen? Liked vs rating? | **Decided:** rating ⇒ seen; liked is a separate flag |
-| A9 | Can "Keep watching · 42 min left" show progress? Ithaca doesn't play films, so it can't know | "Watching" is a shelf with no progress; the Tonight row shows the film without "min left" |
+| A9 | "Watching" shelf and "Keep watching · 42 min left" | **Decided: dropped.** No Watching state, shelf or Tonight row |
 | A10 | Room codes `POP-428` vs the board's share link `ithaca.app/r/pop-428` | Links use the existing route `/rooms/POP-428`; a `/r/:code` short link is optional later |
 | A11 | Group taste ("Blend your histories") with guests who have no history | Second wave, with the taste task |
 | A12 | The glossary has no names for a solo deck's parent record or a solo swipe (`Vote` is a room member's) | `swipe`/`SwipeDto`/`swipeId` in the contract; BE-08 proposes glossary entries |
