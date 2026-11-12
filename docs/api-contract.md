@@ -320,6 +320,15 @@ Mirrors FlowOps (ADR-0021):
    later task. Adding an enum value (e.g. `taste`) is additive but must be handled by the frontend in the same release.
 4. A stub (`501 server.not_implemented`) is part of the contract: its shapes are final, only the behaviour is missing.
 
+### As built (BE-01)
+The stubs follow this file exactly. Names the shapes above leave implicit, now fixed in `contracts/openapi.json`:
+- `"user" | "guest"` (`CurrentUserDto.kind`, `RoomMemberDto.kind`) is the enum `PrincipalKind`; `RoomResultDto.kind` is
+  `RoomResultKind`; `RoomProgressDto.members[]` is `MemberProgressDto`; `FilmTrailerDto.trailer` is `TrailerDto` with
+  `site: TrailerSite` (`"YouTube"`, TMDB's spelling kept).
+- `MoodInput` keeps its name (it is part of `CreateDeckRequest`, not a request of its own).
+- Browse and library sorts are the enums `FilmSort` and `LibrarySort`; query parameters are camelCase like JSON.
+- Stubbed actions also declare `501` (`[ContractStub]`); a feature task removes the attribute when it lands.
+
 ## 11. Open questions
 
 | Id | Question | Assumption in this contract |

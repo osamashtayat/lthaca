@@ -7,6 +7,11 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
 - `[ApiController]`, `[Route("api/<plural>")]`, `[Tags("<Feature>")]`, sealed, primary-constructor injection of **services only**.
 - One action = one service call, then `this.ToActionResult(result)` (200), `this.ToCreatedResult(result, v => url)` (201) or
   `this.ToActionResult(result)` for a non-generic `Result` (204). Nothing else: no `if`, no mapping, no try/catch.
+- **Contract stubs** (BE-01): an endpoint whose task hasn't landed has its final route, DTOs and statuses, plus
+  `[ContractStub]` (documents 501), and its service method returns `ContractStub.Of<T>()` / `ContractStub.Command()`
+  (501 `server.not_implemented`). Implementing it: replace the body, drop `[ContractStub]` and the CA1822 suppression,
+  remove its row from `ContractStubEndpointTests`, re-export the contract.
+- List queries derive from `PageRequest` and bind camelCase names (`CamelCaseBindingMetadataProvider`).
 - Declare `[ProducesResponseType]` for every status; they feed `contracts/openapi.json` and the frontend types.
 - Route constraints (`{tmdbId:int:min(1)}`) and DataAnnotations on `…Request` records do input-shape validation
   (automatic 400). Business validation is the service's job and returns `Error.Validation(field, message)`.

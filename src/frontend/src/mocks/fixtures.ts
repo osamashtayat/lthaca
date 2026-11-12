@@ -4,7 +4,8 @@ type FilmDto = components['schemas']['FilmDto']
 
 /**
  * Mock catalog: the same three TMDB ids the backend's Development seed uses (550, 27205, 496243), so links work with
- * mocks on or off. Overviews are our own one-liners, not TMDB text. Posters are null (no network in mocks).
+ * mocks on or off. Overviews are our own one-liners, not TMDB text. Posters are null (no network in mocks); backdrop, votes and
+ * language stay null like the real API until BE-06 syncs them.
  */
 export const mockFilms: readonly FilmDto[] = [
   {
@@ -15,6 +16,10 @@ export const mockFilms: readonly FilmDto[] = [
     posterPath: null,
     runtimeMinutes: 139,
     genres: ['Drama', 'Thriller'],
+    backdropPath: null,
+    voteAverage: null,
+    voteCount: null,
+    originalLanguage: null,
   },
   {
     tmdbId: 27205,
@@ -24,6 +29,10 @@ export const mockFilms: readonly FilmDto[] = [
     posterPath: null,
     runtimeMinutes: 148,
     genres: ['Action', 'Science Fiction', 'Adventure'],
+    backdropPath: null,
+    voteAverage: null,
+    voteCount: null,
+    originalLanguage: null,
   },
   {
     tmdbId: 496243,
@@ -33,6 +42,10 @@ export const mockFilms: readonly FilmDto[] = [
     posterPath: null,
     runtimeMinutes: 133,
     genres: ['Comedy', 'Thriller', 'Drama'],
+    backdropPath: null,
+    voteAverage: null,
+    voteCount: null,
+    originalLanguage: null,
   },
 ]
 

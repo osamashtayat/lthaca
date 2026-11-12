@@ -1,4 +1,5 @@
 using Ithaca.Api.Errors;
+using Ithaca.Application.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
@@ -25,6 +26,7 @@ public static class OpenApiSetup
             });
             options.AddSchemaTransformer(DescribeProblemExtensions);
             options.AddSchemaTransformer(RequireAllResponseProperties);
+            options.AddSchemaTransformer(DescribeEnums);
         });
 
     /// <summary>Every ProblemDetails we send carries <c>code</c> and <c>traceId</c>.</summary>
@@ -44,18 +46,37 @@ public static class OpenApiSetup
     }
 
     /// <summary>
-    /// Response DTOs (<c>…Dto</c>) always send every property (nullable ones as <c>null</c>), so mark them all required;
-    /// otherwise generated TypeScript would make every field optional.
+    /// Response DTOs (<c>…Dto</c>, and <see cref="PagedResult{T}"/>) always send every property (nullable ones as
+    /// <c>null</c>), so mark them all required; otherwise generated TypeScript would make every field optional.
     /// </summary>
     private static Task RequireAllResponseProperties(OpenApiSchema schema, OpenApiSchemaTransformerContext context, CancellationToken _)
     {
         var type = context.JsonTypeInfo.Type;
-        if (context.JsonPropertyInfo is not null || !type.Name.EndsWith("Dto", StringComparison.Ordinal) || schema.Properties is not { Count: > 0 })
+        var isResponse = type.Name.EndsWith("Dto", StringComparison.Ordinal)
+            || (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(PagedResult<>));
+        if (context.JsonPropertyInfo is not null || !isResponse || schema.Properties is not { Count: > 0 })
         {
             return Task.CompletedTask;
         }
 
         schema.Required = new HashSet<string>(schema.Properties.Keys, StringComparer.Ordinal);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Enums are strings (JsonSetup). A shared enum schema lists only its values: when the first use is nullable
+    /// (<c>SeenVerdict?</c>) the generator would put <c>null</c> into the shared list; nullability belongs to the property.
+    /// </summary>
+    private static Task DescribeEnums(OpenApiSchema schema, OpenApiSchemaTransformerContext context, CancellationToken _)
+    {
+        var type = Nullable.GetUnderlyingType(context.JsonTypeInfo.Type) ?? context.JsonTypeInfo.Type;
+        if (!type.IsEnum || schema.Enum is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        schema.Type = JsonSchemaType.String;
+        schema.Enum = [.. schema.Enum.Where(value => value is not null)];
         return Task.CompletedTask;
     }
 }
