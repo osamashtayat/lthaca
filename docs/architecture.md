@@ -59,7 +59,7 @@ AGENTS.md CLAUDE.md          agent instructions (AGENTS.md is the source of trut
 .github/workflows/ci.yml     CI: backend, frontend, Docker stack smoke
 contracts/                   openapi.json (generated), realtime-events.json (hub contract, hand-written)
 prompts/                     versioned LLM prompts: <name>.v<N>.md
-docs/                        this documentation + decisions/ (ADRs)
+docs/                        this documentation, backlog.md (tasks), api-contract.md (design contract), decisions/ (ADRs)
 scripts/export-openapi.sh    regenerates contracts/openapi.json
 src/backend/
   Ithaca.Domain/             <Feature>/ entities · Common/ · Errors/
@@ -70,6 +70,8 @@ src/backend/
 src/frontend/
   src/app/                   providers, router, routes, layout/ (AppShell, header, ☰ menu), pages/, dev/
   src/shared/                api/ · query/ · realtime/ · ui/ · notify/ · styles/
+  src/mocks/                 MSW mock API for the dev server and Vitest (ADR-0020); never in production builds
+  src/test/setup.ts          Vitest setup: MSW node server, unhandled requests fail
   src/features/<feature>/    api/ · components/ · pages/ · types.ts · index.ts
   Dockerfile docker/nginx.conf
 tests/backend/Ithaca.Tests/  architecture, contract, error-mapping, AI plumbing, slice (Testcontainers) tests

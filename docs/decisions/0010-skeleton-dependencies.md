@@ -1,6 +1,6 @@
 # ADR-0010: Only the dependencies the skeleton uses (deviation from FlowOps)
 
-- **Status:** Accepted
+- **Status:** Accepted (the MSW part is superseded by ADR-0020)
 - **Date:** 2026-11-12
 
 ## Context

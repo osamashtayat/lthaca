@@ -15,7 +15,7 @@ ADRs marked *deviation* record where Ithaca differs from the FlowOps reference p
 | [0007](0007-hub-in-api.md) | RoomHub and its publisher live in the Api (deviation from FlowOps) |
 | [0008](0008-background-jobs.md) | Plain BackgroundService for the nightly sync; no job framework |
 | [0009](0009-local-http-and-ports.md) | Plain HTTP locally; ports chosen to coexist with FlowOps (deviation from FlowOps) |
-| [0010](0010-skeleton-dependencies.md) | Only the dependencies the skeleton uses (deviation from FlowOps) |
+| [0010](0010-skeleton-dependencies.md) | Only the dependencies the skeleton uses (deviation from FlowOps; MSW part superseded by 0020) |
 | [0011](0011-agent-files.md) | AGENTS.md as the only rule source; `.claude/commands` instead of rules/skills (deviation from FlowOps) |
 | [0012](0012-auth-users-and-guests.md) | Cookie auth for users; guests as room-scoped cookie identities |
 | [0013](0013-embeddings-voyage-1024.md) | Embeddings from Voyage AI at 1024 dimensions, model recorded per vector |
@@ -25,3 +25,5 @@ ADRs marked *deviation* record where Ithaca differs from the FlowOps reference p
 | [0017](0017-tmdb-terms-and-ai.md) | TMDB for display, Wikidata for AI (TMDB API terms) |
 | [0018](0018-anthropic-llm-client.md) | Anthropic client: official SDK, schema-enforced JSON, Result errors, server-side fallback |
 | [0019](0019-catalog-retention.md) | Films users reference are refreshed, never purged |
+| [0020](0020-msw-mock-api.md) | Mock API with MSW for the dev server and Vitest (deviation from FlowOps: mocks everything when on) |
+| [0021](0021-contract-first-parallel-agents.md) | Contract first, one task per branch and worktree, backend and frontend agents in parallel |

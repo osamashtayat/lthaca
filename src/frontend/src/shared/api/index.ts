@@ -1,4 +1,5 @@
 export { api } from './client'
 export { ApiError, requireData } from './apiError'
-export { toUserMessage, serverFieldError } from './problem'
+export { toUserMessage, serverFieldError, type ProblemCode } from './problem'
 export type { components, paths } from './schema'
+export { API_MOCKS_ENABLED, REALTIME_ENABLED } from './mode'

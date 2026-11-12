@@ -9,6 +9,8 @@ This file is the single source of truth for every agent (Claude, Codex, Cursor�
 | Read | When |
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | Always, once: layers, dependency direction, request flow, folder map |
+| [docs/backlog.md](docs/backlog.md) | Before any task: your task's entry (scope, contract, acceptance criteria) and its dependencies |
+| [docs/api-contract.md](docs/api-contract.md) | Any task that adds, implements or consumes an endpoint |
 | [docs/backend-conventions.md](docs/backend-conventions.md) | Any backend change |
 | [docs/frontend-conventions.md](docs/frontend-conventions.md) | Any frontend change |
 | [docs/ai.md](docs/ai.md) | LLM, prompts, embeddings, evals |
@@ -25,7 +27,8 @@ docker compose up --build                     # full stack: db + migrations + ap
 docker compose up -d db                       # only PostgreSQL + pgvector (localhost:5433) for local dev
 set -a; source .env; set +a                   # export ConnectionStrings__Ithaca etc. for dotnet commands
 dotnet run --project src/backend/Ithaca.Api   # API → http://localhost:5280 (Development seeds 3 films)
-cd src/frontend && npm install && npm run dev # SPA → http://localhost:5273 (proxies /api and /hubs to :5280)
+cd src/frontend && npm install && npm run dev # SPA → http://localhost:5273, mock API by default (ADR-0020)
+VITE_API_MOCKS=off npm run dev               # (in src/frontend) SPA against the real API: proxies /api and /hubs to :5280
 
 dotnet build Ithaca.slnx                      # backend build (warnings are errors)
 dotnet test tests/backend/Ithaca.Tests        # unit + architecture + contract + slice tests (needs Docker for Testcontainers)
@@ -45,7 +48,7 @@ dotnet run --project evals/Ithaca.Evals                 # AI evals, recorded rep
 dotnet run --project evals/Ithaca.Evals -- --live       # AI evals against the configured provider
 ```
 
-Plumbing check page: `/dev/status` on the Vite dev server only (:5273; not in production builds). Reference slice: `/films/550`.
+Plumbing check page: `/dev/status` on the Vite dev server only (:5273; not in production builds); it shows whether the mock or the real API answers (real API + hub: `VITE_API_MOCKS=off`). Reference slice: `/films/550`.
 
 ## 2. Architecture rules
 
@@ -71,11 +74,12 @@ Plumbing check page: `/dev/status` on the Vite dev server only (:5273; not in pr
 - **Feature folders:** `src/features/<feature>/{api/,components/,pages/,types.ts,index.ts}`. Other code imports a feature only through its `index.ts`.
 - **Data goes through feature `api/` hooks** on TanStack Query + `api` from `@/shared/api` + keys from `queryKeys`. Copy [useFilm](src/frontend/src/features/films/api/useFilm.ts) and [FilmPage](src/frontend/src/features/films/pages/FilmPage.tsx).
 - API types come from the generated `schema.d.ts` (`npm run api:types`), never hand-written.
+- **Build against the mock API** (ADR-0020): every endpoint a screen uses gets a handler in `src/mocks/handlers.ts`, typed from the contract. Dev server: mocks on; `VITE_API_MOCKS=off` for the real API.
 - Toasts via `notify` from `@/shared/notify`; real-time via `useRoomHub` from `@/shared/realtime`; event names from `contracts/realtime-events.json`.
 - Colours, fonts, radii, shadows only from `src/shared/styles/tokens.css` (Tailwind classes such as `bg-cream text-ink font-display shadow-hard rounded-card`). Mobile first; touch targets ≥ 44px; navigation is the top header + ☰ menu.
 
 ### Frontend — don't
-- No `fetch` in components (lint error); no importing `sonner`, `@microsoft/signalr` or `openapi-fetch` outside `src/shared` (lint error).
+- No `fetch` in components (lint error; allowed only in `src/shared/api` and `src/mocks`); no `msw` imports outside `src/mocks` and `src/test` (lint error); no mocking a path that isn't in `contracts/openapi.json`; no importing `sonner`, `@microsoft/signalr` or `openapi-fetch` outside `src/shared` (lint error).
 - No hex/rgb colours or default Tailwind palette classes in `.ts/.tsx` (`npm run lint:tokens`).
 - No bottom tab bar; no Shrikhand outside the wordmark and big moments.
 - No business rules in components: anything the server decides (eligibility, matches, ranking) comes from the API.
@@ -90,6 +94,7 @@ Plumbing check page: `/dev/status` on the Vite dev server only (:5273; not in pr
 |---|---|
 | an endpoint | `/new-endpoint`: DTOs + `<Feature>Errors` + service method in `Ithaca.Application/<Feature>/` → register in `AddApplication()` → thin action in `Ithaca.Api/Controllers/<Feature>Controller.cs` → status mapping for new codes → test → `export-openapi.sh` → `npm run api:types` |
 | a table/entity | entity in `Ithaca.Domain/<Feature>/` → `DbSet` on `IAppDbContext` + `AppDbContext` → `<Entity>Configuration` → migration (`/new-migration`) |
+| a mock handler | in `src/mocks/handlers.ts`: `apiPath('/api/…')` + `ResponseOf<…>` bodies + `problem(status, code)`; state in a `<area>Store.ts` reset in `src/test/setup.ts` (docs/frontend-conventions.md → Mock API) |
 | a feature page | `/new-feature`: page in `src/features/<f>/pages/`, hook in `api/`, keys in `shared/query/queryKeys.ts`, export from `index.ts`, swap the `PlaceholderPage` route in `src/app/routes.tsx` |
 | a real-time event | name in `contracts/realtime-events.json` **and** `RoomEvents.cs` → publish from a service via `IRoomEventPublisher` after commit → handle with `useRoomHub({ handlers })` |
 | a prompt / AI call | `prompts/<name>.v1.md` + id in `Prompts` + output record in `Ithaca.Application/Ai/` + an eval case in `evals/cases/` |
@@ -103,6 +108,65 @@ Plumbing check page: `/dev/status` on the Vite dev server only (:5273; not in pr
 - CI (`.github/workflows/ci.yml`) runs the §1 checks on every PR and push to `main`: backend build/tests/evals, OpenAPI and migration drift, frontend type drift/typecheck/lint/test/build, and a Docker stack smoke test. A red CI is not done.
 - If a rule here blocks you, don't work around it silently: say so in the report and propose an ADR in `docs/decisions/`.
 - Before finishing a sizeable change, run the `architecture-reviewer` agent (Claude) or check §2 yourself.
+
+Backend and frontend agents work **in parallel** from [docs/backlog.md](docs/backlog.md), against the contract in
+[docs/api-contract.md](docs/api-contract.md) (ADR-0021). The rules below keep them from blocking or overwriting each other.
+
+### 4.1 How to start a task
+1. Pick the lowest-numbered task in your lane (backend `BE-`, frontend `FE-`, `OPS-`) whose dependencies are `Done` and
+   that nobody has claimed: no open PR for it (`gh pr list --state open --search "[<ID>] in:title"`) and no branch
+   (`git ls-remote origin 'refs/heads/task/<ID>-*'`). `P-` tasks need the owner's approval first. Claude: `/do-task <ID>` walks you through all of §4.
+2. Read its backlog entry, the contract sections it names, and the docs from the table at the top.
+3. **Claim it:** create your branch and worktree (4.2), set the task to `In progress` in `docs/backlog.md` as your first
+   commit, push, and immediately open a **draft PR** titled `[<ID>] <title>`. The draft PR (and the branch) is the visible
+   claim; `main` shows `In progress` only after the merge, so never rely on `docs/backlog.md` alone.
+
+### 4.2 Branch workflow (every task)
+1. **One task = one branch** `task/<ID>-short-name` (e.g. `task/BE-05-library`) from the latest `origin/main`. No two tasks
+   on one branch, no task split across branches, no branch stacked on another unmerged branch.
+2. **Own worktree, never the shared checkout:**
+   ```bash
+   git fetch origin
+   git worktree add -b task/BE-05-library .claude/worktrees/BE-05 origin/main
+   cd .claude/worktrees/BE-05 && (cd src/frontend && npm ci)   # frontend tasks; backend: dotnet restore happens on build
+   ```
+   Never switch branches, commit, or run `git stash` in the main checkout; other agents use it. Export `.env` from the
+   main checkout for `dotnet` commands (`set -a; source ../../../.env; set +a`) — never print or copy it.
+3. **Keep it current:** merge or rebase `origin/main` before opening and before merging the PR; fix conflicts on your branch.
+   A task that adds an EF migration and finds a newer migration on `main`: delete yours, update, re-add it (`/new-migration`).
+4. **Finish = merged:** update the task to `Done` in `docs/backlog.md` in the same PR, push, mark the draft PR ready
+   (body ends with the §5 report), wait for CI green, **squash-merge**, delete the branch and remove the worktree
+   (`git worktree remove .claude/worktrees/BE-05`). A task isn't done while its work sits on a branch.
+5. **Never merge red,** never merge with tests you didn't run, never force-push `main`. If it can't be finished green:
+   leave the PR open, open an issue (4.4), set the task to `Blocked (#n)`.
+
+### 4.3 Who touches what
+| Path | Owner | Others |
+|---|---|---|
+| `src/backend/**`, `tests/backend/**`, `prompts/**`, `evals/**`, `contracts/**`, `docs/api-contract.md` | backend tasks | read |
+| `src/frontend/**` (`schema.d.ts` only via `npm run api:types`) | frontend tasks | backend tasks: `npm run api:types` after a contract change, and the entries for their own error codes in `src/shared/api/problem.ts` (§2); nothing else |
+| `docs/backend-conventions.md`, `docs/ai.md`, `docs/realtime.md` · `docs/frontend-conventions.md` | backend · frontend tasks, for what the task changes | propose via an issue |
+| `docs/glossary.md` | the task that introduces or refines the term | — |
+| `docs/backlog.md` | the task's own status line | — |
+| `AGENTS.md`, `CLAUDE.md`, `.claude/**`, `.github/**`, `docs/decisions/**` | `OPS-` tasks, or a new ADR in any task | propose via an issue |
+
+- **A contract change is backend work** and lands as its own merged task (contract + 501 stubs, like BE-01, BE-14a)
+  before the frontend task that needs it starts (api-contract.md §10). A backend task may change the contract within its
+  own PR only when no frontend task is waiting on that change. The frontend agent never edits the contract: it opens a `contract` issue and keeps going on mocks
+  of what exists.
+- Small fixes found during a task stay on that task's branch; anything unrelated becomes an issue.
+
+### 4.4 Raising problems: a GitHub issue, not just a chat message
+For a bug, blocker, contract gap, conflict with an ADR or doc, flaky test, duplicated logic outside your scope, security
+concern or a decision the owner must make:
+1. Search first: `gh issue list --state open --search "<keywords>"`; if one exists, comment on it.
+2. Create it: `gh issue create --title "[BE-05] Short, specific problem" --label "backend,blocker" --body-file <file>`.
+   Title prefix: the task ID, or `[backend]` / `[frontend]`. Labels: one area (`backend`, `frontend`, `contract`, `docs`,
+   `infra`) + one kind (`bug`, `blocker`, `decision-needed`, `security`, `tech-debt`); create a missing label with
+   `gh label create`. Body: what happened · how to reproduce · expected vs actual · files/lines · doc or ADR involved ·
+   proposed fix or options · whether it blocks the task. Security: impact and location only, never secrets or exploits.
+3. Blocks your task → stop that part, leave the PR open, link the issue. Doesn't block → continue, link it in the PR.
+   Fixed later → `Fixes #n` in the fixing PR. List every issue you opened or updated under "Open questions / TODOs" in §5.
 
 ## 5. Mandatory end-of-task report
 

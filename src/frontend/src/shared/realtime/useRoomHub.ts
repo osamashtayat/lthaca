@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { REALTIME_ENABLED } from '@/shared/api/mode'
 import { ROOM_EVENTS, type RoomEvent } from './events'
 import { createRoomHubConnection, statusOf, type RoomHubStatus } from './roomHub'
 
@@ -7,10 +8,11 @@ export type RoomEventHandlers = Partial<Record<RoomEvent, (payload: unknown) => 
 /**
  * The ONE way to talk to RoomHub: opens a connection while mounted and reports its status.
  * `handlers` maps contract event names to callbacks (typically query invalidations from a feature api/ hook);
- * the latest handlers are always used, without reconnecting.
+ * the latest handlers are always used, without reconnecting. Never connects when `REALTIME_ENABLED` is false.
  * SKELETON: connection only. Joining a room (a hub method) is added by the rooms feature.
  */
-export function useRoomHub({ enabled = true, handlers = {} }: { enabled?: boolean; handlers?: RoomEventHandlers } = {}) {
+export function useRoomHub({ enabled: wanted = true, handlers = {} }: { enabled?: boolean; handlers?: RoomEventHandlers } = {}) {
+  const enabled = wanted && REALTIME_ENABLED
   const [status, setStatus] = useState<RoomHubStatus>(enabled ? 'connecting' : 'disconnected')
   const handlersRef = useRef(handlers)
 

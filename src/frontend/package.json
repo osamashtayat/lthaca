@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/check-no-mocks.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "lint": "oxlint --deny-warnings && npm run lint:tokens",
@@ -32,6 +32,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "msw": "^3.0.5",
     "oxlint": "^1.90.0",
     "tailwindcss": "^4.3.4",
     "typescript": "~7.0.2",
@@ -40,5 +41,10 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }
