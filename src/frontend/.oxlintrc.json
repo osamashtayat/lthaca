@@ -32,7 +32,8 @@
   },
   "overrides": [
     { "files": ["src/shared/api/**"], "rules": { "no-restricted-globals": "off", "no-restricted-imports": "off" } },
-    { "files": ["src/mocks/**", "src/test/**"], "rules": { "no-restricted-imports": "off" } },
+    { "files": ["src/mocks/**"], "rules": { "no-restricted-globals": "off", "no-restricted-imports": "off" } },
+    { "files": ["src/test/**"], "rules": { "no-restricted-imports": "off" } },
     { "files": ["src/shared/notify/**", "src/shared/realtime/**"], "rules": { "no-restricted-imports": "off" } },
     { "files": ["scripts/**"], "rules": { "no-console": "off" } }
   ],

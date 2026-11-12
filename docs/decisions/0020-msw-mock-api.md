@@ -22,7 +22,8 @@ network. FlowOps solved this with MSW (`src/mocks/`, a `main.tsx` toggle, a node
   a request without a handler fails the test. Tests override per case with `server.use(...)`.
 - **Realtime off with mocks:** `REALTIME_ENABLED` (`shared/realtime`) is false while mocks answer or in tests;
   `useRoomHub` never connects then (FlowOps' `REALTIME_ENABLED`). Screens test event handling by calling handlers directly.
-- **Lint:** `msw` may be imported only in `src/mocks/**` and `src/test/**`; the `fetch` ban stays as it is.
+- **Lint:** `fetch` is allowed in `src/mocks/**` (e.g. `fetch(bypass(request))` to pass a request through) besides
+  `src/shared/api/**`; `msw` may be imported only in `src/mocks/**` and `src/test/**`.
 - **Only contract paths are mocked.** `apiPath()` accepts generated paths only, so the frontend can't mock an endpoint
   that isn't in `contracts/openapi.json` (ADR-0021).
 

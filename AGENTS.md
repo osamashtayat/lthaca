@@ -79,7 +79,7 @@ Plumbing check page: `/dev/status` on the Vite dev server only (:5273; not in pr
 - Colours, fonts, radii, shadows only from `src/shared/styles/tokens.css` (Tailwind classes such as `bg-cream text-ink font-display shadow-hard rounded-card`). Mobile first; touch targets ≥ 44px; navigation is the top header + ☰ menu.
 
 ### Frontend — don't
-- No `fetch` in components (lint error); no `msw` imports outside `src/mocks` and `src/test` (lint error); no mocking a path that isn't in `contracts/openapi.json`; no importing `sonner`, `@microsoft/signalr` or `openapi-fetch` outside `src/shared` (lint error).
+- No `fetch` in components (lint error; allowed only in `src/shared/api` and `src/mocks`); no `msw` imports outside `src/mocks` and `src/test` (lint error); no mocking a path that isn't in `contracts/openapi.json`; no importing `sonner`, `@microsoft/signalr` or `openapi-fetch` outside `src/shared` (lint error).
 - No hex/rgb colours or default Tailwind palette classes in `.ts/.tsx` (`npm run lint:tokens`).
 - No bottom tab bar; no Shrikhand outside the wordmark and big moments.
 - No business rules in components: anything the server decides (eligibility, matches, ranking) comes from the API.
@@ -113,13 +113,13 @@ Backend and frontend agents work **in parallel** from [docs/backlog.md](docs/bac
 [docs/api-contract.md](docs/api-contract.md) (ADR-0021). The rules below keep them from blocking or overwriting each other.
 
 ### 4.1 How to start a task
-1. Pick the lowest-numbered task in your lane (backend `BE-`, frontend `FE-`, `OPS-`) whose dependencies are `done` and
+1. Pick the lowest-numbered task in your lane (backend `BE-`, frontend `FE-`, `OPS-`) whose dependencies are `Done` and
    that nobody has claimed: no open PR for it (`gh pr list --state open --search "[<ID>] in:title"`) and no branch
    (`git ls-remote origin 'refs/heads/task/<ID>-*'`). `P-` tasks need the owner's approval first. Claude: `/do-task <ID>` walks you through all of §4.
 2. Read its backlog entry, the contract sections it names, and the docs from the table at the top.
-3. **Claim it:** create your branch and worktree (4.2), set the task to `in progress` in `docs/backlog.md` as your first
+3. **Claim it:** create your branch and worktree (4.2), set the task to `In progress` in `docs/backlog.md` as your first
    commit, push, and immediately open a **draft PR** titled `[<ID>] <title>`. The draft PR (and the branch) is the visible
-   claim; `main` shows `in progress` only after the merge, so never rely on `docs/backlog.md` alone.
+   claim; `main` shows `In progress` only after the merge, so never rely on `docs/backlog.md` alone.
 
 ### 4.2 Branch workflow (every task)
 1. **One task = one branch** `task/<ID>-short-name` (e.g. `task/BE-05-library`) from the latest `origin/main`. No two tasks
@@ -134,11 +134,11 @@ Backend and frontend agents work **in parallel** from [docs/backlog.md](docs/bac
    main checkout for `dotnet` commands (`set -a; source ../../../.env; set +a`) — never print or copy it.
 3. **Keep it current:** merge or rebase `origin/main` before opening and before merging the PR; fix conflicts on your branch.
    A task that adds an EF migration and finds a newer migration on `main`: delete yours, update, re-add it (`/new-migration`).
-4. **Finish = merged:** update the task to `done` in `docs/backlog.md` in the same PR, push, mark the draft PR ready
+4. **Finish = merged:** update the task to `Done` in `docs/backlog.md` in the same PR, push, mark the draft PR ready
    (body ends with the §5 report), wait for CI green, **squash-merge**, delete the branch and remove the worktree
    (`git worktree remove .claude/worktrees/BE-05`). A task isn't done while its work sits on a branch.
 5. **Never merge red,** never merge with tests you didn't run, never force-push `main`. If it can't be finished green:
-   leave the PR open, open an issue (4.4), set the task to `blocked (#n)`.
+   leave the PR open, open an issue (4.4), set the task to `Blocked (#n)`.
 
 ### 4.3 Who touches what
 | Path | Owner | Others |
