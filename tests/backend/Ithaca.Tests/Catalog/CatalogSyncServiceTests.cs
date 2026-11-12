@@ -30,7 +30,7 @@ public sealed class CatalogSyncServiceTests(PostgresFixture postgres)
         result.IsSuccess.ShouldBeTrue();
         result.Value.Pages.ShouldBe(1);
         (result.Value.Added + result.Value.Updated).ShouldBe(3);
-        result.Value.Embedded.ShouldBe(0, "EmbedOverviews is off until ADR-0017 is decided");
+        result.Value.Embedded.ShouldBe(0, "EmbedOverviews stays off: TMDB text must not reach AI (ADR-0017)");
         result.Value.Purged.ShouldBeGreaterThanOrEqualTo(1);
         (await db.Films.AnyAsync(f => f.TmdbId == 424242, TestContext.Current.CancellationToken)).ShouldBeFalse("older than the 6-month TMDB cache limit");
     }

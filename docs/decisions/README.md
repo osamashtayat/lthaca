@@ -22,5 +22,6 @@ ADRs marked *deviation* record where Ithaca differs from the FlowOps reference p
 | [0014](0014-no-notifications-yet.md) | No notifications feature for now |
 | [0015](0015-votes-over-http.md) | Votes are HTTP requests; the hub only broadcasts |
 | [0016](0016-single-instance-assumptions.md) | One API instance for now; what to add before scaling out |
-| [0017](0017-tmdb-terms-and-ai.md) | TMDB's API terms vs Ithaca's AI features (**Proposed — needs a decision**) |
+| [0017](0017-tmdb-terms-and-ai.md) | TMDB for display, Wikidata for AI (TMDB API terms) |
 | [0018](0018-anthropic-llm-client.md) | Anthropic client: official SDK, schema-enforced JSON, Result errors, server-side fallback |
+| [0019](0019-catalog-retention.md) | Films users reference are refreshed, never purged |

@@ -58,7 +58,7 @@ Plumbing check page: `/dev/status` on the Vite dev server only (:5273; not in pr
 - **One way for each concern:** paging → `PageRequest` / `Paging.ToPagedResultAsync`; config → an `IConfigSection` options class + `AddValidatedOptions<T>()`; DI → `AddApplication()` / `AddInfrastructure()` (one line per service); errors → `Result` + the global `ProblemDetailsExceptionHandler`; time → `TimeProvider`; ids → `SequentialGuid.NewV7`.
 - **AI behind interfaces.** Prompts are files `prompts/<name>.v<N>.md`; outputs are parsed with `StructuredOutput.Parse<T>` into typed records. Every film id the LLM returns must be validated against the candidate list we sent.
 - **Runtime film data comes from our `films` table.** TMDB is only for the nightly sync and cached details (trailers).
-- **TMDB terms (ADR-0017, pending):** don't send TMDB-derived text to the LLM or the embedding model until the owner decides; keep the footer attribution.
+- **Data sources (ADR-0017):** TMDB for display only; Wikidata (and our own user data) for anything the LLM or embedding model sees. Never send TMDB-derived text to AI. Keep the footer attribution. Films users reference are refreshed, never purged (ADR-0019).
 
 ### Backend — don't
 - No `DbContext`, `if` business rules, try/catch, or mapping in controllers or hubs.

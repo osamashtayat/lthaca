@@ -4,9 +4,10 @@ The LLM is used **only at the edges**: (1) parse mood text into filters, (2) ran
 (3) write short explanations. It never chooses films on its own: candidates always come from our `films` table, and every
 `tmdbId` it returns is checked against the list we sent.
 
-> **TMDB terms (ADR-0017, decision pending):** TMDB's API terms restrict using TMDB content with ML/AI applications.
-> Until the owner decides, do **not** send TMDB-derived text (overviews, titles in bulk) to the LLM or the embedding model,
-> and keep `CatalogSync:EmbedOverviews = false`. Mood parsing (user text + generic genre names) is unaffected.
+> **Data sources (ADR-0017):** TMDB is for **display** (details, posters, trailers); **Wikidata** (CC0) feeds the **AI**
+> (embeddings, ranking, explanations). Never send TMDB-derived text (overviews, taglines, TMDB keywords) to the LLM or the
+> embedding model; keep `CatalogSync:EmbedOverviews = false`. Mood parsing (user text + generic genre names) is unaffected.
+> Our own user data (votes, likes, ratings, imports) may be used freely. The Wikidata enricher is not built yet.
 
 ## Pieces
 | Concern | Interface (Application) | Implementations (Infrastructure) | Config |
