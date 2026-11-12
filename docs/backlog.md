@@ -155,7 +155,7 @@ lint, test, build.
 - **Tests:** register/sign-in/sign-out/me, duplicate email, lockout, antiforgery missing/invalid, 401 shape, cookie flags.
 - **Docs:** api-contract.md §4 as built; backend-conventions.md (getting the actor); an ADR for any deviation from FlowOps.
 
-### FE-03 — Sign-in screen and session · `Todo`
+### FE-03 — Sign-in screen and session · `In progress`
 - **Objective:** the Welcome board at `/sign-in`, session hooks, antiforgery header, user-only routes.
 - **Deps:** BE-01, FE-02. **Modules:** `src/features/auth/`, `src/shared/api/client.ts`, `src/app/routes.tsx`,
   `src/app/layout/MenuSheet.tsx`, `src/shared/query/queryKeys.ts`, `src/mocks/`.
