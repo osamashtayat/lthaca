@@ -23,6 +23,8 @@ flowchart LR
   FE00[FE-00 skeleton ✔] --> OPS01
   BE01 --> BE02[BE-02 auth] --> BE03[BE-03 Wikidata] --> BE04[BE-04 Voyage]
   BE02 --> BE05[BE-05 library] --> BE08[BE-08 solo deck] --> BE09[BE-09 mood]
+  BE01 --> BE09a[BE-09a mood-guard contract] --> BE09
+  BE09a --> FE06
   BE01 --> BE06[BE-06 catalog fields + browse]
   BE01 --> BE07[BE-07 trailer]
   BE02 --> BE10[BE-10 rooms core] --> BE11[BE-11 room swiping] --> BE12[BE-12 room result]
@@ -55,7 +57,7 @@ backend and can start at once (FE-01 after the owner approves the asset). Ops: O
 
 | Lane | Order | Notes |
 |---|---|---|
-| Backend | BE-01 → BE-02 → BE-03 → BE-04 → BE-05 → BE-06 → BE-07 → BE-08 → BE-09 → BE-10 → BE-11 → BE-12 → BE-13 → BE-14a → BE-14 → BE-15a → BE-15 → BE-16a → BE-16 → BE-17 | BE-06/BE-07 need only BE-01; the `a` contract tasks are small and may be pulled earlier so FE-13–15 can start |
+| Backend | BE-01 → BE-09a → BE-02 → BE-03 → BE-04 → BE-05 → BE-06 → BE-07 → BE-08 → BE-09 → BE-10 → BE-11 → BE-12 → BE-13 → BE-14a → BE-14 → BE-15a → BE-15 → BE-16a → BE-16 → BE-17 | BE-09a is a tiny contract task done early so FE-06 isn't blocked; BE-06/BE-07 need only BE-01; the `a` contract tasks are small and may be pulled earlier so FE-13–15 can start |
 | Frontend | FE-01 (when approved) · FE-02 → FE-03 → FE-04 → FE-05 → FE-06 → FE-07 → FE-08 → FE-09 → FE-10 → FE-11 → FE-12 → FE-13 → FE-14 → FE-15 | all on mocks |
 
 With a second agent per side, tasks with no path between them can also run in parallel (BE-05 ‖ BE-06, FE-07 ‖ FE-08).
@@ -243,25 +245,43 @@ lint, test, build.
 
 ## Mood
 
+### BE-09a — Mood-guard contract and stubs (ADR-0022) · `Todo`
+- **Objective:** put ADR-0022's contract into code so FE-06 and FE-10 can mock it.
+- **Deps:** BE-01. **Modules:** `ErrorCodes.cs`, `ErrorStatusCodes.cs`, `src/frontend/src/shared/api/problem.ts`,
+  `Application/Moods` (`MoodQueryDto`), `Application/Rooms` (`RoomMoodDto`), `RoomsController`, `contracts/openapi.json`,
+  `schema.d.ts`.
+- **Contract:** §2 `mood.unclear` (422); §5 `MoodQueryDto.textIgnored`; §6 `PUT /api/rooms/{code}/mood` → `RoomMoodDto`.
+- **Scope:** in: the code in the three lists, with the ADR-0022 message text in `problem.ts`; the two DTO changes; stubs
+  still 501; `export-openapi.sh`; `npm run api:types`. Out: logic (BE-09, BE-11).
+- **Acceptance:** `openapi.json` and `schema.d.ts` show the new shapes; `ErrorStatusCodesTests` green.
+- **Tests:** existing stub and mapping tests.
+
 ### BE-09 — Decks by mood · `Todo`
 - **Objective:** start a deck from tapped moods and free text.
-- **Deps:** BE-08. **Modules:** `Domain/Moods`, `Application/Moods`, `Application/Decks`, migration.
-- **Contract:** §5 (`source: "mood"`, `MoodQuery`).
+- **Deps:** BE-08, BE-09a. **Modules:** `Domain/Moods`, `Application/Moods`, `Application/Decks`, `Application/Ai`,
+  `prompts/`, `evals/`, migration.
+- **Contract:** §5 (`source: "mood"`, `MoodQuery`, `mood.unclear`, `textIgnored`).
 - **Scope:** in: `MoodQuery` entity; chips → genres/filters by a server-side table (no LLM); free text →
-  `mood-parse.v1` → `MoodParseOutput`, genres validated against ours; runtime and language filters. Out: room moods
-  (BE-11 reuses this), new prompt versions unless evals need them.
-- **Acceptance:** §5 for `mood`; AI failures map to `ai.*`; mood text never logged.
-- **Tests:** mapping table; Fake LLM → filters; invalid genres dropped; evals green.
+  `mood-parse.v2` (adds `intent`, ADR-0022) → `MoodParseOutput`, genres validated against ours; runtime and language
+  filters; the ADR-0022 rules (chips win, `mood.unclear`, no LLM call for empty text, never echo the text); the eval
+  suite: runner `kind`, `intentIs`, `mustNotContain`, and ~20 mood-parse cases (representative / edge / adversarial).
+  Out: room moods (BE-11 reuses this).
+- **Acceptance:** §5 for `mood`; every row of ADR-0022's table behaves as written; AI failures map to `ai.*`; mood text
+  never logged; replay evals green, live evals run once with Anthropic and their result is in the PR.
+- **Tests:** mapping table; Fake LLM → filters; each ADR-0022 row as a slice test; invalid genres dropped; evals green.
 - **Docs:** docs/ai.md (mood flow), api-contract.md §5.
 
 ### FE-06 — By mood picker · `Todo`
 - **Objective:** the "Solo — by mood" board.
-- **Deps:** FE-05. **Modules:** `src/features/mood/`, `src/mocks/`.
-- **Contract:** §5.
+- **Deps:** FE-05, BE-09a. **Modules:** `src/features/mood/`, `src/features/deck/`, `src/mocks/`.
+- **Contract:** §5 (incl. `mood.unclear`, `textIgnored`).
 - **Scope:** in: mood chips (max 2), "How long have you got?", language, "Describe it your way", "Deal my deck" → deck
-  (`source: "mood"`) → `/deck/:deckId`; a `MoodPicker` reused by FE-10. Out: "More filters".
-- **Acceptance:** with mocks: max 2 moods, ≤ 280 chars, loading while the LLM works, each `ai.*` error shows its message.
-- **Tests:** picker state; error mapping.
+  (`source: "mood"`) → `/deck/:deckId`; a `MoodPicker` reused by FE-10; ADR-0022 copy: `mood.unclear` under the text
+  field (text kept and focused), `textIgnored` as a small line on the deck that goes after the first swipe (no toast).
+  Out: "More filters".
+- **Acceptance:** with mocks: max 2 moods, ≤ 280 chars, loading while the LLM works, each `ai.*` error and
+  `mood.unclear` shows its message; `textIgnored` shows the note; the user's text is never shown back in a message.
+- **Tests:** picker state; error mapping; `mood.unclear` keeps the text; `textIgnored` note.
 
 ## Taste
 
@@ -303,7 +323,8 @@ lint, test, build.
 - **Objective:** everyone swipes the same deck; votes are HTTP (ADR-0015).
 - **Deps:** BE-10, BE-08, BE-09. **Modules:** `Application/Rooms`, `Application/Decks`, `Domain/Rooms`, migration.
 - **Contract:** §6 (mood, start, deck, votes, progress); events `voteCast`, `deckExtended`.
-- **Scope:** in: per-member mood + private hard nos, readiness, start (first batch from the combined moods or the sampler,
+- **Scope:** in: per-member mood + private hard nos with the ADR-0022 rules (`RoomMoodDto.textIgnored`, `mood.unclear`),
+  readiness, start (first batch from the combined moods or the sampler,
   hard nos excluded), idempotent votes, progress, extension near the end. Out: match/compromise (BE-12).
 - **Acceptance:** hard-no films never enter the deck; duplicate votes are no-ops; `voteCast` carries no values.
 - **Tests:** slice tests; hard-no exclusion; concurrent votes on one item (≥ 20 runs).
@@ -335,11 +356,13 @@ lint, test, build.
 - **Docs:** docs/realtime.md client section.
 
 ### FE-10 — Room mood step · `Todo`
-- **Objective:** the "Group — your mood tonight" board. **Deps:** FE-09, FE-06. **Modules:** `src/features/rooms/`,
+- **Objective:** the "Group — your mood tonight" board. **Deps:** FE-09, FE-06, BE-09a. **Modules:** `src/features/rooms/`,
   `src/mocks/`.
-- **Contract:** §6 (`PUT …/mood`).
-- **Scope:** in: `MoodPicker`, "How long can you stay up?", hard nos (marked private), "I'm ready", who's ready.
-- **Acceptance:** with mocks: submit → ready. **Tests:** submit + ready state.
+- **Contract:** §6 (`PUT …/mood` → `RoomMoodDto`).
+- **Scope:** in: `MoodPicker`, "How long can you stay up?", hard nos (marked private), "I'm ready", who's ready;
+  ADR-0022 copy with "your vibe for tonight".
+- **Acceptance:** with mocks: submit → ready; `mood.unclear` and `textIgnored` handled as in FE-06.
+  **Tests:** submit + ready state; `mood.unclear`.
 
 ### FE-11 — Group swipe and result · `Todo`
 - **Objective:** the "Group — swipe", "It's a match" and "Close call" boards, and the desktop group swipe.
@@ -479,6 +502,16 @@ lint, test, build.
 - **Contract:** §4, §5, §8.
 - **Scope:** in: phone viewport, Fake providers: register → Just swipe → swipe 3 cards → film details. Out: rooms (later).
 - **Acceptance:** green in CI with no external network.
+
+### OPS-04 — Mood input guard: decision and contract (ADR-0022) · `Done`
+- **Objective:** decide how unclear, off-topic and injected mood text is handled, end to end, before BE-09 / FE-06.
+- **Deps:** OPS-01. **Modules:** `docs/decisions/0022-mood-input-guard.md`, `docs/api-contract.md`, `docs/ai.md`,
+  `docs/backlog.md`.
+- **Contract:** §2 (`mood.unclear`), §5 (`MoodQueryDto.textIgnored`), §6 (`PUT /api/rooms/{code}/mood` → `RoomMoodDto`).
+- **Scope:** in: ADR, design contract, AI doc, new task BE-09a, scope of BE-09 / BE-11 / FE-06 / FE-10. Out: code (BE-09a,
+  BE-09).
+- **Acceptance:** the four rows of ADR-0022's table are in the contract; FE-06 / FE-10 depend on BE-09a.
+- **Tests:** none (docs).
 
 ### BE-17 — Remove the contract-stub plumbing · `Todo`
 - **Objective:** no stubs left. **Deps:** BE-12, BE-14, BE-15, BE-16. **Modules:** `ErrorCodes.cs`,

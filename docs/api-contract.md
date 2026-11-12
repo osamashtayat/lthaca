@@ -61,6 +61,7 @@ BE-01 adds all of them at once, so mocks and screens can use them from day one.
 | 409 | `room.invalid_state` | action not allowed in the room's current `status` (e.g. vote in the lobby, start twice) |
 | 409 | `room.no_result` | result requested before there is one |
 | 422 | `deck.no_yeses` | top 3 requested before any right swipe |
+| 422 | `mood.unclear` | mood text isn't a mood (unclear or off-topic) and no chips were tapped; nothing created (ADR-0022) |
 | 422 / 502 / 503 | `ai.refused` / `ai.invalid_output` / `ai.unavailable` | mood parsing failed — exist (docs/ai.md) |
 | 501 | `server.not_implemented` | contract stub: the endpoint exists, its backlog task hasn't landed (BE-01) |
 | 503 | `tmdb.unavailable` | trailer lookup failed and nothing is cached — exists |
@@ -138,7 +139,7 @@ A solo deck belongs to one user. "Just swipe" starts with a varied **sampler** a
 
 | Method & path | Access | Body | Success | Errors |
 |---|---|---|---|---|
-| `POST /api/decks` | user | `CreateDeckRequest` | 201 `DeckDto` (first batch), `Location: /api/decks/{id}` | 400, 401, mood: 422 `ai.refused`, 502 `ai.invalid_output`, 503 `ai.unavailable` |
+| `POST /api/decks` | user | `CreateDeckRequest` | 201 `DeckDto` (first batch), `Location: /api/decks/{id}` | 400, 401, mood: 422 `mood.unclear` / `ai.refused`, 502 `ai.invalid_output`, 503 `ai.unavailable` |
 | `GET /api/decks/{deckId}` | user | — | 200 `DeckDto` | 401, 404 `deck.not_found` |
 | `POST /api/decks/{deckId}/items` | user | — | 200 `DeckItemDto[]` (next batch; `[]` = nothing left) | 401, 404 |
 | `POST /api/decks/{deckId}/swipes` | user | `SwipeRequest` | 204 | 400, 401, 404 `deck.not_found` / `deck.item_not_found`, 409 `deck.already_swiped` |
@@ -153,8 +154,11 @@ type MoodInput  = {
   text: string | null;           // "Describe it your way", ≤ 280 chars — user text goes to the LLM, nothing else (docs/ai.md)
 }
 type CreateDeckRequest = { source: DeckSource; mood: MoodInput | null }   // mood required iff source = "mood" (400 errors.mood)
-type MoodQueryDto = MoodInput & { id: string; filters: MoodFiltersDto }
-type MoodFiltersDto = {           // the validated output of mood-parse.v1 (MoodParseOutput), after our own checks
+type MoodQueryDto = MoodInput & {
+  id: string; filters: MoodFiltersDto;
+  textIgnored: boolean;   // true: the text wasn't a mood, so only the chips were used (ADR-0022)
+}
+type MoodFiltersDto = {           // the validated output of mood-parse (MoodParseOutput), after our own checks
   includeGenres: string[]; excludeGenres: string[]; maxRuntimeMinutes: number | null;
   minReleaseYear: number | null; maxReleaseYear: number | null; keywords: string[];
 }
@@ -175,8 +179,11 @@ Rules (server-side; the UI never decides them):
   separate button on the card (`PUT`/`DELETE /api/library/{tmdbId}/watchlist`, §7).
 - The top 3 is chosen from the deck's right swipes only. Until BE-13 (Wikidata-based ranking/explanations) it is
   ordered by our own data (genre fit with the mood/swipes, then TMDB popularity) with `reason = null`.
-- Mood chips map to our genres/filters on the server; free `text` goes through `mood-parse.v1`. `language` and
+- Mood chips map to our genres/filters on the server; free `text` goes through `mood-parse.v2`. `language` and
   `maxRuntime` are plain filters, not LLM input.
+- **Unclear, off-topic or injected text (ADR-0022):** empty text makes no LLM call. Text the model labels `unclear` or
+  `offTopic` → with chips: the deck is built from the chips and `mood.textIgnored = true`; without chips: 422
+  `mood.unclear`, nothing created. No response or log ever repeats the user's text.
 - Solo decks require a signed-in user; no anonymous "Just swipe" (A3, decided).
 - Routes (A4, decided): `/mood` (picker), `/deck/:deckId` (swipe), `/deck/:deckId/top` (top 3; it belongs to a deck,
   "from 14 swipes").
@@ -193,7 +200,7 @@ match or best compromise. Codes look like `POP-428` (3 letters, dash, 3 digits),
 | `GET /api/rooms/{code}/preview` | anon | — | 200 `RoomPreviewDto` | 404 `room.not_found` |
 | `POST /api/rooms/{code}/join` | anon | `JoinRoomRequest` | 200 `RoomDto` (+ guest cookie when anonymous) | 400, 404, 409 `room.closed` / `room.full` |
 | `GET /api/rooms/{code}` | member | — | 200 `RoomDto` | 401, 403 `room.not_member`, 404 |
-| `PUT /api/rooms/{code}/mood` | member | `SetRoomMoodRequest` | 200 `RoomMemberDto` (now ready) | 400, 401, 403, 404, 409 `room.invalid_state`, ai errors |
+| `PUT /api/rooms/{code}/mood` | member | `SetRoomMoodRequest` | 200 `RoomMoodDto` (now ready) | 400, 401, 403, 404, 409 `room.invalid_state`, 422 `mood.unclear` / `ai.refused`, 502, 503 |
 | `POST /api/rooms/{code}/start` | host | — | 200 `RoomDto` (`status: "swiping"`) | 401, 403 `room.not_host`, 404, 409 `room.invalid_state` |
 | `GET /api/rooms/{code}/deck?fromPosition=0` | member | — | 200 `DeckItemDto[]` (`swipe` = my vote) | 401, 403, 404, 409 `room.invalid_state` (lobby) |
 | `POST /api/rooms/{code}/votes` | member | `CastVoteRequest` | 204 | 400, 401, 403, 404 / `deck.item_not_found`, 409 `room.already_voted` / `room.invalid_state` / `room.closed` |
@@ -209,6 +216,7 @@ type RoomStatus = "lobby" | "swiping" | "result" | "closed"
 type CreateRoomRequest = { name: string; mode: RoomMode; startsAt: string | null }   // name 1–40 ("Friday Film Club")
 type JoinRoomRequest   = { displayName: string | null }   // required (1–30) when anonymous; ignored for users
 type SetRoomMoodRequest = { moods: Mood[]; maxRuntime: RuntimeLimit; hardNos: HardNo[]; text: string | null }
+type RoomMoodDto = { member: RoomMemberDto; textIgnored: boolean }   // textIgnored is only ever sent to that member (ADR-0022)
 type CastVoteRequest   = { voteId: string; deckItemId: string; direction: SwipeDirection; seenVerdict: SeenVerdict | null }
 
 type RoomMemberDto = { id: string; displayName: string; kind: "user" | "guest"; isHost: boolean; isReady: boolean; joinedAt: string }
