@@ -136,6 +136,8 @@ Layout vars: `--header-height` 64px (phones) / `--header-height-lg` 76px, `--con
 `--touch-target` 44px.
 `npm run lint:tokens` rejects hex/rgb literals and Tailwind default palette classes in `.ts/.tsx`.
 
+Use the kit (`@/shared/ui`: `Button`, `IconButton`, `ToggleChip`, `Sheet`…) instead of hand-styled `<button>`s or dialogs; extend a kit piece rather than copying it.
+
 ## Layout and responsiveness
 - Mobile first: write for 375px, add `md:`/`lg:` overrides. Breakpoints: `sm` 30rem, `md` 48rem, `lg` 64rem, `xl` 80rem.
 - Navigation: top header (wordmark · ☰; no bell until notifications exist, ADR-0014). Every page shows the TMDB attribution footer (`AppFooter`). The ☰ opens `MenuSheet` (native modal `<dialog>`); from `lg` the main items

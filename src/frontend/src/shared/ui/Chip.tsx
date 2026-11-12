@@ -1,10 +1,10 @@
 import type { ComponentProps } from 'react'
 
-const base = 'inline-flex min-h-8 items-center rounded-full border-2 border-ink px-3.5 text-sm font-bold'
+const base = 'inline-flex items-center rounded-full border-2 border-ink px-3.5 text-sm font-bold'
 
 /** A static tag (genre, year). Not interactive: use ToggleChip for a choice. */
 export function Chip({ className = '', ...props }: ComponentProps<'span'>) {
-  return <span className={`${base} bg-cream ${className}`} {...props} />
+  return <span className={`${base} min-h-8 bg-cream ${className}`} {...props} />
 }
 
 type ToggleChipProps = Omit<ComponentProps<'button'>, 'aria-pressed'> & { selected: boolean }

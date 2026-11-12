@@ -51,4 +51,19 @@ describe('Sheet', () => {
     )
     expect(screen.queryByRole('dialog')).toBeNull()
   })
+
+  it('calls onClose exactly once when the parent closes it', () => {
+    const onClose = vi.fn<() => void>()
+    const { rerender } = render(
+      <Sheet open onClose={onClose} title="Filters">
+        body
+      </Sheet>,
+    )
+    rerender(
+      <Sheet open={false} onClose={onClose} title="Filters">
+        body
+      </Sheet>,
+    )
+    expect(onClose).not.toHaveBeenCalled()
+  })
 })
