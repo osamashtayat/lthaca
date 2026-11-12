@@ -53,6 +53,14 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
 - After parsing, the feature service validates meaning: genres from our list only, `tmdbId ∈ candidates`, hard no's removed.
   The model's output is advice, never trusted data.
 
+## Unclear, off-topic and injected text (ADR-0022)
+- `mood-parse.v2` returns `intent`: `mood` | `unclear` | `offTopic`. The model only labels the text; instructions inside it
+  ("ignore your rules", fake `SYSTEM:` lines, closing tags) are `offTopic` and never followed. Filters are empty unless
+  `intent` is `mood`.
+- The mood service decides: chips + non-mood text → chips only, `textIgnored: true`; no chips + non-mood text → 422
+  `mood.unclear`; empty text → no LLM call. Real refusals stay `ai.refused`.
+- Never repeat the user's text in a response, message or log; user-facing copy says "we", never "the AI".
+
 ## Embeddings and similarity (ADR-0002, ADR-0013)
 - One vector per film in `films.embedding` (`vector(1024)`, HNSW cosine index) plus `films.embedding_model`.
 - Filled by the catalog sync when `CatalogSync:EmbedOverviews` is on (off: ADR-0017). The sync re-embeds a film when its
@@ -74,7 +82,10 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
 ## Evals (`evals/`)
 - `evals/cases/*.json`, one case per file:
   `id`, `description`, `prompt` (`name.vN`), `variables`, `input` or `candidates` (TMDB ids), `recordedResponse`, `checks[]`.
-- Check types (`EvalChecks.cs`): `validJson`, `excludesGenre`, `doesNotIncludeGenre`, `idsFromCandidates`, `excludesTmdbId`.
+- Check types (`EvalChecks.cs`): `validJson`, `excludesGenre`, `doesNotIncludeGenre`, `idsFromCandidates`, `excludesTmdbId`;
+  BE-09 adds `intentIs` and `mustNotContain` (text that must not appear anywhere in the reply).
+- Each case has a `kind`: `representative`, `edge` or `adversarial` (BE-09); the runner reports counts per kind. A
+  prompt's suite covers all three, e.g. mood-parse: ~10 / ~5 / ~5 (ADR-0022).
 - **Replay mode (default):** the recorded reply is checked. No network, safe for CI.
 - **Live mode (`-- --live`):** the configured `ILlmClient` answers and the reply is printed. With `Fake` the cases are expected
   to fail (no intelligence); with Anthropic this is the quality gate before shipping a prompt version. Live runs cost money.
