@@ -29,7 +29,10 @@ export const routes: RouteObject[] = [
       { path: '/films/:tmdbId', element: <FilmPage /> },
       // Dev builds only: the import is dynamic, so production bundles don't contain the page at all.
       ...(import.meta.env.DEV
-        ? [{ path: '/dev/status', lazy: async () => ({ Component: (await import('@/app/dev/DevStatusPage')).DevStatusPage }) }]
+        ? [
+            { path: '/dev/status', lazy: async () => ({ Component: (await import('@/app/dev/DevStatusPage')).DevStatusPage }) },
+            { path: '/dev/ui', lazy: async () => ({ Component: (await import('@/app/dev/UiGalleryPage')).UiGalleryPage }) },
+          ]
         : []),
       { path: '*', element: <NotFoundPage /> },
     ],
