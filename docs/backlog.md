@@ -138,7 +138,7 @@ lint, test, build.
 
 ## Auth
 
-### BE-02 — Users, guests, session and antiforgery (ADR-0012) · `Todo`
+### BE-02 — Users, guests, session and antiforgery (ADR-0012) · `In progress`
 - **Objective:** cookie auth for users, the guest principal plumbing, `/api/auth/*`, antiforgery (FlowOps' XSRF pattern).
 - **Deps:** BE-01. **Modules:** `Infrastructure/Identity` (or `Persistence`), `Application/Users`,
   `Api/Controllers/AuthController.cs`, `Program.cs`, migration.
