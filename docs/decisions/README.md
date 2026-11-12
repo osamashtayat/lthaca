@@ -28,3 +28,4 @@ ADRs marked *deviation* record where Ithaca differs from the FlowOps reference p
 | [0020](0020-msw-mock-api.md) | Mock API with MSW for the dev server and Vitest (deviation from FlowOps: mocks everything when on) |
 | [0021](0021-contract-first-parallel-agents.md) | Contract first, one task per branch and worktree, backend and frontend agents in parallel |
 | [0022](0022-mood-input-guard.md) | Unclear, off-topic and injected mood text: the model labels, the server decides, chips win |
+| [0023](0023-auth-as-built.md) | Auth as built: 30-day sliding sessions, Lax cookies, no antiforgery exemption, guests in the Identity scheme |
