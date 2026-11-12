@@ -15,6 +15,9 @@ public static class ErrorStatusCodes
         [ErrorCodes.FilmNotFound] = StatusCodes.Status404NotFound,
         [ErrorCodes.Conflict] = StatusCodes.Status409Conflict,
         [ErrorCodes.AiInvalidOutput] = StatusCodes.Status502BadGateway,
+        [ErrorCodes.AiUnavailable] = StatusCodes.Status503ServiceUnavailable,
+        [ErrorCodes.AiRefused] = StatusCodes.Status422UnprocessableEntity,
+        [ErrorCodes.TmdbUnavailable] = StatusCodes.Status503ServiceUnavailable,
         [ErrorCodes.ServerError] = StatusCodes.Status500InternalServerError,
     };
 

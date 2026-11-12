@@ -1,4 +1,6 @@
+using Anthropic;
 using Ithaca.Application.Ai;
+using Ithaca.Application.Catalog;
 using Ithaca.Application.Common;
 using Ithaca.Application.Tmdb;
 using Ithaca.Infrastructure.Ai;
@@ -36,37 +38,52 @@ public static class DependencyInjection
 
         services.AddExternalClients(configuration);
 
+        // CatalogSyncOptions lives with its consumer (Application) but is bound here: AddApplication takes no configuration.
         services.AddValidatedOptions<CatalogSyncOptions>(configuration);
         services.AddHostedService<CatalogSyncJob>();
         return services;
     }
 
     /// <summary>
-    /// TMDB, LLM and embedding clients, each picked by config. Only the Fake implementations exist yet; selecting a real
-    /// provider fails at startup with a clear message until its client is built (docs/ai.md, "Adding a provider").
+    /// TMDB, LLM and embedding clients, each picked by config (docs/ai.md). Built: Fake everywhere, Anthropic (LLM), Http (TMDB).
+    /// A real provider without its key, or a provider that isn't built, fails at startup with a clear message.
     /// </summary>
     private static void AddExternalClients(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddValidatedOptions<AiOptions>(configuration)
-            .Validate(o => o.LlmProvider == LlmProvider.Fake, "Ai:LlmProvider: only 'Fake' is implemented so far.")
-            .Validate(o => o.EmbeddingProvider == EmbeddingProvider.Fake, "Ai:EmbeddingProvider: only 'Fake' is implemented so far.");
+            .Validate(o => o.LlmProvider is LlmProvider.Fake or LlmProvider.Anthropic, "Ai:LlmProvider: only 'Fake' and 'Anthropic' are implemented.")
+            .Validate(o => o.LlmProvider != LlmProvider.Anthropic || !string.IsNullOrWhiteSpace(o.ApiKey), "Ai:ApiKey is required when Ai:LlmProvider is 'Anthropic' (user-secrets or Ai__ApiKey).")
+            .Validate(o => o.EmbeddingProvider == EmbeddingProvider.Fake, "Ai:EmbeddingProvider: only 'Fake' is implemented so far (Voyage: ADR-0013).");
         services.AddValidatedOptions<TmdbOptions>(configuration)
-            .Validate(o => o.Client == TmdbClientKind.Fake, "Tmdb:Client: only 'Fake' is implemented so far.");
+            .Validate(o => o.Client != TmdbClientKind.Http || !string.IsNullOrWhiteSpace(o.ApiKey), "Tmdb:ApiKey is required when Tmdb:Client is 'Http' (user-secrets or Tmdb__ApiKey).");
 
         services.AddSingleton<IPromptLibrary, FilePromptLibrary>();
+
+        // The SDK client is created only when it's used, so Fake setups need no key.
+        services.AddSingleton(sp => new AnthropicClient { ApiKey = sp.GetRequiredService<IOptions<AiOptions>>().Value.ApiKey });
+        services.AddSingleton<AnthropicLlmClient>();
         services.AddSingleton<ILlmClient>(sp => sp.GetRequiredService<IOptions<AiOptions>>().Value.LlmProvider switch
         {
             LlmProvider.Fake => new FakeLlmClient(),
+            LlmProvider.Anthropic => sp.GetRequiredService<AnthropicLlmClient>(),
             var other => throw NotImplemented("LLM", other),
         });
+
         services.AddSingleton<IEmbeddingClient>(sp => sp.GetRequiredService<IOptions<AiOptions>>().Value.EmbeddingProvider switch
         {
             EmbeddingProvider.Fake => new FakeEmbeddingClient(),
             var other => throw NotImplemented("embedding", other),
         });
-        services.AddSingleton<ITmdbClient>(sp => sp.GetRequiredService<IOptions<TmdbOptions>>().Value.Client switch
+
+        services.AddHttpClient<TmdbHttpClient>((sp, http) =>
+        {
+            http.BaseAddress = new Uri(sp.GetRequiredService<IOptions<TmdbOptions>>().Value.BaseUrl);
+            http.Timeout = TimeSpan.FromSeconds(20);
+        });
+        services.AddTransient<ITmdbClient>(sp => sp.GetRequiredService<IOptions<TmdbOptions>>().Value.Client switch
         {
             TmdbClientKind.Fake => new FakeTmdbClient(),
+            TmdbClientKind.Http => sp.GetRequiredService<TmdbHttpClient>(),
             var other => throw NotImplemented("TMDB", other),
         });
     }

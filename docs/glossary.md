@@ -6,7 +6,7 @@ Use these names exactly in code (types, tables, routes, UI copy where it fits). 
 |---|---|---|
 | `User` | A registered person. | Auth design not decided yet. |
 | `Guest` | Someone who joined a room from a shared link without an account. | Can vote in that room only. |
-| `Film` | A movie in **our** catalog, synced nightly from TMDB, with an embedding. | Public id is `TmdbId`. Table `films`. Built. |
+| `Film` | A movie in **our** catalog, synced from TMDB, with an optional embedding and the model that made it. | Public id is `TmdbId`. Table `films`. Refreshed at least every 180 days (TMDB terms). |
 | `UserFilm` | A user's relation to a film: liked, watchlist, watching, seen, personal rating. | Powers "My Cinema" (Library). |
 | `Room` | A group session with one shared deck, joined by link or code. | Stored in the DB; real-time via RoomHub. |
 | `RoomMember` | A `User` or `Guest` in a `Room`. | Host is a member with extra rights. |

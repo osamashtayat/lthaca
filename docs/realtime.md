@@ -20,8 +20,8 @@ Payloads carry ids, never whole objects or other members' votes; the client fetc
 authorization stays in one place. Group name per room: `RoomEvents.GroupFor(roomId)` → `room:<guid>`.
 
 ## Server rules
-- `RoomHub` is anonymous (guests have no account). The rooms feature decides how a connection proves membership
-  (e.g. a signed room/guest token passed to a `JoinRoom` hub method) — open decision, see the report.
+- Auth (ADR-0012): users and guests both carry a cookie principal (a guest's is scoped to one room). A `JoinRoom(code)` hub
+  method asks a service to confirm the caller is a `RoomMember` before adding the connection to the room's group.
 - Hub methods are thin: call one Application service, return. Group membership changes happen only after the service
   confirmed the member.
 - Services publish through `IRoomEventPublisher.PublishAsync(roomId, RoomEvents.X, payload, ct)` **after** `SaveChangesAsync`.
@@ -32,7 +32,8 @@ authorization stays in one place. Group name per room: `RoomEvents.GroupFor(room
 - `useRoomHub({ enabled, handlers })` is the only hub access. It opens one connection per mounted screen, auto-reconnects
   (0, 2, 10, 30 s) and reports `connecting | connected | reconnecting | disconnected`.
 - Handlers invalidate TanStack Query keys; on reconnect, invalidate the room's queries (events may have been missed).
-- Votes and swipes are sent as HTTP mutations (retry 0), not hub calls, unless a later ADR decides otherwise.
+- Votes and swipes are HTTP mutations (retry 0) with a client-generated id, never hub calls (ADR-0015).
+- Scaling out needs a SignalR backplane first (ADR-0016).
 
 ## Transport
 Same origin: Vite proxies `/hubs` with `ws: true` in dev; nginx forwards WebSocket upgrades in Docker.

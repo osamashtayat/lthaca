@@ -1,9 +1,9 @@
 import { Link, NavLink } from 'react-router'
-import { BellIcon, MenuIcon, Wordmark } from '@/shared/ui'
+import { MenuIcon, Wordmark } from '@/shared/ui'
 import { NAV_ITEMS } from './navigation'
 
 /**
- * Top header (never a bottom tab bar). Phones: wordmark · bell · ☰. From `lg` the main items become pills.
+ * Top header (never a bottom tab bar). Phones: wordmark · ☰ (no bell until notifications exist, ADR-0014). From `lg` the main items become pills.
  * Structure only — visual polish follows the design canvas in the screens' own tasks.
  */
 export function AppHeader({ menuOpen, onOpenMenu }: { menuOpen: boolean; onOpenMenu: () => void }) {
@@ -28,9 +28,6 @@ export function AppHeader({ menuOpen, onOpenMenu }: { menuOpen: boolean; onOpenM
         </nav>
 
         <div className="ml-auto flex items-center gap-2.5">
-          <Link to="/updates" aria-label="Updates" className="flex size-11 items-center justify-center rounded-full text-ink">
-            <BellIcon />
-          </Link>
           <button
             type="button"
             onClick={onOpenMenu}

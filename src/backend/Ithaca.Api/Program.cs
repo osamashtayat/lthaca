@@ -5,10 +5,14 @@ using Ithaca.Api.OpenApi;
 using Ithaca.Application;
 using Ithaca.Application.Realtime;
 using Ithaca.Infrastructure;
+using Ithaca.Infrastructure.Jobs;
 using Ithaca.Infrastructure.Seeding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 
-var builder = WebApplication.CreateBuilder(args);
+// `--sync-catalog`: run one TMDB catalog sync and exit (a switch, not configuration; removed before config reads args).
+const string SyncCatalogFlag = "--sync-catalog";
+var syncCatalog = args.Contains(SyncCatalogFlag, StringComparer.Ordinal);
+var builder = WebApplication.CreateBuilder(args.Where(a => a != SyncCatalogFlag).ToArray());
 
 // Structured logs: the built-in JSON console formatter (no Serilog).
 builder.Logging.ClearProviders();
@@ -37,6 +41,12 @@ builder.Services.AddSignalR(options => options.EnableDetailedErrors = false)
 builder.Services.AddSingleton<IRoomEventPublisher, SignalRRoomEventPublisher>();
 
 var app = builder.Build();
+
+if (syncCatalog)
+{
+    Environment.ExitCode = await CatalogSyncCommand.RunAsync(app.Services, CancellationToken.None);
+    return;
+}
 
 if (app.Environment.IsDevelopment())
 {

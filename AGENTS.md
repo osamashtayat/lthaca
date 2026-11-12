@@ -35,6 +35,9 @@ dotnet tool restore                           # once: dotnet-ef
 dotnet ef migrations add <Name> --project src/backend/Ithaca.Infrastructure --startup-project src/backend/Ithaca.Api --output-dir Migrations
 dotnet ef database update --project src/backend/Ithaca.Infrastructure --startup-project src/backend/Ithaca.Api
 
+dotnet run --project src/backend/Ithaca.Api -- --sync-catalog   # one TMDB catalog sync, then exit
+dotnet user-secrets --project src/backend/Ithaca.Api set "Ai:ApiKey" "…"   # keys: user-secrets locally, .env in Docker (docs/ai.md)
+
 ./scripts/export-openapi.sh                   # after any API change → contracts/openapi.json
 cd src/frontend && npm run api:types          # then regenerate src/shared/api/schema.d.ts
 
@@ -42,7 +45,7 @@ dotnet run --project evals/Ithaca.Evals                 # AI evals, recorded rep
 dotnet run --project evals/Ithaca.Evals -- --live       # AI evals against the configured provider
 ```
 
-Plumbing check page: `/dev/status` (API health + RoomHub connection). Reference slice: `/films/550`.
+Plumbing check page: `/dev/status` on the Vite dev server only (:5273; not in production builds). Reference slice: `/films/550`.
 
 ## 2. Architecture rules
 
@@ -55,6 +58,7 @@ Plumbing check page: `/dev/status` (API health + RoomHub connection). Reference 
 - **One way for each concern:** paging → `PageRequest` / `Paging.ToPagedResultAsync`; config → an `IConfigSection` options class + `AddValidatedOptions<T>()`; DI → `AddApplication()` / `AddInfrastructure()` (one line per service); errors → `Result` + the global `ProblemDetailsExceptionHandler`; time → `TimeProvider`; ids → `SequentialGuid.NewV7`.
 - **AI behind interfaces.** Prompts are files `prompts/<name>.v<N>.md`; outputs are parsed with `StructuredOutput.Parse<T>` into typed records. Every film id the LLM returns must be validated against the candidate list we sent.
 - **Runtime film data comes from our `films` table.** TMDB is only for the nightly sync and cached details (trailers).
+- **TMDB terms (ADR-0017, pending):** don't send TMDB-derived text to the LLM or the embedding model until the owner decides; keep the footer attribution.
 
 ### Backend — don't
 - No `DbContext`, `if` business rules, try/catch, or mapping in controllers or hubs.
@@ -89,7 +93,7 @@ Plumbing check page: `/dev/status` (API health + RoomHub connection). Reference 
 | a feature page | `/new-feature`: page in `src/features/<f>/pages/`, hook in `api/`, keys in `shared/query/queryKeys.ts`, export from `index.ts`, swap the `PlaceholderPage` route in `src/app/routes.tsx` |
 | a real-time event | name in `contracts/realtime-events.json` **and** `RoomEvents.cs` → publish from a service via `IRoomEventPublisher` after commit → handle with `useRoomHub({ handlers })` |
 | a prompt / AI call | `prompts/<name>.v1.md` + id in `Prompts` + output record in `Ithaca.Application/Ai/` + an eval case in `evals/cases/` |
-| an external provider | implement the interface in `Ithaca.Infrastructure/<Area>/`, add it to the config switch in `DependencyInjection.cs`, drop the "only Fake" startup check for it |
+| an external provider | implement the interface in `Ithaca.Infrastructure/<Area>/`, add it to the config switch in `DependencyInjection.cs`, extend its startup validation (allowed + key required) — docs/ai.md |
 | a config section | options class implementing `IConfigSection` next to its consumer + `AddValidatedOptions<T>()` + defaults in `appsettings.json`, secrets in `.env.example` (placeholder) |
 
 ## 4. Process

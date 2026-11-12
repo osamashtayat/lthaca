@@ -1,7 +1,6 @@
 import type { RouteObject } from 'react-router'
 import { AppShell } from '@/app/layout/AppShell'
 import { PlaceholderPage } from '@/app/PlaceholderPage'
-import { DevStatusPage } from '@/app/dev/DevStatusPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { FilmPage } from '@/features/films'
 
@@ -25,11 +24,13 @@ export const routes: RouteObject[] = [
       { path: '/browse', element: <PlaceholderPage title="Browse" feature="browse" /> },
       { path: '/import', element: <PlaceholderPage title="Import from Letterboxd" feature="import" /> },
       { path: '/profile', element: <PlaceholderPage title="Profile & settings" feature="profile" /> },
-      { path: '/updates', element: <PlaceholderPage title="Updates" feature="(open question: notifications)" /> },
       { path: '/sign-in', element: <PlaceholderPage title="Welcome" feature="auth" /> },
       // Reference slice: the one real page.
       { path: '/films/:tmdbId', element: <FilmPage /> },
-      { path: '/dev/status', element: <DevStatusPage /> },
+      // Dev builds only: the import is dynamic, so production bundles don't contain the page at all.
+      ...(import.meta.env.DEV
+        ? [{ path: '/dev/status', lazy: async () => ({ Component: (await import('@/app/dev/DevStatusPage')).DevStatusPage }) }]
+        : []),
       { path: '*', element: <NotFoundPage /> },
     ],
   },

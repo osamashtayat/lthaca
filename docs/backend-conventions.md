@@ -36,7 +36,8 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
 - `IAppDbContext` exposes a `DbSet` per aggregate; no repositories (ADR-0001).
 - Reads: `AsNoTracking()` + `Select(new XDto(...))`, order before paging, `Paging.ToPagedResultAsync(page, ct)` for lists
   (`PageRequest` is the base of every list query; `PagedResult<T>` is the response).
-- Writes: load, call entity methods, `SaveChangesAsync` **once**, then publish realtime.
+- Writes: load, call entity methods, `SaveChangesAsync` **once**, then publish realtime. Exception: a resumable batch job
+  (e.g. `CatalogSyncService`) may save once per batch; say so in the service's doc comment.
 - Configurations: `Infrastructure/Persistence/Configurations/<Entity>Configuration.cs`, explicit table and index names,
   snake_case via `EFCore.NamingConventions`. Vectors: `HasColumnType($"vector({N})")` + converter from `float[]` + HNSW index.
 - Migrations: `/new-migration` or AGENTS.md §1. Generated files are `generated_code` in `.editorconfig`; never edit an

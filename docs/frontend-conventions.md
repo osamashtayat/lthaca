@@ -56,7 +56,7 @@ Layout vars: `--header-height` 64px (phones) / `--header-height-lg` 76px, `--con
 
 ## Layout and responsiveness
 - Mobile first: write for 375px, add `md:`/`lg:` overrides. Breakpoints: `sm` 30rem, `md` 48rem, `lg` 64rem, `xl` 80rem.
-- Navigation: top header (wordmark · bell · ☰). The ☰ opens `MenuSheet` (native modal `<dialog>`); from `lg` the main items
+- Navigation: top header (wordmark · ☰; no bell until notifications exist, ADR-0014). Every page shows the TMDB attribution footer (`AppFooter`). The ☰ opens `MenuSheet` (native modal `<dialog>`); from `lg` the main items
   show as pills in the header. Items are defined once in `app/layout/navigation.ts`. No bottom tab bar.
 - Deck gestures own the lower screen; toasts sit top-center.
 
