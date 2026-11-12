@@ -1,7 +1,9 @@
+using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
 using Ithaca.Api.OpenApi;
 using Ithaca.Application.Common;
 using Ithaca.Application.Library;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ithaca.Api.Controllers;
@@ -10,6 +12,7 @@ namespace Ithaca.Api.Controllers;
 [ApiController]
 [Route("api/library")]
 [Tags("Library")]
+[Authorize(Policy = AuthPolicies.User)]
 public sealed class LibraryController(LibraryService library) : ControllerBase
 {
     [HttpGet]

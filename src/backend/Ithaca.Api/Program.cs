@@ -1,4 +1,5 @@
 using Ithaca.Api;
+using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
 using Ithaca.Api.Hubs;
 using Ithaca.Api.OpenApi;
@@ -29,11 +30,14 @@ builder.Services
     {
         options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider());
         options.ModelMetadataDetailsProviders.Add(new CamelCaseBindingMetadataProvider());
+        options.Filters.Add<ValidateAntiforgeryFilter>();
+        options.Conventions.Add(new AntiforgeryResponseConvention());
     })
     .AddJsonOptions(options => JsonSetup.Configure(options.JsonSerializerOptions));
 builder.Services.ConfigureHttpJsonOptions(options => JsonSetup.Configure(options.SerializerOptions));
 builder.Services.AddIthacaProblemDetails();
 builder.Services.AddIthacaOpenApi();
+builder.Services.AddIthacaAuth(builder.Environment);
 
 // Layer registrations: one extension method per layer (docs/backend-conventions.md).
 builder.Services.AddApplication();
@@ -60,6 +64,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<RoomHub>(RoomEvents.HubPath);

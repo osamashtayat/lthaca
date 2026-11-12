@@ -1,6 +1,8 @@
+using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
 using Ithaca.Api.OpenApi;
 using Ithaca.Application.Decks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ithaca.Api.Controllers;
@@ -9,6 +11,7 @@ namespace Ithaca.Api.Controllers;
 [ApiController]
 [Route("api/decks")]
 [Tags("Decks")]
+[Authorize(Policy = AuthPolicies.User)]
 public sealed class DecksController(DeckService decks) : ControllerBase
 {
     [HttpPost]

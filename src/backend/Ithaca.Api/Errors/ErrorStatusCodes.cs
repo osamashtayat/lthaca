@@ -49,6 +49,8 @@ public static class ErrorStatusCodes
     public static string DefaultCodeFor(int status) => status switch
     {
         StatusCodes.Status400BadRequest => ErrorCodes.Validation,
+        StatusCodes.Status401Unauthorized => ErrorCodes.AuthUnauthenticated,
+        StatusCodes.Status403Forbidden => ErrorCodes.AuthForbidden,
         StatusCodes.Status404NotFound => ErrorCodes.NotFound,
         StatusCodes.Status409Conflict => ErrorCodes.Conflict,
         >= 500 => ErrorCodes.ServerError,

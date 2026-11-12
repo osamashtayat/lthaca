@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
 using Ithaca.Api.OpenApi;
 using Ithaca.Application.Decks;
 using Ithaca.Application.Rooms;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ithaca.Api.Controllers;
@@ -14,6 +16,7 @@ namespace Ithaca.Api.Controllers;
 public sealed class RoomsController(RoomService rooms) : ControllerBase
 {
     [HttpPost]
+    [Authorize(Policy = AuthPolicies.User)]
     [ProducesResponseType<RoomDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]

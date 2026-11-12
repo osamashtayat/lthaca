@@ -7,7 +7,8 @@ namespace Ithaca.Tests.Contract;
 
 /// <summary>
 /// BE-01: every first-wave endpoint whose task hasn't landed answers 501 ProblemDetails <c>server.not_implemented</c>.
-/// When a feature task implements an endpoint, it removes that row here and adds its own slice tests.
+/// When a feature task implements an endpoint, it removes that row here and adds its own slice tests. Requests come from
+/// a signed-in browser client (session cookie + XSRF header, BE-02), so access rules don't hide the stub.
 /// </summary>
 [Collection(DatabaseCollectionDefinition.Name)]
 public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsyncLifetime
@@ -18,19 +19,23 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
     private const string Op = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5d";
 
     private IthacaApiFactory _factory = null!;
+    private HttpClient _user = null!;
 
-    public async ValueTask InitializeAsync() => _factory = await IthacaApiFactory.StartAsync(postgres.ConnectionString);
+    public async ValueTask InitializeAsync()
+    {
+        _factory = await IthacaApiFactory.StartAsync(postgres.ConnectionString);
+        _user = await BrowserClient.RegisteredAsync(_factory, TestContext.Current.CancellationToken);
+    }
 
-    public ValueTask DisposeAsync() => _factory.DisposeAsync();
+    public ValueTask DisposeAsync()
+    {
+        _user.Dispose();
+        return _factory.DisposeAsync();
+    }
 
     /// <summary>Method, path, and a valid JSON body (so model validation passes and the stub answers).</summary>
     public static TheoryData<string, string, string?> Stubs => new()
     {
-        { "GET", "/api/auth/me", null },
-        { "POST", "/api/auth/register", """{"email":"ada@example.com","password":"correct horse","displayName":"Ada"}""" },
-        { "POST", "/api/auth/sign-in", """{"email":"ada@example.com","password":"correct horse"}""" },
-        { "POST", "/api/auth/sign-out", null },
-
         { "POST", "/api/decks", """{"source":"mood","mood":{"moods":["cozy"],"maxRuntime":"upTo2h","language":null,"text":null}}""" },
         { "GET", Deck, null },
         { "POST", $"{Deck}/items", null },
@@ -73,7 +78,7 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
             request.Content = new StringContent(body, Encoding.UTF8, "application/json");
         }
 
-        using var response = await _factory.CreateClient().SendAsync(request, TestContext.Current.CancellationToken);
+        using var response = await _user.SendAsync(request, TestContext.Current.CancellationToken);
 
         response.StatusCode.ShouldBe(HttpStatusCode.NotImplemented, await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
@@ -96,7 +101,7 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
     public async Task EnumAsInteger_IsRejected()
     {
         using var content = new StringContent("""{"source":0,"mood":null}""", Encoding.UTF8, "application/json");
-        using var response = await _factory.CreateClient().PostAsync(new Uri("/api/decks", UriKind.Relative), content, TestContext.Current.CancellationToken);
+        using var response = await _user.PostAsync(new Uri("/api/decks", UriKind.Relative), content, TestContext.Current.CancellationToken);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
@@ -106,7 +111,7 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
     {
         // No "direction": must be a 400, never a silent default ("right" would be an unintended yes).
         using var content = new StringContent($$"""{"swipeId":"{{Op}}","deckItemId":"{{Item}}","seenVerdict":null}""", Encoding.UTF8, "application/json");
-        using var response = await _factory.CreateClient().PostAsync(new Uri($"{Deck}/swipes", UriKind.Relative), content, TestContext.Current.CancellationToken);
+        using var response = await _user.PostAsync(new Uri($"{Deck}/swipes", UriKind.Relative), content, TestContext.Current.CancellationToken);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }

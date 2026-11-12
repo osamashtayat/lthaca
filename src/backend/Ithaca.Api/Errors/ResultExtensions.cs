@@ -1,6 +1,7 @@
 using Ithaca.Application.Common;
 using Ithaca.Domain.Errors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Ithaca.Api.Errors;
@@ -35,22 +36,35 @@ public static class ResultExtensions
         return result.IsSuccess ? controller.NoContent() : controller.ToProblem(result.Error);
     }
 
-    private static ActionResult ToProblem(this ControllerBase controller, Error error)
+    private static ObjectResult ToProblem(this ControllerBase controller, Error error) => controller.HttpContext.ToProblemResult(error);
+
+    /// <summary>
+    /// The ProblemDetails response for an error, also for filters that have no controller (antiforgery). Unmapped codes
+    /// are a bug and hide behind 500 <c>server.error</c>, like the exception handler does.
+    /// </summary>
+    public static ObjectResult ToProblemResult(this HttpContext http, Error error)
     {
+        ArgumentNullException.ThrowIfNull(http);
+        ArgumentNullException.ThrowIfNull(error);
         var status = ErrorStatusCodes.For(error.Code);
-        // An unmapped code is a bug: hide it behind server.error, like the exception handler does.
         var hidden = status == StatusCodes.Status500InternalServerError;
         var code = hidden ? ErrorCodes.ServerError : error.Code;
         var detail = hidden ? "An unexpected error occurred." : error.Message;
-        controller.HttpContext.Items[ProblemDetailsSetup.CodeItemKey] = code;
+        http.Items[ProblemDetailsSetup.CodeItemKey] = code;
 
+        var factory = http.RequestServices.GetRequiredService<ProblemDetailsFactory>();
+        ProblemDetails problem;
         if (error.Field is not null && status == StatusCodes.Status400BadRequest)
         {
             var modelState = new ModelStateDictionary();
             modelState.AddModelError(error.Field, error.Message);
-            return controller.ValidationProblem(detail: detail, statusCode: status, modelStateDictionary: modelState);
+            problem = factory.CreateValidationProblemDetails(http, modelState, status, detail: detail);
+        }
+        else
+        {
+            problem = factory.CreateProblemDetails(http, status, detail: detail);
         }
 
-        return controller.Problem(detail: detail, statusCode: status);
+        return new ObjectResult(problem) { StatusCode = status, ContentTypes = { "application/problem+json" } };
     }
 }

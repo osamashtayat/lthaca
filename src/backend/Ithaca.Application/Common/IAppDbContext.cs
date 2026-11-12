@@ -1,4 +1,6 @@
+using Ithaca.Application.Users;
 using Ithaca.Domain.Films;
+using Ithaca.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ithaca.Application.Common;
@@ -11,6 +13,11 @@ namespace Ithaca.Application.Common;
 public interface IAppDbContext
 {
     DbSet<Film> Films { get; }
+
+    /// <summary>Registered users, read-only: accounts are created and changed through <c>ISessionManager</c> (Identity).</summary>
+    IQueryable<UserReadModel> Users { get; }
+
+    DbSet<Guest> Guests { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
