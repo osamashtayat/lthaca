@@ -1,0 +1,62 @@
+/*
+ * Ithaca design tokens — the ONLY place colours, fonts, radii, shadows and breakpoints are defined.
+ * Values come from the Ithaca design canvas. Components use them through Tailwind classes
+ * (bg-cream, text-ink, font-display, shadow-hard, rounded-card…) or var(--…); never raw hex (npm run lint:tokens).
+ */
+@import "tailwindcss";
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource/shrikhand";
+@import "@fontsource/dm-mono/400.css";
+@import "@fontsource/dm-mono/500.css";
+
+@theme {
+  /* Remove Tailwind's default palette so off-brand colours cannot be used. */
+  --color-*: initial;
+
+  /* Brand */
+  --color-cream: #f8f5ec;       /* page background */
+  --color-yellow: #f5d94e;      /* active / highlight */
+  --color-pink: #f04483;        /* accent surfaces, wordmark shadow — NOT for text (contrast) */
+  --color-ink: #242321;         /* text, borders, dark surfaces */
+  --color-beige: #eae3d5;       /* soft panels, segmented controls */
+  --color-pink-text: #c8245f;   /* pink when it must be readable text (links, hover) */
+
+  /* Supporting neutrals used across the canvas */
+  --color-ink-muted: #5b574f;   /* secondary text on cream/beige */
+  --color-line: #d8d0bf;        /* dividers, progress tracks */
+  --color-cream-soft: #e4ded0;  /* secondary text on ink */
+
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* Typography */
+  --font-sans: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif; /* all UI */
+  --font-display: "Shrikhand", "Bricolage Grotesque Variable", serif;              /* wordmark + big moments only */
+  --font-mono: "DM Mono", ui-monospace, monospace;                                /* metadata, labels, counts */
+
+  /* Radius */
+  --radius-control: 14px;  /* buttons, inputs, icon buttons */
+  --radius-tile: 18px;     /* list rows, soft panels */
+  --radius-card: 22px;     /* ticket cards */
+  --radius-hero: 24px;     /* hero card */
+
+  /* Shadows: hard offset, no blur */
+  --shadow-hard: 5px 5px 0 var(--color-ink);
+  --shadow-hard-yellow: 5px 5px 0 var(--color-yellow);
+
+  /* Breakpoints: mobile first. lg = where the ☰ menu becomes header nav pills. */
+  --breakpoint-sm: 30rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+}
+
+:root {
+  --border-ink: 2px;
+  --border-ink-bold: 2.5px;
+  --header-height: 64px;
+  --header-height-lg: 76px;
+  --content-max-width: 1240px;
+  --gutter: 20px;
+  --touch-target: 44px;
+}

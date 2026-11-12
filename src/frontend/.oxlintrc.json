@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc", "jsx-a11y", "vitest"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "react/no-danger": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "warn",
+    "no-console": ["error", { "allow": ["warn", "error"] }],
+    "no-restricted-globals": [
+      "error",
+      { "name": "fetch", "message": "Call the API through src/shared/api/client.ts via a feature api/ hook (docs/frontend-conventions.md)." }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          { "name": "sonner", "message": "Use notify() from @/shared/notify; components never import the toast library." },
+          { "name": "@microsoft/signalr", "message": "Use the hooks in @/shared/realtime; there is one hub connection." },
+          { "name": "openapi-fetch", "message": "Use `api` from @/shared/api/client inside a feature api/ hook." }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    { "files": ["src/shared/api/**"], "rules": { "no-restricted-globals": "off", "no-restricted-imports": "off" } },
+    { "files": ["src/shared/notify/**", "src/shared/realtime/**"], "rules": { "no-restricted-imports": "off" } },
+    { "files": ["scripts/**"], "rules": { "no-console": "off" } }
+  ],
+  "ignorePatterns": ["dist", "src/shared/api/schema.d.ts"]
+}
