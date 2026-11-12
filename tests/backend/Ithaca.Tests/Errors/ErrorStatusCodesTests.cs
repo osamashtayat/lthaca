@@ -22,6 +22,9 @@ public sealed class ErrorStatusCodesTests
         var codes = typeof(ErrorCodes).GetFields(BindingFlags.Public | BindingFlags.Static)
             .Where(f => f.IsLiteral).Select(f => (string)f.GetRawConstantValue()!);
 
-        codes.ShouldAllBe(code => problemTs.Contains($"'{code}'", StringComparison.Ordinal), "Add a user message to problem.ts for every code.");
+        // Keys are either quoted ('film.not_found':) or bare identifiers (validation:).
+        codes.ShouldAllBe(
+            code => problemTs.Contains($"'{code}':", StringComparison.Ordinal) || problemTs.Contains($"\n  {code}:", StringComparison.Ordinal),
+            "Add a user message to src/frontend/src/shared/api/problem.ts for every code.");
     }
 }
