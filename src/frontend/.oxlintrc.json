@@ -22,15 +22,19 @@
         "paths": [
           { "name": "sonner", "message": "Use notify() from @/shared/notify; components never import the toast library." },
           { "name": "@microsoft/signalr", "message": "Use the hooks in @/shared/realtime; there is one hub connection." },
-          { "name": "openapi-fetch", "message": "Use `api` from @/shared/api/client inside a feature api/ hook." }
+          { "name": "openapi-fetch", "message": "Use `api` from @/shared/api/client inside a feature api/ hook." },
+          { "name": "msw", "message": "MSW belongs in src/mocks and src/test only (ADR-0020)." },
+          { "name": "msw/browser", "message": "MSW belongs in src/mocks and src/test only (ADR-0020)." },
+          { "name": "msw/node", "message": "MSW belongs in src/mocks and src/test only (ADR-0020)." }
         ]
       }
     ]
   },
   "overrides": [
     { "files": ["src/shared/api/**"], "rules": { "no-restricted-globals": "off", "no-restricted-imports": "off" } },
+    { "files": ["src/mocks/**", "src/test/**"], "rules": { "no-restricted-imports": "off" } },
     { "files": ["src/shared/notify/**", "src/shared/realtime/**"], "rules": { "no-restricted-imports": "off" } },
     { "files": ["scripts/**"], "rules": { "no-console": "off" } }
   ],
-  "ignorePatterns": ["dist", "src/shared/api/schema.d.ts"]
+  "ignorePatterns": ["dist", "public/mockServiceWorker.js", "src/shared/api/schema.d.ts"]
 }
