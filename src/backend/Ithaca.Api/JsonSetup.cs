@@ -10,8 +10,9 @@ public static class JsonSetup
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        // Enums travel as strings only: an integer such as 99 would otherwise bind to an undefined value.
-        options.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
+        // Enums travel as camelCase strings only ("justSwipe", "notForMe"): an integer such as 99 would otherwise bind to an
+        // undefined value. [JsonStringEnumMemberName] overrides the name where an outside spelling is kept ("YouTube").
+        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
         // Numbers are numbers: the Web default also accepts "1", which would type every integer as number | string.
         options.NumberHandling = JsonNumberHandling.Strict;
     }

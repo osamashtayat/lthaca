@@ -1,0 +1,34 @@
+using System.ComponentModel.DataAnnotations;
+using Ithaca.Application.Decks;
+using Ithaca.Application.Moods;
+
+namespace Ithaca.Application.Rooms;
+
+/// <summary><c>POST /api/rooms</c>, e.g. "Friday Film Club".</summary>
+public sealed record CreateRoomRequest(
+    [Required, StringLength(CreateRoomRequest.NameMaxLength, MinimumLength = 1)] string Name,
+    RoomMode Mode,
+    DateTimeOffset? StartsAt)
+{
+    public const int NameMaxLength = 40;
+}
+
+/// <summary><c>POST /api/rooms/{code}/join</c>. The name is required (1–30) when anonymous and ignored for users (service rule).</summary>
+public sealed record JoinRoomRequest([StringLength(JoinRoomRequest.DisplayNameMaxLength, MinimumLength = 1)] string? DisplayName)
+{
+    public const int DisplayNameMaxLength = 30;
+}
+
+/// <summary><c>PUT /api/rooms/{code}/mood</c>. Hard nos are private to the member.</summary>
+public sealed record SetRoomMoodRequest(
+    [MaxLength(MoodInput.MaxMoods)] IReadOnlyList<Mood> Moods,
+    RuntimeLimit MaxRuntime,
+    IReadOnlyList<HardNo> HardNos,
+    [MaxLength(MoodInput.TextMaxLength)] string? Text);
+
+/// <summary><c>POST /api/rooms/{code}/votes</c>. <see cref="VoteId"/> makes retries idempotent (ADR-0015).</summary>
+public sealed record CastVoteRequest(
+    [Required] Guid VoteId,
+    [Required] Guid DeckItemId,
+    SwipeDirection Direction,
+    SeenVerdict? SeenVerdict);
