@@ -85,7 +85,7 @@ generated types, `ApiError` + `problem.ts`, `notify` (sonner), `useRoomHub`, app
 attribution footer), `PlaceholderPage` for every route, `/dev/status`, `FilmPage` reference slice. Verified: typecheck,
 lint, test, build.
 
-### OPS-01 — Backlog, API contract, MSW mocks, parallel-agent workflow · `In progress` (PR #3)
+### OPS-01 — Backlog, API contract, MSW mocks, parallel-agent workflow · `Done` (PR #3)
 - **Objective:** let a backend and a frontend agent work in parallel without blocking or overwriting each other.
 - **Deps:** BE-00, FE-00. **Modules:** `docs/`, `AGENTS.md`, `CLAUDE.md`, `.claude/commands/`, `src/frontend/src/mocks`,
   `src/frontend/src/test`, `src/frontend` tooling.
@@ -234,11 +234,12 @@ lint, test, build.
 - **Contract:** §5.
 - **Scope:** in: `/deck` starts Just swipe → `/deck/:deckId`; card stack with drag right/left/up plus buttons and keyboard;
   up → Loved it / Not for me / Skip sheet; prefetch the next batch near the end; top 3 at `/deck/:deckId/top`; a reusable
-  `SwipeCard` + `useSwipeGesture` for FE-11; `prefers-reduced-motion`. Out: "learning" chips (P-06), where-to-watch lines.
+  `SwipeCard` + `useSwipeGesture` for FE-11; a watchlist button on the card, separate from the swipe, at the bottom or
+  left of the card (A2; `PUT`/`DELETE /api/library/{tmdbId}/watchlist`); `prefers-reduced-motion`. Out: "learning" chips (P-06), where-to-watch lines.
 - **Acceptance:** with mocks: a full batch by touch, mouse and keyboard; one request per swipe with a stable `swipeId`; a
   failed swipe toasts and the card returns; top 3 shows 1–3 picks and the `deck.no_yeses` state.
 - **Tests:** gesture → direction (pure), swipe idempotency, flow with MSW.
-- **Docs:** frontend-conventions.md route map (A4).
+- **Docs:** none (routes decided, A4).
 
 ## Mood
 
@@ -345,7 +346,8 @@ lint, test, build.
 - **Deps:** FE-09, FE-05. **Modules:** `src/features/rooms/`, `src/mocks/`.
 - **Contract:** §6 (deck, votes, progress, finish, result); events `voteCast`, `deckExtended`, `roomMatched`, `roomClosed`.
 - **Scope:** in: `/rooms/:code/swipe` (reuses `SwipeCard`; "LIVE · N SWIPING", "4 OF 12"), votes with `voteId`,
-  `roomMatched` → `/rooms/:code/result`; match (Shrikhand big moment) and close call; host finish; ≥ lg layout. Out:
+  `roomMatched` → `/rooms/:code/result`; match (Shrikhand big moment) and close call (names who said yes or has seen it,
+  shows only the number of noes: A7); host finish; ≥ lg layout. Out:
   "Watch on Netflix", "Run it back", tiebreak, "Swipe 6 more" (P-01, P-04).
 - **Acceptance:** with mocks: vote through a deck; a scripted `roomMatched` moves to the result; reconnect invalidates
   room queries.
@@ -357,8 +359,9 @@ lint, test, build.
 - **Objective:** the user's library, and films users reference are refreshed, never purged.
 - **Deps:** BE-02. **Modules:** `Domain/Library`, `Application/Library`, `Api/Controllers/LibraryController.cs`,
   `CatalogSyncService`, configurations, migration.
-- **Contract:** §7.
-- **Scope:** in: `UserFilm` (FK to films `ON DELETE RESTRICT`), list/summary/get/put (rating ⇒ seen), the sync's
+- **Contract:** §7 (incl. the `/watchlist` pair) and `DeckItemDto.onWatchlist` (§3).
+- **Scope:** in: `UserFilm` (FK to films `ON DELETE RESTRICT`), list/summary/get/put (rating ⇒ seen), watchlist
+  add/remove, `DeckItemDto.onWatchlist` filled for decks, the sync's
   refresh-by-reference step and orphan-only purge, TMDB 404 → keep the row, clear TMDB fields, mark unavailable (A14).
   Out: import (BE-15), taste (BE-14).
 - **Acceptance:** §7 as written; a referenced film past `MaxAgeDays` is refreshed, not purged; deleting a referenced film
@@ -494,7 +497,7 @@ lint, test, build.
 | P-02 | Google / Apple sign-in ("Continue with Google" on the Welcome board) | ADR-0012 says "later". |
 | P-03 | Personal "WHY" note on film details | Needs BE-03, BE-14 and a new prompt. |
 | P-04 | Room extras: Nudge / invited seats, "Restart with the same friends", tiebreak, "Swipe 6 more", "Run it back", shared watchlist ("FROM SAMI") | Invites and nudges border on notifications (ADR-0014). |
-| P-05 | Anonymous solo "Just swipe" | Needs an auth decision (A3). |
+| P-05 | ~~Anonymous solo "Just swipe"~~ | Rejected by the owner (A3): solo needs an account. |
 | P-06 | "Learning" chips on the solo deck (+ Mysteries, − Horror) | Needs a contract for deck signals. |
 
 ## Open questions for the owner

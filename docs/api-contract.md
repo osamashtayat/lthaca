@@ -90,7 +90,11 @@ type FilmDto = {
 type FilmSummaryDto = Omit<FilmDto, "overview" | "backdropPath" | "voteCount" | "originalLanguage">
 
 type SwipeDto    = { direction: SwipeDirection; seenVerdict: SeenVerdict | null }
-type DeckItemDto = { id: string; position: number; film: FilmDto; swipe: SwipeDto | null }  // swipe = the caller's own
+type DeckItemDto = {
+  id: string; position: number; film: FilmDto;
+  swipe: SwipeDto | null;   // the caller's own swipe or vote
+  onWatchlist: boolean;     // the caller's watchlist state, for the card's watchlist button (A2); false for guests
+}
 ```
 Posters/backdrops are TMDB image paths; the frontend builds the URL (TMDB image CDN) and always shows the footer
 attribution (ADR-0017). Mood/hard-no **labels** are UI copy (the canvas wording) and live in the frontend; the server owns
@@ -167,15 +171,15 @@ type TopPickDto = { film: FilmDto; reason: string | null }                      
 Rules (server-side; the UI never decides them):
 - `seenVerdict` only with `up` (else 400 `errors.seenVerdict`).
 - **Library effects** of a swipe: `up` → `seen = true`; `up` + `loved` → also `liked = true`. `right` and `left` don't
-  touch the library (a right swipe is a deck "yes", not a watchlist add). ⚠ Open (A2): confirm.
+  touch the library: a right swipe is a deck "yes", not a watchlist add (A2, decided). Saving to the watchlist is a
+  separate button on the card (`PUT`/`DELETE /api/library/{tmdbId}/watchlist`, §7).
 - The top 3 is chosen from the deck's right swipes only. Until BE-13 (Wikidata-based ranking/explanations) it is
   ordered by our own data (genre fit with the mood/swipes, then TMDB popularity) with `reason = null`.
 - Mood chips map to our genres/filters on the server; free `text` goes through `mood-parse.v1`. `language` and
   `maxRuntime` are plain filters, not LLM input.
-- ⚠ Open (A3): solo decks require a signed-in user (guests are room-scoped, ADR-0012). An anonymous "Just swipe"
-  needs a new decision.
-- ⚠ Open (A4): the route map sends both "Solo by mood" and "your top 3" to `/mood`; the top 3 belongs to a deck
-  ("from 14 swipes"). Proposed routes: `/mood` (pick), `/deck/:deckId` (swipe), `/deck/:deckId/top` (top 3).
+- Solo decks require a signed-in user; no anonymous "Just swipe" (A3, decided).
+- Routes (A4, decided): `/mood` (picker), `/deck/:deckId` (swipe), `/deck/:deckId/top` (top 3; it belongs to a deck,
+  "from 14 swipes").
 
 ## 6. Rooms and votes (ADR-0012, ADR-0015, docs/realtime.md)
 
@@ -221,7 +225,12 @@ type RoomResultDto = {
   picks: RoomPickDto[];             // match: exactly 1; compromise: up to 3, best first
   memberCount: number; decidedAt: string;
 }
-type RoomPickDto = { rank: number; film: FilmSummaryDto; yesCount: number; votes: { memberId: string; direction: SwipeDirection | null }[] }
+type RoomPickDto = {
+  rank: number; film: FilmSummaryDto;
+  yesCount: number; noCount: number;
+  yes: string[];    // memberIds who swiped right
+  seen: string[];   // memberIds who swiped up ("Omar passed — he's seen it")
+}                   // who said no is never revealed, only how many (A7)
 ```
 Rules (all in services; see docs/realtime.md for when each event is published):
 - **Join** is idempotent (already a member → 200). Late arrivals may join while `swiping` ("Late arrivals can still hop in").
@@ -238,8 +247,9 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 - **Deck extension** ("Just swipe together", "Swipe 6 more"): the server adds a batch when members near the end and
   publishes `deckExtended`. ⚠ Open (A6): the "Swipe 6 more" and "Tiebreak" buttons on the close-call board are not in
   the first wave.
-- **Result visibility:** the result reveals each member's vote on the picked films (the close-call board shows ✓/✕/seen
-  per member). ⚠ Open (A7): confirm that revealing votes at the result is fine.
+- **Result visibility (A7, recommended, owner to confirm):** for the picked films only, the result names who said yes
+  and who has seen it, and gives just the **number** of noes, never who said no. Hard nos and mood answers are never
+  shown. Nobody's "no" can be singled out, while the reason a film lost ("one of you has seen it") stays visible.
 - **Hub:** `JoinRoom(code)` / `LeaveRoom(code)` on `/hubs/rooms`, membership checked by a service (ADR-0012); clients
   then refetch through the endpoints above. Events: `contracts/realtime-events.json`.
 
@@ -254,6 +264,8 @@ puts a film in Watching) and a 1–5 rating in ticket stubs.
 | `GET /api/library/summary` | user | — | 200 `LibrarySummaryDto` | 401 |
 | `GET /api/library/{tmdbId}` | user | — | 200 `UserFilmDto` (all false/null when untouched) | 401, 404 `film.not_found` |
 | `PUT /api/library/{tmdbId}` | user | `UpdateUserFilmRequest` | 200 `UserFilmDto` | 400, 401, 404 `film.not_found` |
+| `PUT /api/library/{tmdbId}/watchlist` | user | — | 204 (idempotent add; other flags untouched) | 401, 404 `film.not_found` |
+| `DELETE /api/library/{tmdbId}/watchlist` | user | — | 204 (idempotent remove) | 401, 404 `film.not_found` |
 
 ```ts
 type LibraryShelf = "liked" | "watchlist" | "watching" | "seen"
@@ -262,11 +274,12 @@ type UpdateUserFilmRequest = { liked: boolean; onWatchlist: boolean; watching: b
 type UserFilmDto = UpdateUserFilmRequest & { film: FilmSummaryDto; updatedAt: string }
 type LibrarySummaryDto = { liked: number; watchlist: number; watching: number; seen: number }
 ```
-- `PUT` replaces the whole state (last write wins); all false + `rating: null` deletes the row.
-- A rating implies `seen = true` (server rule). ⚠ Open (A8): confirm; also whether "liked" and a rating are separate
-  (the My Cinema board shows stars on the Liked shelf).
-- ⚠ Open (A9): "Watching" has no progress data ("42 min left" on the Tonight board can't be known). Assumed: Watching is
-  a flag set by "Watch tonight", with no progress.
+- `PUT` replaces the whole state (last write wins); all false + `rating: null` deletes the row. The `/watchlist`
+  pair changes only that flag, for the deck card's watchlist button, where the client doesn't hold the full state.
+- A rating implies `seen = true` (server rule; A8, decided). `liked` stays a separate flag; the Liked shelf shows the
+  rating when there is one.
+- ⚠ Open (A9): Ithaca never plays the film, so it can't know how far someone got ("42 min left" on the Tonight board).
+  Assumed: "Watching" is just a shelf the user puts a film on ("Watch tonight") and takes it off again, with no progress bar.
 - ADR-0019 lands here: referenced films are refreshed by the sync, never purged; FKs to `films` are `ON DELETE RESTRICT`.
 
 ## 8. Film details
@@ -314,14 +327,14 @@ Mirrors FlowOps (ADR-0021):
 | Id | Question | Assumption in this contract |
 |---|---|---|
 | A1 | Guest in two rooms at once? | One room per guest identity; opening another room replaces it |
-| A2 | Do solo right swipes add to the watchlist? | No; only `up` touches the library (`seen`, `liked` if loved) |
-| A3 | Can anonymous visitors use solo "Just swipe"? | No; solo needs a user (ADR-0012 has guests per room only) |
-| A4 | Routes for deck and top 3 | `/deck/:deckId` and `/deck/:deckId/top`; `/mood` is the picker |
+| A2 | Do solo right swipes add to the watchlist? | **Decided: no.** A separate watchlist button on the card (bottom or left; FE-05 picks the spot) |
+| A3 | Can anonymous visitors use solo "Just swipe"? | **Decided: no.** Solo needs a signed-in user |
+| A4 | Routes for deck and top 3 | **Decided:** `/deck/:deckId` and `/deck/:deckId/top`; `/mood` is the picker |
 | A5 | Can a room vote be changed? Does `seenVerdict` in a room update the library? | No and no |
 | A6 | "Swipe 6 more" / "Tiebreak" on the close-call board | Not first wave |
-| A7 | Reveal each member's votes on the result screen? | Yes, only for the result's picks |
-| A8 | Rating implies seen? Liked vs rating? | Rating ⇒ seen; liked is a separate flag |
-| A9 | "Watching" progress ("42 min left") | Flag only, no progress |
+| A7 | Reveal each member's votes on the result screen? | **Recommended:** name yes and seen, count noes only; picks only |
+| A8 | Rating implies seen? Liked vs rating? | **Decided:** rating ⇒ seen; liked is a separate flag |
+| A9 | Can "Keep watching · 42 min left" show progress? Ithaca doesn't play films, so it can't know | "Watching" is a shelf with no progress; the Tonight row shows the film without "min left" |
 | A10 | Room codes `POP-428` vs the board's share link `ithaca.app/r/pop-428` | Links use the existing route `/rooms/POP-428`; a `/r/:code` short link is optional later |
 | A11 | Group taste ("Blend your histories") with guests who have no history | Second wave, with the taste task |
 | A12 | The glossary has no names for a solo deck's parent record or a solo swipe (`Vote` is a room member's) | `swipe`/`SwipeDto`/`swipeId` in the contract; BE-08 proposes glossary entries |

@@ -96,7 +96,7 @@ where-to-watch data, **not in scope** (backlog P-01); leave it out.
 | Menu (☰ open) | `MenuSheet` | exists |
 | Solo — by mood | `/mood` | FE-06 |
 | Solo — the deck | `/deck` → `/deck/:deckId` | FE-05 |
-| Solo — your top 3 | `/deck/:deckId/top` (proposed; the brief maps it to `/mood`, see api-contract A4) | FE-05 |
+| Solo — your top 3 | `/deck/:deckId/top` (decided, api-contract A4) | FE-05 |
 | Solo — by taste | `/taste` | FE-13 |
 | Film details (A) | `/films/:tmdbId` | FE-04 |
 | Group — lobby | `/rooms/:code` | FE-09 |
