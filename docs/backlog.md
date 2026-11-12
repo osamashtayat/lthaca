@@ -98,7 +98,7 @@ lint, test, build.
   the production build has no mock code; all AGENTS.md §1 checks green.
 - **Tests:** `src/mocks/handlers.test.ts`.
 
-### BE-01 — Contract stubs for every first-wave endpoint · `Todo`
+### BE-01 — Contract stubs for every first-wave endpoint · `Done` (PR #4)
 - **Objective:** make api-contract.md §4–§9 executable: every DTO, enum and action exists with its final route and
   `[ProducesResponseType]`s, and returns 501 until its feature task lands, so `contracts/openapi.json` and `schema.d.ts`
   exist before any logic.

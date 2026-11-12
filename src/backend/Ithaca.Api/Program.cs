@@ -23,9 +23,13 @@ builder.Logging.AddJsonConsole(options =>
     options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
 });
 
-// Validation errors use JSON (camelCase) field paths.
+// Validation errors use JSON (camelCase) field paths; query-bound records bind camelCase names.
 builder.Services
-    .AddControllers(options => options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider()))
+    .AddControllers(options =>
+    {
+        options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider());
+        options.ModelMetadataDetailsProviders.Add(new CamelCaseBindingMetadataProvider());
+    })
     .AddJsonOptions(options => JsonSetup.Configure(options.JsonSerializerOptions));
 builder.Services.ConfigureHttpJsonOptions(options => JsonSetup.Configure(options.SerializerOptions));
 builder.Services.AddIthacaProblemDetails();

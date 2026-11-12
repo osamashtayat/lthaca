@@ -1,5 +1,9 @@
+using Ithaca.Application.Auth;
 using Ithaca.Application.Catalog;
+using Ithaca.Application.Decks;
 using Ithaca.Application.Films;
+using Ithaca.Application.Library;
+using Ithaca.Application.Rooms;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -17,6 +21,11 @@ public static class DependencyInjection
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<FilmQueryService>();
         services.AddScoped<CatalogSyncService>();
+        services.AddScoped<FilmTrailerService>();
+        services.AddScoped<AuthService>();
+        services.AddScoped<DeckService>();
+        services.AddScoped<RoomService>();
+        services.AddScoped<LibraryService>();
         return services;
     }
 }

@@ -11,7 +11,30 @@ public static class ErrorCodes
     public const string Conflict = "conflict";
     public const string ServerError = "server.error";
 
+    /// <summary>Contract stub (BE-01): the endpoint exists, its backlog task hasn't landed. Deleted by BE-17.</summary>
+    public const string ServerNotImplemented = "server.not_implemented";
+
+    public const string AuthAntiforgeryFailed = "auth.antiforgery_failed";
+    public const string AuthUnauthenticated = "auth.unauthenticated";
+    public const string AuthInvalidCredentials = "auth.invalid_credentials";
+    public const string AuthForbidden = "auth.forbidden";
+    public const string AuthEmailTaken = "auth.email_taken";
+
     public const string FilmNotFound = "film.not_found";
+
+    public const string DeckNotFound = "deck.not_found";
+    public const string DeckItemNotFound = "deck.item_not_found";
+    public const string DeckAlreadySwiped = "deck.already_swiped";
+    public const string DeckNoYeses = "deck.no_yeses";
+
+    public const string RoomNotFound = "room.not_found";
+    public const string RoomNotMember = "room.not_member";
+    public const string RoomNotHost = "room.not_host";
+    public const string RoomAlreadyVoted = "room.already_voted";
+    public const string RoomClosed = "room.closed";
+    public const string RoomFull = "room.full";
+    public const string RoomInvalidState = "room.invalid_state";
+    public const string RoomNoResult = "room.no_result";
 
     public const string AiInvalidOutput = "ai.invalid_output";
     public const string AiUnavailable = "ai.unavailable";
