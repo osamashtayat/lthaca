@@ -15,6 +15,7 @@ public sealed class IthacaApiFactory(string connectionString, IReadOnlyDictionar
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        builder.UseOfflineProviders();
         builder.UseSetting("ConnectionStrings:Ithaca", connectionString);
         foreach (var (key, value) in settings ?? new Dictionary<string, string>())
         {

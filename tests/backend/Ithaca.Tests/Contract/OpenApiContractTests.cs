@@ -14,7 +14,7 @@ public sealed class OpenApiContractTests
     [Fact]
     public async Task CommittedContract_MatchesTheApi()
     {
-        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Development"));
+        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Development").UseOfflineProviders());
         var served = JsonNode.Parse(await factory.CreateClient().GetStringAsync(new Uri("/openapi/v1.json", UriKind.Relative), TestContext.Current.CancellationToken));
         var committed = JsonNode.Parse(await File.ReadAllTextAsync(RepoPaths.File("contracts", "openapi.json"), TestContext.Current.CancellationToken));
 
