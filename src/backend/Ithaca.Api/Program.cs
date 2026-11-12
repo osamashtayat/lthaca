@@ -1,0 +1,56 @@
+using Ithaca.Api;
+using Ithaca.Api.Errors;
+using Ithaca.Api.Hubs;
+using Ithaca.Api.OpenApi;
+using Ithaca.Application;
+using Ithaca.Application.Realtime;
+using Ithaca.Infrastructure;
+using Ithaca.Infrastructure.Seeding;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Structured logs: the built-in JSON console formatter (no Serilog).
+builder.Logging.ClearProviders();
+builder.Logging.AddJsonConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.UseUtcTimestamp = true;
+    options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
+});
+
+// Validation errors use JSON (camelCase) field paths.
+builder.Services
+    .AddControllers(options => options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider()))
+    .AddJsonOptions(options => JsonSetup.Configure(options.JsonSerializerOptions));
+builder.Services.ConfigureHttpJsonOptions(options => JsonSetup.Configure(options.SerializerOptions));
+builder.Services.AddIthacaProblemDetails();
+builder.Services.AddIthacaOpenApi();
+
+// Layer registrations: one extension method per layer (docs/backend-conventions.md).
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
+
+// Real-time: the hub and its publisher live in the Api (ADR-0007).
+builder.Services.AddSignalR(options => options.EnableDetailedErrors = false)
+    .AddJsonProtocol(options => JsonSetup.Configure(options.PayloadSerializerOptions));
+builder.Services.AddSingleton<IRoomEventPublisher, SignalRRoomEventPublisher>();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    await DevDataSeeder.RunAsync(app.Services, CancellationToken.None);
+    app.MapOpenApi();
+}
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+
+app.MapControllers();
+app.MapHub<RoomHub>(RoomEvents.HubPath);
+
+await app.RunAsync();
+
+/// <summary>Visible to WebApplicationFactory in Ithaca.Tests.</summary>
+public partial class Program;

@@ -1,0 +1,11 @@
+@Api = http://localhost:5280
+
+GET {{Api}}/api/health
+
+###
+# Reference slice. 550 is seeded in Development (DevDataSeeder).
+GET {{Api}}/api/films/550
+
+###
+# Not in the catalog → 404 ProblemDetails with code film.not_found
+GET {{Api}}/api/films/1

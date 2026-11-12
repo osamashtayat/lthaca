@@ -1,0 +1,71 @@
+# Copy .env.example to .env first (placeholders only, never real secrets). Then:
+#   docker compose up --build        full stack: db, migrations, api, web on http://localhost:8080
+#   docker compose up -d db          PostgreSQL + pgvector only, for `dotnet run` + `npm run dev`
+name: ithaca
+
+x-api-environment: &api-environment
+  ConnectionStrings__Ithaca: "Host=db;Port=5432;Database=${POSTGRES_DB:-ithaca};Username=${POSTGRES_USER:-ithaca};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (copy .env.example)}"
+
+services:
+  db:
+    # PostgreSQL with the pgvector extension available (ADR-0002); the initial migration runs CREATE EXTENSION.
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ithaca}
+      POSTGRES_USER: ${POSTGRES_USER:-ithaca}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (copy .env.example)}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - ithaca-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-shot: applies the EF Core migrations and exits. The API starts only after it succeeded.
+  migrate:
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      target: migrations
+    environment: *api-environment
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      target: api
+    restart: unless-stopped
+    environment:
+      <<: *api-environment
+      ASPNETCORE_ENVIRONMENT: ${ITHACA_ENVIRONMENT:-Development}
+      Ai__LlmProvider: ${Ai__LlmProvider:-Fake}
+      Ai__EmbeddingProvider: ${Ai__EmbeddingProvider:-Fake}
+      Ai__ApiKey: ${Ai__ApiKey:-}
+      Tmdb__Client: ${Tmdb__Client:-Fake}
+      Tmdb__ApiKey: ${Tmdb__ApiKey:-}
+    # No `ports:`: only the web proxy reaches the API (same origin, no CORS).
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: .
+      dockerfile: src/frontend/Dockerfile
+      target: web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${ITHACA_WEB_PORT:-8080}:8080"
+    depends_on:
+      - api
+
+volumes:
+  ithaca-db:

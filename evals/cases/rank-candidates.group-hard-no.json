@@ -1,0 +1,19 @@
+{
+  "id": "rank-candidates.group-hard-no",
+  "description": "ranking returns only given ids and drops a member's hard no",
+  "prompt": "rank-candidates.v1",
+  "variables": { "audience": "a group of three friends", "limit": "2", "hardNos": "tmdbId 496243 (one member said never)" },
+  "input": "",
+  "candidates": [550, 27205, 496243],
+  "recordedResponse": {
+    "ranked": [
+      { "tmdbId": 27205, "reason": "Everyone liked a twisty plot." },
+      { "tmdbId": 550, "reason": "A cult pick two of you saved." }
+    ]
+  },
+  "checks": [
+    { "type": "validJson" },
+    { "type": "idsFromCandidates" },
+    { "type": "excludesTmdbId", "value": 496243 }
+  ]
+}

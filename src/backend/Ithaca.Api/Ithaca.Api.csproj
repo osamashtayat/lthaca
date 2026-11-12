@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <!-- Local secrets (connection string, API keys) live in dotnet user-secrets or env vars, never in appsettings. -->
+    <UserSecretsId>ithaca-api</UserSecretsId>
+  </PropertyGroup>
+
+  <!--
+    Build-time OpenAPI export, off by default so ordinary builds never touch contracts/.
+    scripts/export-openapi.sh turns it on and writes contracts/openapi.json.
+  -->
+  <PropertyGroup>
+    <OpenApiGenerateDocuments>false</OpenApiGenerateDocuments>
+    <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/../../../contracts</OpenApiDocumentsDirectory>
+    <OpenApiGenerateDocumentsOptions>--file-name openapi</OpenApiGenerateDocumentsOptions>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Infrastructure is referenced only for composition-root DI registration (docs/architecture.md). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Ithaca.Application\Ithaca.Application.csproj" />
+    <ProjectReference Include="..\Ithaca.Infrastructure\Ithaca.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!-- Versioned prompt files (repo-root prompts/) ship next to the binary; Ai:PromptsPath defaults to "prompts". -->
+  <ItemGroup>
+    <None Include="..\..\..\prompts\**\*.md" LinkBase="prompts" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ithaca.Tests" />
+  </ItemGroup>
+
+</Project>

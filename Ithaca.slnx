@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/backend/">
+    <Project Path="src/backend/Ithaca.Api/Ithaca.Api.csproj" />
+    <Project Path="src/backend/Ithaca.Application/Ithaca.Application.csproj" />
+    <Project Path="src/backend/Ithaca.Domain/Ithaca.Domain.csproj" />
+    <Project Path="src/backend/Ithaca.Infrastructure/Ithaca.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/backend/">
+    <Project Path="tests/backend/Ithaca.Tests/Ithaca.Tests.csproj" />
+  </Folder>
+  <Folder Name="/evals/">
+    <Project Path="evals/Ithaca.Evals/Ithaca.Evals.csproj" />
+  </Folder>
+</Solution>

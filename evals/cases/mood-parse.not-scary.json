@@ -1,0 +1,20 @@
+{
+  "id": "mood-parse.not-scary",
+  "description": "\"not scary\" must exclude Horror and never include it",
+  "prompt": "mood-parse.v1",
+  "variables": { "genres": "Action, Comedy, Drama, Horror, Romance, Science Fiction, Thriller" },
+  "input": "something light and funny for tonight, nothing scary",
+  "recordedResponse": {
+    "includeGenres": ["Comedy"],
+    "excludeGenres": ["Horror", "Thriller"],
+    "maxRuntimeMinutes": null,
+    "minReleaseYear": null,
+    "maxReleaseYear": null,
+    "keywords": ["light", "funny"]
+  },
+  "checks": [
+    { "type": "validJson" },
+    { "type": "excludesGenre", "value": "Horror" },
+    { "type": "doesNotIncludeGenre", "value": "Horror" }
+  ]
+}

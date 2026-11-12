@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    AI eval runner (docs/ai.md). Loads evals/cases/*.json, renders the real prompt files, gets a model reply and runs
+    the case's checks. Default mode replays each case's recorded reply (no network, no key); the live flag uses the
+    ILlmClient configured exactly like the API (Ai:LlmProvider), which only Fake supports so far.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\backend\Ithaca.Infrastructure\Ithaca.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

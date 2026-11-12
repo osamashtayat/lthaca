@@ -1,0 +1,12 @@
+{
+  "$comment": "Single source of truth for RoomHub. Backend: Ithaca.Api/Hubs/RoomEvents.cs (a test keeps them equal). Frontend: imported by src/shared/realtime/events.ts. See docs/realtime.md.",
+  "hubPath": "/hubs/rooms",
+  "serverToClient": {
+    "memberJoined": "A member (user or guest) joined the room. Payload: { roomId, memberId }",
+    "memberLeft": "A member left or was disconnected. Payload: { roomId, memberId }",
+    "voteCast": "Someone voted on a deck item. Payload: { roomId, deckItemId } (no vote values: results come from the API)",
+    "deckExtended": "A new batch of deck items was added (group Just swipe). Payload: { roomId, fromPosition }",
+    "roomMatched": "The room reached a match or best compromise. Payload: { roomId, tmdbId }",
+    "roomClosed": "The host closed the room. Payload: { roomId }"
+  }
+}
