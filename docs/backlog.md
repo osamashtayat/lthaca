@@ -123,7 +123,7 @@ lint, test, build.
 - **Acceptance:** logo on every page, visibly smaller than the wordmark; token lint passes (colours stay in the asset).
 - **Tests:** build only. **Docs:** a follow-up note under ADR-0017's Outcome that the logo is done.
 
-### FE-02 — UI kit from the design canvas · `Todo`
+### FE-02 — UI kit from the design canvas · `In progress`
 - **Objective:** the shared building blocks every screen uses, in the canvas' visual language (frontend-conventions.md →
   Design reference).
 - **Deps:** FE-00. **Modules:** `src/frontend/src/shared/ui/`, `src/frontend/src/app/dev/`, test setup.
