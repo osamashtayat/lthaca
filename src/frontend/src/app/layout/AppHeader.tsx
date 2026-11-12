@@ -1,4 +1,5 @@
 import { Link, NavLink } from 'react-router'
+import { SessionAction } from '@/features/auth'
 import { MenuIcon, Wordmark } from '@/shared/ui'
 import { NAV_ITEMS } from './navigation'
 
@@ -28,6 +29,7 @@ export function AppHeader({ menuOpen, onOpenMenu }: { menuOpen: boolean; onOpenM
         </nav>
 
         <div className="ml-auto flex items-center gap-2.5">
+          <SessionAction className="hidden lg:inline-flex" />
           <button
             type="button"
             onClick={onOpenMenu}

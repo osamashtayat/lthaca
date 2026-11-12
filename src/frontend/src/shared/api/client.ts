@@ -2,6 +2,30 @@ import createClient, { type Middleware } from 'openapi-fetch'
 import { ApiError, NETWORK_ERROR_CODE, apiErrorFromResponse } from './apiError'
 import type { paths } from './schema'
 
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'TRACE'])
+export const XSRF_COOKIE = 'XSRF-TOKEN'
+export const XSRF_HEADER = 'X-XSRF-TOKEN'
+
+/** The antiforgery token the server put in the JS-readable `XSRF-TOKEN` cookie (api-contract §4), if any. */
+export function readXsrfToken(cookieString: string | undefined = globalThis.document?.cookie): string | undefined {
+  if (!cookieString) return undefined
+  for (const part of cookieString.split(';')) {
+    const [name, ...rest] = part.trim().split('=')
+    if (name === XSRF_COOKIE) return decodeURIComponent(rest.join('='))
+  }
+  return undefined
+}
+
+/** Echoes the XSRF cookie in `X-XSRF-TOKEN` on every unsafe method (POST/PUT/PATCH/DELETE). No endpoint is exempt. */
+const xsrfMiddleware: Middleware = {
+  onRequest({ request }) {
+    if (SAFE_METHODS.has(request.method.toUpperCase())) return undefined
+    const token = readXsrfToken()
+    if (token) request.headers.set(XSRF_HEADER, token)
+    return request
+  },
+}
+
 /** Turns every non-2xx response into a thrown ApiError, so callers (TanStack Query) just `await`. */
 const problemMiddleware: Middleware = {
   async onResponse({ response }) {
@@ -27,7 +51,7 @@ export function createApiClient() {
     credentials: 'same-origin',
     fetch: fetchOrThrowApiError,
   })
-  client.use(problemMiddleware)
+  client.use(xsrfMiddleware, problemMiddleware)
   return client
 }
 

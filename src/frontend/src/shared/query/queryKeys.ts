@@ -4,6 +4,10 @@
  */
 export const queryKeys = {
   health: ['health'] as const,
+  auth: {
+    all: ['auth'] as const,
+    me: ['auth', 'me'] as const,
+  },
   films: {
     all: ['films'] as const,
     detail: (tmdbId: number) => ['films', 'detail', tmdbId] as const,
