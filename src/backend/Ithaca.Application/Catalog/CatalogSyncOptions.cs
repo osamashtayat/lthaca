@@ -20,8 +20,8 @@ public sealed class CatalogSyncOptions : IConfigSection
     public int Pages { get; init; } = 50;
 
     /// <summary>
-    /// Embed title + overview into <c>films.embedding</c>. OFF until the TMDB terms question is settled (ADR-0017):
-    /// TMDB's terms restrict using its content with ML/AI applications.
+    /// Embed title + overview into <c>films.embedding</c>. Must stay OFF: that text comes from TMDB, whose terms restrict AI use
+    /// (ADR-0017). Embeddings will be built from Wikidata data instead; this switch then goes away.
     /// </summary>
     public bool EmbedOverviews { get; init; }
 
