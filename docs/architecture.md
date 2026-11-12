@@ -56,6 +56,7 @@ or user-secrets. Providers (`Ai:LlmProvider`, `Ai:EmbeddingProvider`, `Tmdb:Clie
 ```
 AGENTS.md CLAUDE.md          agent instructions (AGENTS.md is the source of truth)
 .claude/                     settings, slash commands, architecture-reviewer agent, launch.json
+.github/workflows/ci.yml     CI: backend, frontend, Docker stack smoke
 contracts/                   openapi.json (generated), realtime-events.json (hub contract, hand-written)
 prompts/                     versioned LLM prompts: <name>.v<N>.md
 docs/                        this documentation + decisions/ (ADRs)

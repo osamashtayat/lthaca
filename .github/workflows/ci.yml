@@ -1,0 +1,149 @@
+# Every push to main and every pull request. Mirrors the local commands in AGENTS.md §1.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+
+jobs:
+  backend:
+    name: Backend (build, tests, contract)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore Ithaca.slnx
+
+      # TreatWarningsAsErrors is on in Directory.Build.props; -warnaserror keeps "0 warnings" true even if that changes.
+      - name: Build (0 warnings)
+        run: dotnet build Ithaca.slnx --no-restore -warnaserror
+
+      # Unit, architecture, contract and slice tests. Testcontainers starts pgvector/pgvector:pg17 on the runner's Docker.
+      - name: Tests
+        run: dotnet test tests/backend/Ithaca.Tests --no-build --logger "trx;LogFileName=ithaca.trx"
+
+      # Replay mode: renders every prompt file and runs the checks on recorded replies. No network, no API key.
+      - name: AI evals (recorded replies)
+        run: dotnet run --project evals/Ithaca.Evals --no-build
+
+      # OpenApiContractTests compare JSON semantically; this also catches byte-level drift (formatting, ordering).
+      - name: OpenAPI drift check
+        run: |
+          ./scripts/export-openapi.sh
+          git diff --exit-code -- contracts/openapi.json \
+            || { echo "::error file=contracts/openapi.json::out of date: run ./scripts/export-openapi.sh and commit the result"; exit 1; }
+
+      # A model change without a migration would only fail at runtime.
+      - name: Migrations drift check
+        run: |
+          dotnet tool restore
+          dotnet ef migrations has-pending-model-changes \
+            --project src/backend/Ithaca.Infrastructure --startup-project src/backend/Ithaca.Api --no-build \
+            || { echo "::error::the EF model has changes without a migration: run /new-migration (AGENTS.md §1)"; exit 1; }
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: tests/backend/**/TestResults/*.trx
+          retention-days: 7
+
+  frontend:
+    name: Frontend (types, typecheck, lint, test, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # Generated types must match the committed contract (never hand-edited, AGENTS.md §2).
+      - name: API types drift check
+        run: |
+          npm run api:types
+          git diff --exit-code -- src/shared/api/schema.d.ts \
+            || { echo "::error file=src/frontend/src/shared/api/schema.d.ts::out of date: run npm run api:types and commit the result"; exit 1; }
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # oxlint (no fetch / sonner / signalr outside src/shared) + design-token check.
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  # The compose stack builds and starts from an empty database: migrations (incl. CREATE EXTENSION vector), API, nginx.
+  # Images are not pushed anywhere.
+  stack:
+    name: Docker stack smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      POSTGRES_PASSWORD: ci-only-not-a-secret
+      ITHACA_ENVIRONMENT: Development
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start
+        run: docker compose up -d --build --wait --wait-timeout 180
+
+      - name: Smoke checks through nginx
+        run: |
+          set -euo pipefail
+          base=http://localhost:8080
+          curl -fsS "$base/api/health" | grep -q '"status":"ok"'
+          curl -fsS "$base/api/films/550" | grep -q '"tmdbId":550'
+          test "$(curl -s -o /dev/null -w '%{http_code}' "$base/api/films/1")" = 404
+          test "$(curl -s -o /dev/null -w '%{http_code}' "$base/films/550")" = 200
+          curl -fsS -X POST "$base/hubs/rooms/negotiate?negotiateVersion=1" | grep -q connectionId
+          docker compose exec -T db psql -U ithaca -d ithaca -tAc "select 1 from pg_extension where extname = 'vector'" | grep -q 1
+          echo "Stack smoke passed."
+
+      - name: Stack logs
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Stop
+        if: always()
+        run: docker compose down -v

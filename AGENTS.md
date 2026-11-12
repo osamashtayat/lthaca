@@ -96,6 +96,7 @@ Plumbing check page: `/dev/status` (API health + RoomHub connection). Reference 
 
 - Small, focused changes; no unrelated refactoring (note it as a TODO instead).
 - Run the build and tests you touched; never claim a result you didn't see.
+- CI (`.github/workflows/ci.yml`) runs the §1 checks on every PR and push to `main`: backend build/tests/evals, OpenAPI and migration drift, frontend type drift/typecheck/lint/test/build, and a Docker stack smoke test. A red CI is not done.
 - If a rule here blocks you, don't work around it silently: say so in the report and propose an ADR in `docs/decisions/`.
 - Before finishing a sizeable change, run the `architecture-reviewer` agent (Claude) or check §2 yourself.
 
