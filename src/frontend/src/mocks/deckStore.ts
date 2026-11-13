@@ -6,11 +6,13 @@ type DeckDto = components['schemas']['DeckDto']
 type DeckItemDto = components['schemas']['DeckItemDto']
 type SwipeRequest = components['schemas']['SwipeRequest']
 type DeckTopDto = components['schemas']['DeckTopDto']
+type MoodInput = components['schemas']['MoodInput']
+type MoodQueryDto = components['schemas']['MoodQueryDto']
 
 /** Cards per batch. Small on purpose: the mock catalog has 12 films, so a deck is three batches (5 + 5 + 2), then `[]`. */
 export const MOCK_BATCH_SIZE = 5
 
-type StoredDeck = { id: string; createdAt: string; served: number; swipes: Map<string, SwipeRequest> /* by deckItemId */; swipeIds: Set<string> }
+type StoredDeck = { id: string; createdAt: string; mood: MoodQueryDto | null; served: number; swipes: Map<string, SwipeRequest> /* by deckItemId */; swipeIds: Set<string> }
 const KEY = 'ithaca.mock.decks'
 type Saved = [string, Omit<StoredDeck, 'swipes' | 'swipeIds'> & { swipes: [string, SwipeRequest][]; swipeIds: string[] }][]
 
@@ -51,9 +53,9 @@ function itemAt(deck: StoredDeck, position: number): DeckItemDto {
   }
 }
 
-export function createMockDeck(): DeckDto {
+export function createMockDeck(mood: MoodQueryDto | null = null): DeckDto {
   const id = crypto.randomUUID()
-  const deck: StoredDeck = { id, createdAt: '2026-11-13T12:00:00Z', served: 0, swipes: new Map(), swipeIds: new Set() }
+  const deck: StoredDeck = { id, createdAt: '2026-11-13T12:00:00Z', mood, served: 0, swipes: new Map(), swipeIds: new Set() }
   decks.set(id, deck)
   nextMockBatch(id)
   return mockDeckDto(id) as DeckDto
@@ -65,9 +67,9 @@ export function mockDeckDto(deckId: string): DeckDto | undefined {
   const swipes = [...deck.swipes.values()]
   return {
     id: deck.id,
-    source: 'justSwipe',
+    source: deck.mood ? 'mood' : 'justSwipe',
     createdAt: deck.createdAt,
-    mood: null,
+    mood: deck.mood,
     items: Array.from({ length: deck.served }, (_, i) => itemAt(deck, i + 1)),
     swipeCount: swipes.length,
     yesCount: swipes.filter((s) => s.direction === 'right').length,
@@ -121,5 +123,39 @@ export function resetMockDecks() {
     globalThis.sessionStorage?.removeItem(KEY)
   } catch {
     // ignore
+  }
+}
+
+const RUNTIME_MINUTES = { under90: 90, upTo2h: 120, any: null } as const
+
+export type MockMoodOutcome =
+  | { kind: 'ok'; mood: MoodQueryDto }
+  | { kind: 'error'; status: 400 | 422 | 502 | 503; code: 'validation' | 'mood.unclear' | 'ai.refused' | 'ai.invalid_output' | 'ai.unavailable' }
+
+/**
+ * Stands in for mood-parse (ADR-0022) with scripted outcomes, so every state of the screen can be reached by typing a
+ * keyword: "refuse" → ai.refused, "invalid" → ai.invalid_output, "offline" → ai.unavailable, "asdf" → the text isn't a
+ * mood (422 mood.unclear without chips; with chips the deck is built from them and `textIgnored` is true). Anything
+ * else is a usable mood. Empty text makes no "LLM call".
+ */
+export function parseMockMood(input: MoodInput): MockMoodOutcome {
+  const text = input.text?.trim() ?? ''
+  if (input.text !== null && input.text.length > 280) return { kind: 'error', status: 400, code: 'validation' }
+  if (input.moods.length > 2) return { kind: 'error', status: 400, code: 'validation' }
+  const lower = text.toLowerCase()
+  if (lower.includes('refuse')) return { kind: 'error', status: 422, code: 'ai.refused' }
+  if (lower.includes('invalid')) return { kind: 'error', status: 502, code: 'ai.invalid_output' }
+  if (lower.includes('offline')) return { kind: 'error', status: 503, code: 'ai.unavailable' }
+  const unclear = lower.includes('asdf')
+  if (unclear && input.moods.length === 0) return { kind: 'error', status: 422, code: 'mood.unclear' }
+  return {
+    kind: 'ok',
+    mood: {
+      id: crypto.randomUUID(),
+      ...input,
+      text: text === '' ? null : input.text,
+      filters: { includeGenres: [], excludeGenres: [], maxRuntimeMinutes: RUNTIME_MINUTES[input.maxRuntime], minReleaseYear: null, maxReleaseYear: null, keywords: [] },
+      textIgnored: unclear,
+    },
   }
 }
