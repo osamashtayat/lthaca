@@ -25,11 +25,15 @@ public sealed record MoodFiltersDto(
     int? MaxReleaseYear,
     IReadOnlyList<string> Keywords);
 
-/// <summary>A stored <c>MoodQuery</c>: the input as given plus the filters derived from it.</summary>
+/// <summary>
+/// A stored <c>MoodQuery</c>: the input as given plus the filters derived from it. <see cref="TextIgnored"/> is true when the
+/// text wasn't a mood, so only the chips were used (ADR-0022).
+/// </summary>
 public sealed record MoodQueryDto(
     Guid Id,
     IReadOnlyList<Mood> Moods,
     RuntimeLimit MaxRuntime,
     string? Language,
     string? Text,
-    MoodFiltersDto Filters);
+    MoodFiltersDto Filters,
+    bool TextIgnored);

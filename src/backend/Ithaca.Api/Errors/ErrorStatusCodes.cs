@@ -14,6 +14,7 @@ public static class ErrorStatusCodes
         [ErrorCodes.NotFound] = StatusCodes.Status404NotFound,
         [ErrorCodes.FilmNotFound] = StatusCodes.Status404NotFound,
         [ErrorCodes.Conflict] = StatusCodes.Status409Conflict,
+        [ErrorCodes.MoodUnclear] = StatusCodes.Status422UnprocessableEntity,
         [ErrorCodes.AiInvalidOutput] = StatusCodes.Status502BadGateway,
         [ErrorCodes.AiUnavailable] = StatusCodes.Status503ServiceUnavailable,
         [ErrorCodes.AiRefused] = StatusCodes.Status422UnprocessableEntity,

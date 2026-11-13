@@ -1706,9 +1706,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["RoomMemberDto"];
-                        "application/json": components["schemas"]["RoomMemberDto"];
-                        "text/json": components["schemas"]["RoomMemberDto"];
+                        "text/plain": components["schemas"]["RoomMoodDto"];
+                        "application/json": components["schemas"]["RoomMoodDto"];
+                        "text/json": components["schemas"]["RoomMoodDto"];
                     };
                 };
                 /** @description Bad Request */
@@ -2750,6 +2750,7 @@ export interface components {
             language: null | string;
             text: null | string;
             filters: components["schemas"]["MoodFiltersDto"];
+            textIgnored: boolean;
         };
         PagedResultOfFilmSummaryDto: {
             items: components["schemas"]["FilmSummaryDto"][];
@@ -2817,6 +2818,10 @@ export interface components {
         };
         /** @enum {string} */
         RoomMode: "justSwipe" | "mood";
+        RoomMoodDto: {
+            member: components["schemas"]["RoomMemberDto"];
+            textIgnored: boolean;
+        };
         RoomPickDto: {
             /** Format: int32 */
             rank: number;

@@ -20,6 +20,12 @@ public sealed record RoomDto(
     RoomMemberDto Me,
     IReadOnlyList<RoomMemberDto> Members);
 
+/// <summary>
+/// <c>PUT /api/rooms/{code}/mood</c>: the caller, now ready. <see cref="TextIgnored"/> is true when their text wasn't a mood,
+/// so only their chips were used; it is only ever sent to that member (ADR-0022).
+/// </summary>
+public sealed record RoomMoodDto(RoomMemberDto Member, bool TextIgnored);
+
 /// <summary>What anyone with the link sees before joining.</summary>
 public sealed record RoomPreviewDto(
     string Code,
