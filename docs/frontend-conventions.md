@@ -91,7 +91,8 @@ need). Tokens are already in `src/shared/styles/tokens.css` (table below).
 - Pill buttons (`rounded-full`) for primary actions and toggles; big dark (`bg-ink text-cream`) bottom CTAs, 58–60px tall;
   segmented controls on `bg-beige`; selected chips turn ink with a yellow hard shadow.
 - Ratings are five ticket stubs (pink when on), not stars, for the user's own rating, in half steps 0.5–5 (half a stub
-  pink; ADR-0024, FE-20); TMDB scores show as "★ 8.0".
+  pink; ADR-0024, FE-20): tap a stub to set it, tap it again for half off (3.5 = tap 4, tap 4), arrow keys move by 0.5,
+  Home/End = 0.5/5; `StubRating` is ten hidden radios ("3.5 of 5 stubs") behind five whole-stub tap targets; TMDB scores show as "★ 8.0".
 - Phone boards are 390×844; desktop boards (≥ lg) widen the same pages, they are not separate routes.
 
 **Directions:** two screens have two directions; the owner chose **A** for both. Tonight = the "Tonight — Just me" and
