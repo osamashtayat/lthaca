@@ -169,7 +169,7 @@ public sealed class CatalogRetentionTests(PostgresFixture postgres)
         var user = await BrowserClient.RegisteredAsync(factory, Ct);
         var filmId = await db.Films.Where(f => f.TmdbId == 777001).Select(f => f.Id).SingleAsync(Ct);
         var userId = (await user.GetFromJsonAsync<System.Text.Json.JsonElement>("/api/auth/me", Ct)).GetProperty("id").GetGuid();
-        var deck = Deck.Create(userId, DeckSource.JustSwipe, DateTimeOffset.UtcNow);
+        var deck = Deck.Create(userId, DeckSource.JustSwipe, null, DateTimeOffset.UtcNow);
         db.Decks.Add(deck);
         db.DeckItems.Add(DeckItem.Create(deck.Id, filmId, 1, DateTimeOffset.UtcNow));
         await db.SaveChangesAsync(Ct);

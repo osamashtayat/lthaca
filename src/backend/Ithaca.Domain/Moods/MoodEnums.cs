@@ -1,4 +1,4 @@
-namespace Ithaca.Application.Moods;
+namespace Ithaca.Domain.Moods;
 
 /// <summary>A mood chip. The labels are UI copy in the frontend; the server owns what each one means (api-contract.md §3).</summary>
 public enum Mood
@@ -27,4 +27,16 @@ public enum HardNo
     Gore,
     Musicals,
     SadEndings,
+}
+
+/// <summary>The one meaning of <see cref="RuntimeLimit"/> in minutes, for browse and moods alike.</summary>
+public static class RuntimeLimits
+{
+    /// <summary>The longest runtime that passes: under 90 → 89, up to 2h → 120, any → no limit.</summary>
+    public static int? MaxMinutes(this RuntimeLimit limit) => limit switch
+    {
+        RuntimeLimit.Under90 => 89,
+        RuntimeLimit.UpTo2h => 120,
+        _ => null,
+    };
 }

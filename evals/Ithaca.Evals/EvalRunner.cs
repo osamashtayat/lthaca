@@ -9,11 +9,15 @@ internal sealed class EvalRunner(IPromptLibrary prompts, ILlmClient? liveClient)
     public async Task<bool> RunAsync(IReadOnlyList<EvalCase> cases, CancellationToken ct)
     {
         var failures = 0;
+        var byKind = new SortedDictionary<string, (int Passed, int Total)>(StringComparer.Ordinal);
         foreach (var evalCase in cases)
         {
             var reasons = await RunCaseAsync(evalCase, ct);
             failures += reasons.Count > 0 ? 1 : 0;
-            Console.WriteLine($"{(reasons.Count == 0 ? "PASS" : "FAIL")}  {evalCase.Id}  ({evalCase.Description})");
+            var kind = evalCase.Kind ?? "unlabelled";
+            var (passed, total) = byKind.GetValueOrDefault(kind);
+            byKind[kind] = (passed + (reasons.Count == 0 ? 1 : 0), total + 1);
+            Console.WriteLine($"{(reasons.Count == 0 ? "PASS" : "FAIL")}  [{kind}] {evalCase.Id}  ({evalCase.Description})");
             foreach (var reason in reasons)
             {
                 Console.WriteLine($"      - {reason}");
@@ -21,6 +25,7 @@ internal sealed class EvalRunner(IPromptLibrary prompts, ILlmClient? liveClient)
         }
 
         Console.WriteLine($"{cases.Count - failures}/{cases.Count} passed ({(liveClient is null ? "recorded replies" : "live client")}).");
+        Console.WriteLine("By kind: " + string.Join(", ", byKind.Select(k => $"{k.Key} {k.Value.Passed}/{k.Value.Total}")));
         return failures == 0;
     }
 

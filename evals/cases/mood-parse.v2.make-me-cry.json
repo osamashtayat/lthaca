@@ -1,0 +1,44 @@
+{
+  "id": "mood-parse.make-me-cry",
+  "kind": "representative",
+  "description": "An emotional drama",
+  "prompt": "mood-parse.v2",
+  "variables": {
+    "genres": "Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Science Fiction, TV Movie, Thriller, War, Western",
+    "year": "2026"
+  },
+  "input": "I want something that will make me cry",
+  "recordedResponse": {
+    "intent": "mood",
+    "includeGenres": [
+      "Drama"
+    ],
+    "excludeGenres": [],
+    "maxRuntimeMinutes": null,
+    "minReleaseYear": null,
+    "maxReleaseYear": null,
+    "keywords": [
+      "emotional",
+      "tearjerker",
+      "moving",
+      "heartbreaking"
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "intentIs",
+      "value": "mood"
+    },
+    {
+      "type": "includesGenre",
+      "value": "Drama"
+    },
+    {
+      "type": "doesNotIncludeGenre",
+      "value": "Comedy"
+    }
+  ]
+}

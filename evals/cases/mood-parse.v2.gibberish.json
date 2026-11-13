@@ -1,0 +1,32 @@
+{
+  "id": "mood-parse.gibberish",
+  "kind": "edge",
+  "description": "Keyboard mash is not a mood",
+  "prompt": "mood-parse.v2",
+  "variables": {
+    "genres": "Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Science Fiction, TV Movie, Thriller, War, Western",
+    "year": "2026"
+  },
+  "input": "asdkjh qwe zzzz lkj",
+  "recordedResponse": {
+    "intent": "unclear",
+    "includeGenres": [],
+    "excludeGenres": [],
+    "maxRuntimeMinutes": null,
+    "minReleaseYear": null,
+    "maxReleaseYear": null,
+    "keywords": []
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "intentIsNot",
+      "value": "mood"
+    },
+    {
+      "type": "hasNoFilters"
+    }
+  ]
+}

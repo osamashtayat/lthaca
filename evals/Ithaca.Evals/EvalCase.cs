@@ -7,6 +7,7 @@ namespace Ithaca.Evals;
 internal sealed record EvalCase(
     string Id,
     string Description,
+    string? Kind,
     string Prompt,
     Dictionary<string, string>? Variables,
     string Input,
@@ -16,9 +17,17 @@ internal sealed record EvalCase(
 {
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    public static EvalCase Load(string path) =>
-        JsonSerializer.Deserialize<EvalCase>(File.ReadAllText(path), Json)
+    /// <summary>The case kinds (ADR-0022): a prompt's suite covers all three.</summary>
+    public static readonly string[] Kinds = ["representative", "edge", "adversarial"];
+
+    public static EvalCase Load(string path)
+    {
+        var evalCase = JsonSerializer.Deserialize<EvalCase>(File.ReadAllText(path), Json)
             ?? throw new InvalidDataException($"{path} is empty.");
+        return evalCase.Kind is null || Kinds.Contains(evalCase.Kind, StringComparer.Ordinal)
+            ? evalCase
+            : throw new InvalidDataException($"{path}: kind must be one of {string.Join(", ", Kinds)}.");
+    }
 }
 
 /// <param name="Type">One of <see cref="EvalChecks.Known"/>.</param>

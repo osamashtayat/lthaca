@@ -1,6 +1,5 @@
 using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
-using Ithaca.Api.OpenApi;
 using Ithaca.Application.Decks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +20,6 @@ public sealed class DecksController(DeckService decks) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
-    [ContractStub] // the "mood" source until BE-09; "justSwipe" is built (BE-08)
     public async Task<ActionResult<DeckDto>> Create(CreateDeckRequest request, CancellationToken ct) =>
         this.ToCreatedResult(await decks.CreateAsync(request, ct), deck => $"/api/decks/{deck.Id}");
 

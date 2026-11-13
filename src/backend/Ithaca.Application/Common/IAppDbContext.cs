@@ -1,5 +1,6 @@
 using Ithaca.Application.Users;
 using Ithaca.Domain.Decks;
+using Ithaca.Domain.Moods;
 using Ithaca.Domain.Films;
 using Ithaca.Domain.Library;
 using Ithaca.Domain.Users;
@@ -29,6 +30,9 @@ public interface IAppDbContext
 
     /// <summary>My Cinema: a user's flags and rating per film. Referencing a film keeps it from being purged (ADR-0019).</summary>
     DbSet<UserFilm> UserFilms { get; }
+
+    /// <summary>Mood requests and the filters derived from them (glossary: <c>MoodQuery</c>).</summary>
+    DbSet<MoodQuery> MoodQueries { get; }
 
     /// <summary>Solo decks (glossary: <c>Deck</c>).</summary>
     DbSet<Deck> Decks { get; }

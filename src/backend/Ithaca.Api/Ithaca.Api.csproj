@@ -27,9 +27,10 @@
     <ProjectReference Include="..\Ithaca.Infrastructure\Ithaca.Infrastructure.csproj" />
   </ItemGroup>
 
-  <!-- Versioned prompt files (repo-root prompts/) ship next to the binary; Ai:PromptsPath defaults to "prompts". -->
+  <!-- Versioned prompt files and their output schemas (repo-root prompts/) ship next to the binary; Ai:PromptsPath defaults to "prompts". -->
   <ItemGroup>
     <None Include="..\..\..\prompts\**\*.md" LinkBase="prompts" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\..\prompts\**\*.schema.json" LinkBase="prompts" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

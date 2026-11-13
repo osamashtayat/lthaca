@@ -15,11 +15,12 @@ public sealed class Deck
     /// <summary>A deck stops growing here: the next batch is empty.</summary>
     public const int MaxItems = 300;
 
-    private Deck(Guid userId, DeckSource source, DateTimeOffset now)
+    private Deck(Guid userId, DeckSource source, Guid? moodQueryId, DateTimeOffset now)
     {
         Id = SequentialGuid.NewV7(now);
         UserId = userId;
         Source = source;
+        MoodQueryId = moodQueryId;
         CreatedAt = now;
     }
 
@@ -34,15 +35,23 @@ public sealed class Deck
 
     public DeckSource Source { get; private set; }
 
+    /// <summary>The <c>MoodQuery</c> a deck by mood was built from; set exactly when <see cref="Source"/> is mood.</summary>
+    public Guid? MoodQueryId { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
 
-    public static Deck Create(Guid userId, DeckSource source, DateTimeOffset now)
+    public static Deck Create(Guid userId, DeckSource source, Guid? moodQueryId, DateTimeOffset now)
     {
         if (userId == Guid.Empty)
         {
             throw new DomainException(ErrorCodes.Validation, "userId is required.");
         }
 
-        return new Deck(userId, source, now);
+        if ((source == DeckSource.Mood) != (moodQueryId is { } id && id != Guid.Empty))
+        {
+            throw new DomainException(ErrorCodes.Validation, "A deck by mood needs its mood query, and only it has one.", "mood");
+        }
+
+        return new Deck(userId, source, moodQueryId, now);
     }
 }

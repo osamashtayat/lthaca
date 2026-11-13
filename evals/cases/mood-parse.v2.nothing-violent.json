@@ -1,0 +1,54 @@
+{
+  "id": "mood-parse.nothing-violent",
+  "kind": "representative",
+  "description": "Exclusions only",
+  "prompt": "mood-parse.v2",
+  "variables": {
+    "genres": "Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Science Fiction, TV Movie, Thriller, War, Western",
+    "year": "2026"
+  },
+  "input": "cozy rainy sunday, nothing violent",
+  "recordedResponse": {
+    "intent": "mood",
+    "includeGenres": [
+      "Comedy",
+      "Drama",
+      "Romance",
+      "Family"
+    ],
+    "excludeGenres": [
+      "Action",
+      "Horror",
+      "War",
+      "Thriller",
+      "Crime"
+    ],
+    "maxRuntimeMinutes": null,
+    "minReleaseYear": null,
+    "maxReleaseYear": null,
+    "keywords": [
+      "cozy",
+      "comforting",
+      "gentle",
+      "feel-good",
+      "rainy day"
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "intentIs",
+      "value": "mood"
+    },
+    {
+      "type": "doesNotIncludeGenre",
+      "value": "War"
+    },
+    {
+      "type": "doesNotIncludeGenre",
+      "value": "Horror"
+    }
+  ]
+}

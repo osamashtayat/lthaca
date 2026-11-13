@@ -1,6 +1,6 @@
 using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
-using Ithaca.Application.Moods;
+using Ithaca.Domain.Moods;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ithaca.Application.Films;
@@ -11,8 +11,6 @@ namespace Ithaca.Application.Films;
 /// </summary>
 public sealed class FilmQueryService(IAppDbContext db, ICurrentActor current)
 {
-    private const int Under90Minutes = 90;
-    private const int UpTo2hMinutes = 120;
 
     public async Task<Result<FilmDto>> GetByTmdbIdAsync(int tmdbId, CancellationToken ct)
     {
@@ -49,12 +47,10 @@ public sealed class FilmQueryService(IAppDbContext db, ICurrentActor current)
             films = films.Where(f => f.Genres.Contains(genre));
         }
 
-        films = request.MaxRuntime switch
+        if (request.MaxRuntime?.MaxMinutes() is { } maxMinutes)
         {
-            RuntimeLimit.Under90 => films.Where(f => f.RuntimeMinutes < Under90Minutes),
-            RuntimeLimit.UpTo2h => films.Where(f => f.RuntimeMinutes <= UpTo2hMinutes),
-            _ => films,
-        };
+            films = films.Where(f => f.RuntimeMinutes <= maxMinutes);
+        }
 
         if (request.MinVoteAverage is { } minVote)
         {
@@ -82,13 +78,7 @@ public sealed class FilmQueryService(IAppDbContext db, ICurrentActor current)
     /// <summary>Genres present in our catalog (available films), alphabetical.</summary>
     public async Task<Result<IReadOnlyList<string>>> GetGenresAsync(CancellationToken ct)
     {
-        IReadOnlyList<string> genres = await db.Films
-            .AsNoTracking()
-            .Where(f => f.IsAvailable)
-            .SelectMany(f => f.Genres)
-            .Distinct()
-            .OrderBy(g => g)
-            .ToListAsync(ct);
+        IReadOnlyList<string> genres = await CatalogGenres.ListAsync(db, ct);
         return Result<IReadOnlyList<string>>.Success(genres);
     }
 }

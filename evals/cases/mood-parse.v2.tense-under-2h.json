@@ -1,0 +1,38 @@
+{
+  "id": "mood-parse.tense-under-2h",
+  "kind": "representative",
+  "description": "Tense thriller with a length limit",
+  "prompt": "mood-parse.v2",
+  "variables": {
+    "genres": "Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Science Fiction, TV Movie, Thriller, War, Western",
+    "year": "2026"
+  },
+  "input": "a tense thriller, under two hours please",
+  "recordedResponse": {
+    "intent": "mood",
+    "includeGenres": [
+      "Thriller"
+    ],
+    "excludeGenres": [],
+    "maxRuntimeMinutes": 120,
+    "minReleaseYear": null,
+    "maxReleaseYear": null,
+    "keywords": [
+      "tense",
+      "suspenseful"
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "intentIs",
+      "value": "mood"
+    },
+    {
+      "type": "includesGenre",
+      "value": "Thriller"
+    }
+  ]
+}

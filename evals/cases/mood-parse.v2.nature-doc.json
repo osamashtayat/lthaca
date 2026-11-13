@@ -1,0 +1,39 @@
+{
+  "id": "mood-parse.nature-doc",
+  "kind": "representative",
+  "description": "A documentary",
+  "prompt": "mood-parse.v2",
+  "variables": {
+    "genres": "Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Science Fiction, TV Movie, Thriller, War, Western",
+    "year": "2026"
+  },
+  "input": "a documentary about nature and animals",
+  "recordedResponse": {
+    "intent": "mood",
+    "includeGenres": [
+      "Documentary"
+    ],
+    "excludeGenres": [],
+    "maxRuntimeMinutes": null,
+    "minReleaseYear": null,
+    "maxReleaseYear": null,
+    "keywords": [
+      "nature",
+      "animals",
+      "wildlife"
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "intentIs",
+      "value": "mood"
+    },
+    {
+      "type": "includesGenre",
+      "value": "Documentary"
+    }
+  ]
+}

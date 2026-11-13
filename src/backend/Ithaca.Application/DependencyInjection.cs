@@ -3,6 +3,7 @@ using Ithaca.Application.Catalog;
 using Ithaca.Application.Decks;
 using Ithaca.Application.Films;
 using Ithaca.Application.Library;
+using Ithaca.Application.Moods;
 using Ithaca.Application.Rooms;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -25,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<FilmEmbedder>(); // collaborator of CatalogSyncService only, not a use-case service
         services.AddScoped<FilmTrailerService>();
         services.AddScoped<AuthService>();
+        services.AddScoped<MoodInterpreter>(); // collaborator of DeckService (and RoomService in BE-11), not a use-case service
         services.AddScoped<DeckService>();
         services.AddScoped<RoomService>();
         services.AddScoped<LibraryService>();

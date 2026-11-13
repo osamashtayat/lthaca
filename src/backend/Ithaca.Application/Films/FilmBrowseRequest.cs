@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Ithaca.Application.Common;
-using Ithaca.Application.Moods;
+using Ithaca.Domain.Moods;
 
 namespace Ithaca.Application.Films;
 

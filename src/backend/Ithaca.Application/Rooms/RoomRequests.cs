@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Ithaca.Application.Decks;
 using Ithaca.Application.Moods;
 using Ithaca.Domain.Decks;
+using Ithaca.Domain.Moods;
 
 namespace Ithaca.Application.Rooms;
 
@@ -22,10 +23,10 @@ public sealed record JoinRoomRequest([StringLength(JoinRoomRequest.DisplayNameMa
 
 /// <summary><c>PUT /api/rooms/{code}/mood</c>. Hard nos are private to the member.</summary>
 public sealed record SetRoomMoodRequest(
-    [MaxLength(MoodInput.MaxMoods)] IReadOnlyList<Mood> Moods,
+    [MaxLength(MoodQuery.MaxMoods)] IReadOnlyList<Mood> Moods,
     RuntimeLimit MaxRuntime,
     IReadOnlyList<HardNo> HardNos,
-    [MaxLength(MoodInput.TextMaxLength)] string? Text);
+    [MaxLength(MoodQuery.TextMaxLength)] string? Text);
 
 /// <summary><c>POST /api/rooms/{code}/votes</c>. <see cref="VoteId"/> makes retries idempotent (ADR-0015).</summary>
 public sealed record CastVoteRequest(

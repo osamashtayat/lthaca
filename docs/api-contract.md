@@ -206,7 +206,7 @@ Rules (server-side; the UI never decides them):
 - Solo decks require a signed-in user; no anonymous "Just swipe" (A3, decided).
 - Routes (A4, decided): `/mood` (picker), `/deck/:deckId` (swipe), `/deck/:deckId/top` (top 3; it belongs to a deck,
   "from 14 swipes").
-- As built (BE-08, `justSwipe`; `source: "mood"` still answers 501 until BE-09):
+- As built (BE-08, `justSwipe`):
   - Batches of 10 cards (`Deck.BatchSize`), positions from 1; a deck stops at 300 cards (`Deck.MaxItems`), then
     `POST …/items` returns `[]`. Also `[]` once no eligible film is left.
   - Eligible: available films (not A14) not yet in this deck and not `seen` in the caller's library at dealing time. A
@@ -220,6 +220,17 @@ Rules (server-side; the UI never decides them):
   - Swipe retries: the same `swipeId` on the same card → 204, nothing changes; a `swipeId` already used for another card,
     or a new one for a swiped card → 409 `deck.already_swiped`.
   - Top 3: right swipes ordered by genre fit with the deck's swipes and the library, then TMDB popularity, then deck order.
+- As built (BE-09, `mood`; the full flow is in docs/ai.md → Mood flow):
+  - `source: "mood"` without `mood` → 400 `errors.mood`. Chips are de-duplicated; `language` is stored lowercase.
+  - Chips map to genres by a server-side table; `maxRuntime` (`under90` → < 90 min, `upTo2h` → ≤ 120) and `language`
+    (the film's original language) are filters, never LLM input. Empty or whitespace `text` makes no LLM call and comes
+    back as `text: null`.
+  - Each ADR-0022 row is a slice test. With a mood in the text, its filters join the chips'; a chip's genre is never
+    excluded by the text, and the stricter runtime wins. Genres the model returns that our catalog doesn't have are dropped.
+  - `mood.filters` is what every batch is limited to (a film missing the needed value doesn't pass); its genres also
+    weigh in adaptation and the top 3. `keywords` are stored but don't filter yet (BE-13).
+  - If no film passes the filters, the deck is created with `items: []` and `POST …/items` returns `[]`.
+  - `mood.text` is the caller's own text in their own deck; no error or log ever contains it.
 
 ## 6. Rooms and votes (ADR-0012, ADR-0015, docs/realtime.md)
 

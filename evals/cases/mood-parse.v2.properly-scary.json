@@ -1,0 +1,40 @@
+{
+  "id": "mood-parse.properly-scary",
+  "kind": "representative",
+  "description": "Horror on purpose",
+  "prompt": "mood-parse.v2",
+  "variables": {
+    "genres": "Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Science Fiction, TV Movie, Thriller, War, Western",
+    "year": "2026"
+  },
+  "input": "properly scary, I want to jump out of my seat",
+  "recordedResponse": {
+    "intent": "mood",
+    "includeGenres": [
+      "Horror"
+    ],
+    "excludeGenres": [],
+    "maxRuntimeMinutes": null,
+    "minReleaseYear": null,
+    "maxReleaseYear": null,
+    "keywords": [
+      "jump scares",
+      "terrifying",
+      "intense",
+      "suspense"
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "intentIs",
+      "value": "mood"
+    },
+    {
+      "type": "includesGenre",
+      "value": "Horror"
+    }
+  ]
+}
