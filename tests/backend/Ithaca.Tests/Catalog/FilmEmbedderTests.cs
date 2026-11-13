@@ -86,6 +86,24 @@ public sealed class FilmEmbedderTests(PostgresFixture postgres)
         (await FilmWithFactsAsync(db, 27205)).Film.Embedding.ShouldNotBeNull();
     }
 
+    [Fact]
+    public async Task Run_SkipsFilmsWhoseFactsAreAllEmpty()
+    {
+        await using var factory = await IthacaApiFactory.StartAsync(postgres.ConnectionString);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = await ResetAsync(scope);
+        var parasite = await db.Films.SingleAsync(f => f.TmdbId == 496243, Ct);
+        db.FilmFacts.Add(FilmFacts.Create(parasite.Id, new WikidataFacts("Q1", [], [], [], [], [], [], null, null, []), DateTimeOffset.UtcNow));
+        await db.SaveChangesAsync(Ct);
+        var counting = new CountingEmbeddings("fake");
+
+        var result = await Embedder(db, counting).RunAsync(Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        counting.Texts.ShouldNotContain("", "an empty text is never sent to the provider");
+        (await FilmWithFactsAsync(db, 496243)).Film.Embedding.ShouldBeNull();
+    }
+
     private static FilmEmbedder Embedder(AppDbContext db, IEmbeddingClient client, int batchSize = 100) =>
         new(db, client, Options.Create(new CatalogSyncOptions { EmbeddingBatchSize = batchSize }));
 

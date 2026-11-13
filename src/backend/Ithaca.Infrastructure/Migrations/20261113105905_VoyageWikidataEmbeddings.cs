@@ -26,6 +26,7 @@ namespace Ithaca.Infrastructure.Migrations
                 defaultValue: "");
 
             // Same value FilmFacts.HashOf computes (lowercase hex SHA-256 of the UTF-8 text), for rows written before this column.
+            // Checked against HashOf for ASCII, multi-line and non-ASCII text; a mismatch would only cost one re-embed.
             migrationBuilder.Sql("UPDATE film_facts SET embedding_text_hash = encode(sha256(convert_to(embedding_text, 'UTF8')), 'hex');");
 
             // Every vector so far is either fake or built from TMDB text (CatalogSync:EmbedOverviews, now removed). ADR-0017

@@ -185,7 +185,7 @@ lint, test, build.
 - **Tests:** stub `HttpMessageHandler` with recorded SPARQL replies; builder unit tests; "no TMDB text" test.
 - **Docs:** docs/ai.md (data sources, enricher).
 
-### BE-04 — Voyage embedding client (ADR-0013) · `In progress`
+### BE-04 — Voyage embedding client (ADR-0013) · `Done` (PR #15)
 - **Objective:** real embeddings of the Wikidata text with Voyage (the key `Ai:EmbeddingApiKey` is in user-secrets).
 - **Deps:** BE-03. **Modules:** `Infrastructure/Ai/VoyageEmbeddingClient.cs`, `Application/Ai/IEmbeddingClient.cs`,
   `Infrastructure/DependencyInjection.cs` (`AddExternalClients` + startup validation), `CatalogSyncService`,

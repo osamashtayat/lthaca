@@ -8,9 +8,10 @@ namespace Ithaca.Application.Catalog;
 /// <summary>
 /// Embeds each film's Wikidata text (<c>FilmFacts.EmbeddingText</c>) into <c>films.embedding</c> (ADR-0013, ADR-0017). A
 /// film is (re-)embedded when it has facts and no vector yet, its vector came from another model, or its facts' text
-/// changed since (<c>Film.EmbeddingSourceHash</c> ≠ <c>FilmFacts.EmbeddingTextHash</c>). Films without facts are never
-/// embedded: no TMDB text reaches the model. Works in TMDB-id order, <see cref="CatalogSyncOptions.EmbeddingBatchSize"/>
-/// films per request and one save per batch, so a failure keeps finished batches and the next run continues.
+/// changed since (<c>Film.EmbeddingSourceHash</c> ≠ <c>FilmFacts.EmbeddingTextHash</c>). Films without facts, or whose
+/// facts are all empty, are never embedded: no TMDB text reaches the model, and an empty text would fail every run.
+/// Works in TMDB-id order, <see cref="CatalogSyncOptions.EmbeddingBatchSize"/> films per request and one save per batch,
+/// so a failure keeps finished batches and the next run continues.
 /// A collaborator of <see cref="CatalogSyncService"/>, its only caller, not a use-case service of its own.
 /// </summary>
 public sealed class FilmEmbedder(IAppDbContext db, IEmbeddingClient embeddings, IOptions<CatalogSyncOptions> options)
@@ -28,6 +29,7 @@ public sealed class FilmEmbedder(IAppDbContext db, IEmbeddingClient embeddings, 
             var batch = await db.Films
                 .Join(db.FilmFacts, f => f.Id, x => x.FilmId, (f, x) => new { Film = f, x.EmbeddingText, x.EmbeddingTextHash })
                 .Where(r => r.Film.TmdbId > afterTmdbId
+                    && r.EmbeddingText != ""
                     && (r.Film.Embedding == null || r.Film.EmbeddingModel != model || r.Film.EmbeddingSourceHash != r.EmbeddingTextHash))
                 .OrderBy(r => r.Film.TmdbId)
                 .Take(batchSize)
