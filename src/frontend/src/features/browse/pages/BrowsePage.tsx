@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { isUser, useCurrentUser } from '@/features/auth'
 import { useGenres } from '@/features/films'
 import { Button, ErrorState, LoadingState, MonoLabel, Poster, ToggleChip, tmdbImageUrl } from '@/shared/ui'
 import { useBrowseFilms } from '../api/useBrowseFilms'
@@ -16,6 +17,7 @@ export function BrowsePage() {
   const [params, setParams] = useSearchParams()
   const filters = filtersFromParams(params)
   const genres = useGenres()
+  const signedIn = isUser(useCurrentUser().data)
   const films = useBrowseFilms(filters)
 
   function update(next: Partial<BrowseFilters>, replace = false) {
@@ -63,9 +65,12 @@ export function BrowsePage() {
         <ToggleChip selected={filters.under2h} onClick={() => update({ under2h: !filters.under2h })}>
           Under 2h
         </ToggleChip>
-        <ToggleChip selected={filters.hideSeen} onClick={() => update({ hideSeen: !filters.hideSeen })}>
-          Hide seen
-        </ToggleChip>
+        {/* "Seen" is the user's own list; for visitors the server ignores the flag, so the chip isn't offered. */}
+        {signedIn && (
+          <ToggleChip selected={filters.hideSeen} onClick={() => update({ hideSeen: !filters.hideSeen })}>
+            Hide seen
+          </ToggleChip>
+        )}
         <ToggleChip selected={filters.topRated} onClick={() => update({ topRated: !filters.topRated })}>
           ★ 7+
         </ToggleChip>

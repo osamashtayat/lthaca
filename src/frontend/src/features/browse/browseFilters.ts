@@ -4,6 +4,8 @@ export type RuntimeLimit = components['schemas']['RuntimeLimit']
 
 export const BROWSE_PAGE_SIZE = 8
 export const MAX_SEARCH_LENGTH = 100
+/** The "★ 7+" chip: TMDB score of at least 7 out of 10. */
+const TOP_RATED_MIN = 7
 
 /** What the Browse screen filters by. Everything is optional; no filters means "Trending this week". */
 export type BrowseFilters = {
@@ -48,7 +50,7 @@ export function toFilmsQuery(filters: BrowseFilters, page: number) {
     ...(search ? { search } : {}),
     ...(filters.genre ? { genre: filters.genre } : {}),
     ...(filters.under2h ? { maxRuntime: 'upTo2h' as const } : {}),
-    ...(filters.topRated ? { minVoteAverage: 7 } : {}),
+    ...(filters.topRated ? { minVoteAverage: TOP_RATED_MIN } : {}),
     ...(filters.hideSeen ? { hideSeen: true } : {}),
     sort: 'popular' as const,
     page,

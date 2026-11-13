@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router'
 import { afterEach, describe, expect, it } from 'vitest'
+import { setMockSession } from '@/mocks/authStore'
 import { mockFilms } from '@/mocks/fixtures'
 import { putMockUserFilm } from '@/mocks/libraryStore'
 import { server } from '@/mocks/server'
@@ -59,7 +60,7 @@ describe('Browse', () => {
     await screen.findByText('Fight Club')
     await user.click(screen.getByRole('button', { name: 'Under 2h' }))
     await user.click(screen.getByRole('button', { name: '★ 7+' }))
-    await user.click(screen.getByRole('button', { name: 'Hide seen' }))
+    await user.click(await screen.findByRole('button', { name: 'Hide seen' }))
     await waitFor(() => expect(where()).toBe('/browse?under2h=1&hideSeen=1&topRated=1'))
     await waitFor(() => {
       const last = requests.at(-1)?.searchParams
@@ -110,6 +111,14 @@ describe('Browse', () => {
     renderBrowse('/browse?hideSeen=1')
     await screen.findByText('Inception')
     expect(screen.queryByText('Fight Club')).toBeNull()
+  })
+
+  it('offers "Hide seen" only to signed-in users', async () => {
+    setMockSession(null)
+    renderBrowse()
+    await screen.findByText('Fight Club')
+    expect(screen.queryByRole('button', { name: 'Hide seen' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Under 2h' })).toBeTruthy()
   })
 
   it('shows an empty state with a way out', async () => {
