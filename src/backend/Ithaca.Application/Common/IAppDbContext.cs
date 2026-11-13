@@ -1,4 +1,5 @@
 using Ithaca.Application.Users;
+using Ithaca.Domain.Decks;
 using Ithaca.Domain.Films;
 using Ithaca.Domain.Library;
 using Ithaca.Domain.Users;
@@ -28,6 +29,15 @@ public interface IAppDbContext
 
     /// <summary>My Cinema: a user's flags and rating per film. Referencing a film keeps it from being purged (ADR-0019).</summary>
     DbSet<UserFilm> UserFilms { get; }
+
+    /// <summary>Solo decks (glossary: <c>Deck</c>).</summary>
+    DbSet<Deck> Decks { get; }
+
+    /// <summary>Cards in a deck. Referencing a film keeps it from being purged (ADR-0019).</summary>
+    DbSet<DeckItem> DeckItems { get; }
+
+    /// <summary>Solo swipes, one per deck item (glossary: <c>Swipe</c>).</summary>
+    DbSet<Swipe> Swipes { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

@@ -1,5 +1,6 @@
 using Ithaca.Application.Films;
 using Ithaca.Application.Moods;
+using Ithaca.Domain.Decks;
 
 namespace Ithaca.Application.Decks;
 

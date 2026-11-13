@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Ithaca.Application.Decks;
 using Ithaca.Application.Moods;
+using Ithaca.Domain.Decks;
 
 namespace Ithaca.Application.Rooms;
 

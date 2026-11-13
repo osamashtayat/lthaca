@@ -19,9 +19,7 @@ public sealed class FilmQueryService(IAppDbContext db, ICurrentActor current)
         var film = await db.Films
             .AsNoTracking()
             .Where(f => f.TmdbId == tmdbId)
-            .Select(f => new FilmDto(
-                f.TmdbId, f.Title, f.ReleaseYear, f.Overview, f.PosterPath, f.RuntimeMinutes, f.Genres,
-                f.BackdropPath, f.VoteAverage, f.VoteCount, f.OriginalLanguage))
+            .Select(FilmProjections.Dto)
             .SingleOrDefaultAsync(ct);
 
         return film is null ? FilmErrors.NotFound : film;

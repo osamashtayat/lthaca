@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using Ithaca.Application.Catalog;
 using Ithaca.Application.Common;
 using Ithaca.Application.Tmdb;
+using Ithaca.Domain.Decks;
 using Ithaca.Domain.Films;
 using Ithaca.Infrastructure.Persistence;
 using Ithaca.Infrastructure.Tmdb;
@@ -156,6 +157,29 @@ public sealed class CatalogRetentionTests(PostgresFixture postgres)
         db.ChangeTracker.Clear();
         (await db.FilmTrailers.AnyAsync(t => t.FilmId == films[776001], Ct)).ShouldBeFalse("TMDB data isn't kept past 6 months");
         (await db.FilmTrailers.AnyAsync(t => t.FilmId == films[776002], Ct)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Sync_NeverPurgesAFilmADeckReferences()
+    {
+        await using var factory = await IthacaApiFactory.StartAsync(postgres.ConnectionString);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await AddStaleFilmsAsync(db, 777001);
+        var user = await BrowserClient.RegisteredAsync(factory, Ct);
+        var filmId = await db.Films.Where(f => f.TmdbId == 777001).Select(f => f.Id).SingleAsync(Ct);
+        var userId = (await user.GetFromJsonAsync<System.Text.Json.JsonElement>("/api/auth/me", Ct)).GetProperty("id").GetGuid();
+        var deck = Deck.Create(userId, DeckSource.JustSwipe, DateTimeOffset.UtcNow);
+        db.Decks.Add(deck);
+        db.DeckItems.Add(DeckItem.Create(deck.Id, filmId, 1, DateTimeOffset.UtcNow));
+        await db.SaveChangesAsync(Ct);
+
+        var result = await Sync(scope, db, new StubTmdb(known: new() { [777001] = "Still Here" })).RunAsync(Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        db.ChangeTracker.Clear();
+        var film = await db.Films.AsNoTracking().SingleAsync(f => f.TmdbId == 777001, Ct);
+        film.Title.ShouldBe("Still Here", "a film in a deck is refreshed by id, not purged (ADR-0019)");
     }
 
     private static CatalogSyncService Sync(AsyncServiceScope scope, AppDbContext db, ITmdbClient tmdb) =>

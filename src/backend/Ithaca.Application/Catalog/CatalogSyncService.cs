@@ -120,7 +120,7 @@ public sealed class CatalogSyncService(
     /// The films user data points at: the one definition of "referenced" for the refresh and the purge (ADR-0019). Tasks
     /// that add references to films (deck items, votes) extend it.
     /// </summary>
-    private IQueryable<Guid> ReferencedFilmIds() => db.UserFilms.Select(u => u.FilmId);
+    private IQueryable<Guid> ReferencedFilmIds() => db.UserFilms.Select(u => u.FilmId).Union(db.DeckItems.Select(i => i.FilmId));
 
     /// <summary>
     /// Re-fetches by TMDB id every referenced film this run hasn't refreshed (it may have left TMDB's popular pages), in

@@ -12,7 +12,9 @@ Use these names exactly in code (types, tables, routes, UI copy where it fits). 
 | `UserFilm` | A user's relation to a film: liked, watchlist, seen, personal rating (0.5–5 in half steps, shown as ticket stubs). No "watching" state. | Powers "My Cinema" (Library). Stored as half stars 1–10 (ADR-0024). |
 | `Room` | A group session with one shared deck, joined by link or code. | Stored in the DB; real-time via RoomHub. |
 | `RoomMember` | A `User` or `Guest` in a `Room`. | Host is a member with extra rights. |
+| `Deck` | A user's solo deck: how it was started (just swipe, mood, taste) and the `DeckItem`s dealt so far. | Table `decks`. A room's shared deck is the room's (BE-11). Proposed by BE-08 (A12). |
 | `DeckItem` | One card (a `Film`) at a position in a deck — solo or a room's shared deck. | Group "Just swipe" adds them in batches. |
+| `Swipe` | A user's gesture on a card in their own `Deck`: right, left or up (+ optional loved it / not for me). | Table `swipes`, one per `DeckItem`, keyed by the client's `swipeId`. A room member's is a `Vote`. Proposed by BE-08 (A12). |
 | `Vote` | A member's swipe on a `DeckItem`: right (I'd watch it), left (not for me), up (seen it → loved it / not for me). | Same three gestures everywhere. |
 | `TasteProfile` | A user's (or room's) taste vector in the film-embedding space, plus what built it. | Built after a few swipes or from history. |
 | `MoodQuery` | A mood request: tapped moods and/or free text, and the structured filters the LLM parsed from it. | Output of `mood-parse.vN`. |

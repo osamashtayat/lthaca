@@ -24,6 +24,115 @@ namespace Ithaca.Infrastructure.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Ithaca.Domain.Decks.Deck", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("source");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_decks");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_decks_user_id");
+
+                    b.ToTable("decks", (string)null);
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Decks.DeckItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeckId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deck_id");
+
+                    b.Property<Guid>("FilmId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("film_id");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.HasKey("Id")
+                        .HasName("pk_deck_items");
+
+                    b.HasIndex("FilmId")
+                        .HasDatabaseName("ix_deck_items_film_id");
+
+                    b.HasIndex("DeckId", "FilmId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_deck_items_deck_id_film_id");
+
+                    b.HasIndex("DeckId", "Position")
+                        .IsUnique()
+                        .HasDatabaseName("ux_deck_items_deck_id_position");
+
+                    b.ToTable("deck_items", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_deck_items_position", "position BETWEEN 1 AND 300");
+                        });
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Decks.Swipe", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeckItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deck_item_id");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("direction");
+
+                    b.Property<string>("SeenVerdict")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("seen_verdict");
+
+                    b.HasKey("Id")
+                        .HasName("pk_swipes");
+
+                    b.HasIndex("DeckItemId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_swipes_deck_item_id");
+
+                    b.ToTable("swipes", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_swipes_seen_verdict", "seen_verdict IS NULL OR direction = 'Up'");
+                        });
+                });
+
             modelBuilder.Entity("Ithaca.Domain.Films.Film", b =>
                 {
                     b.Property<Guid>("Id")
@@ -471,6 +580,43 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasName("pk_user_tokens");
 
                     b.ToTable("user_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Decks.Deck", b =>
+                {
+                    b.HasOne("Ithaca.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_decks_users_user_id");
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Decks.DeckItem", b =>
+                {
+                    b.HasOne("Ithaca.Domain.Decks.Deck", null)
+                        .WithMany()
+                        .HasForeignKey("DeckId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_deck_items_decks_deck_id");
+
+                    b.HasOne("Ithaca.Domain.Films.Film", null)
+                        .WithMany()
+                        .HasForeignKey("FilmId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_deck_items_films_film_id");
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Decks.Swipe", b =>
+                {
+                    b.HasOne("Ithaca.Domain.Decks.DeckItem", null)
+                        .WithOne()
+                        .HasForeignKey("Ithaca.Domain.Decks.Swipe", "DeckItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_swipes_deck_items_deck_item_id");
                 });
 
             modelBuilder.Entity("Ithaca.Domain.Films.FilmFacts", b =>

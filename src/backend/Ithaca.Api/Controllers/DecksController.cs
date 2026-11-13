@@ -21,7 +21,7 @@ public sealed class DecksController(DeckService decks) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
-    [ContractStub]
+    [ContractStub] // the "mood" source until BE-09; "justSwipe" is built (BE-08)
     public async Task<ActionResult<DeckDto>> Create(CreateDeckRequest request, CancellationToken ct) =>
         this.ToCreatedResult(await decks.CreateAsync(request, ct), deck => $"/api/decks/{deck.Id}");
 
@@ -29,7 +29,6 @@ public sealed class DecksController(DeckService decks) : ControllerBase
     [ProducesResponseType<DeckDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ContractStub]
     public async Task<ActionResult<DeckDto>> Get(Guid deckId, CancellationToken ct) =>
         this.ToActionResult(await decks.GetAsync(deckId, ct));
 
@@ -37,7 +36,6 @@ public sealed class DecksController(DeckService decks) : ControllerBase
     [ProducesResponseType<IReadOnlyList<DeckItemDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ContractStub]
     public async Task<ActionResult<IReadOnlyList<DeckItemDto>>> AddItems(Guid deckId, CancellationToken ct) =>
         this.ToActionResult(await decks.AddItemsAsync(deckId, ct));
 
@@ -47,7 +45,6 @@ public sealed class DecksController(DeckService decks) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    [ContractStub]
     public async Task<ActionResult> Swipe(Guid deckId, SwipeRequest request, CancellationToken ct) =>
         this.ToActionResult(await decks.SwipeAsync(deckId, request, ct));
 
@@ -56,7 +53,6 @@ public sealed class DecksController(DeckService decks) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
-    [ContractStub]
     public async Task<ActionResult<DeckTopDto>> Top(Guid deckId, CancellationToken ct) =>
         this.ToActionResult(await decks.GetTopAsync(deckId, ct));
 }
