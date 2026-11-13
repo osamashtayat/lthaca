@@ -117,7 +117,7 @@ describe('SignInPage', () => {
     await userEvent.type(await screen.findByLabelText('Room code'), 'abcd')
     await userEvent.click(screen.getByRole('button', { name: 'Join' }))
     expect(await screen.findByText('room')).toBeTruthy()
-    expect(screen.getByTestId('where').textContent).toBe('/rooms/ABCD')
+    expect(screen.getByTestId('where').textContent).toBe('/rooms/abcd')
   })
 })
 

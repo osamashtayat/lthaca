@@ -12,7 +12,8 @@ export function RoomCodeForm() {
       className="flex flex-col gap-3"
       onSubmit={(e) => {
         e.preventDefault()
-        const clean = code.trim().toUpperCase()
+        // The format of a room code is the server's rule: pass it through and let the room screen report room.not_found.
+        const clean = code.trim()
         if (clean) void navigate(`/rooms/${encodeURIComponent(clean)}`)
       }}
     >
@@ -23,10 +24,9 @@ export function RoomCodeForm() {
             label="Room code"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            autoCapitalize="characters"
             autoComplete="off"
             spellCheck={false}
-            className="w-full uppercase"
+            className="w-full"
           />
         </div>
         <Button type="submit" variant="yellow" className="mb-px h-12">

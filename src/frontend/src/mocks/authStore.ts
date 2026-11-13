@@ -2,7 +2,7 @@ import type { components } from '@/shared/api'
 
 type CurrentUserDto = components['schemas']['CurrentUserDto']
 
-/** Mock accounts. Sample content for dev and tests, not product data. */
+/** Mock accounts: sample content for dev and tests. The rules in handlers.ts (password 8–128, name 1–40, taken email) mirror api-contract §4. */
 export const MOCK_USER: CurrentUserDto = {
   kind: 'user',
   id: '0190c4a2-0000-7000-8000-000000000001',

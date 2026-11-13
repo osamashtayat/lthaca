@@ -2,6 +2,9 @@
  * Central TanStack Query keys. Hooks build keys here only, so invalidation by prefix is predictable:
  * `queryKeys.films.all` invalidates every film query. Add a block per feature as it lands.
  */
+/** Matches every cached query that isn't the session itself: what must be dropped or refetched when the principal changes. */
+export const isNotSessionQuery = (query: { queryKey: readonly unknown[] }) => query.queryKey[0] !== 'auth'
+
 export const queryKeys = {
   health: ['health'] as const,
   auth: {
