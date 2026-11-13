@@ -63,3 +63,20 @@ describe('SegmentedControl', () => {
     expect(onChange).toHaveBeenCalledWith('b')
   })
 })
+
+describe('ButtonLink', () => {
+  it('is a link with the button look', async () => {
+    const { MemoryRouter } = await import('react-router')
+    const { ButtonLink } = await import('./Button')
+    render(
+      <MemoryRouter>
+        <ButtonLink to="/deck" variant="yellow">
+          Go
+        </ButtonLink>
+      </MemoryRouter>,
+    )
+    const link = screen.getByRole('link', { name: 'Go' })
+    expect(link.getAttribute('href')).toBe('/deck')
+    expect(link.className).toContain('bg-yellow')
+  })
+})
