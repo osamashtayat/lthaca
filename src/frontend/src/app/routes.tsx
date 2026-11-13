@@ -3,6 +3,7 @@ import { AppShell } from '@/app/layout/AppShell'
 import { PlaceholderPage } from '@/app/PlaceholderPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { RequireUser, SignInPage } from '@/features/auth'
+import { DeckPage, DeckStartPage, DeckTopPage } from '@/features/deck'
 import { FilmPage } from '@/features/films'
 
 /**
@@ -18,7 +19,9 @@ export const routes: RouteObject[] = [
       {
         element: <RequireUser />,
         children: [
-          { path: '/deck', element: <PlaceholderPage title="The deck" feature="deck" /> },
+          { path: '/deck', element: <DeckStartPage /> },
+          { path: '/deck/:deckId', element: <DeckPage /> },
+          { path: '/deck/:deckId/top', element: <DeckTopPage /> },
           { path: '/mood', element: <PlaceholderPage title="By mood" feature="mood" /> },
           { path: '/taste', element: <PlaceholderPage title="By taste" feature="taste" /> },
           { path: '/cinema', element: <PlaceholderPage title="My Cinema" feature="library" /> },

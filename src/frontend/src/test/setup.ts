@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll } from 'vitest'
 import { resetMockAuth } from '@/mocks/authStore'
+import { resetMockDecks } from '@/mocks/deckStore'
 import { resetMockLibrary } from '@/mocks/libraryStore'
 import { server } from '@/mocks/server'
 
@@ -25,6 +26,7 @@ afterEach(() => {
   server.resetHandlers()
   resetMockAuth()
   resetMockLibrary()
+  resetMockDecks()
 })
 
 afterAll(() => server.close())

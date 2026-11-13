@@ -66,3 +66,13 @@ export function resetMockLibrary() {
     // ignore
   }
 }
+
+/** `PUT`/`DELETE …/watchlist`: changes only the watchlist flag (idempotent). */
+export function setMockWatchlist(tmdbId: number, onWatchlist: boolean) {
+  const current = store.get(tmdbId) ?? untouched
+  putMockUserFilm(tmdbId, { ...current, onWatchlist })
+}
+
+export function isOnMockWatchlist(tmdbId: number): boolean {
+  return store.get(tmdbId)?.onWatchlist ?? false
+}
