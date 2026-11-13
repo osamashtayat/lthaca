@@ -513,6 +513,13 @@ lint, test, build.
 - **Acceptance:** the four rows of ADR-0022's table are in the contract; FE-06 / FE-10 depend on BE-09a.
 - **Tests:** none (docs).
 
+### OPS-12 — Letterboxd import and half-star ratings: decision and contract · `In progress`
+- **Objective:** record the owner's Letterboxd-import and half-star decisions, and turn them into contract and tasks.
+- **Deps:** OPS-01, BE-05. **Modules:** `docs/decisions/`, `docs/api-contract.md`, `docs/backlog.md`,
+  `docs/glossary.md`, `docs/frontend-conventions.md`.
+- **Contract:** writes the design of §13 Import and the §7 rating change (code lands in later tasks).
+- **Scope:** in: docs only. Out: code.
+
 ### BE-17 — Remove the contract-stub plumbing · `Todo`
 - **Objective:** no stubs left. **Deps:** BE-12, BE-14, BE-15, BE-16. **Modules:** `ErrorCodes.cs`,
   `ErrorStatusCodes.cs`, `problem.ts`, stub test.
