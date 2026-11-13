@@ -36,6 +36,9 @@ public static class ErrorCodes
     public const string RoomInvalidState = "room.invalid_state";
     public const string RoomNoResult = "room.no_result";
 
+    /// <summary>Mood text isn't a mood (unclear or off-topic) and no chips were tapped; nothing is created (ADR-0022).</summary>
+    public const string MoodUnclear = "mood.unclear";
+
     public const string AiInvalidOutput = "ai.invalid_output";
     public const string AiUnavailable = "ai.unavailable";
     public const string AiRefused = "ai.refused";

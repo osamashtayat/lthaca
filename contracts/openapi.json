@@ -2448,17 +2448,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoomMemberDto"
+                  "$ref": "#/components/schemas/RoomMoodDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoomMemberDto"
+                  "$ref": "#/components/schemas/RoomMoodDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoomMemberDto"
+                  "$ref": "#/components/schemas/RoomMoodDto"
                 }
               }
             }
@@ -4391,7 +4391,8 @@
           "maxRuntime",
           "language",
           "text",
-          "filters"
+          "filters",
+          "textIgnored"
         ],
         "type": "object",
         "properties": {
@@ -4422,6 +4423,9 @@
           },
           "filters": {
             "$ref": "#/components/schemas/MoodFiltersDto"
+          },
+          "textIgnored": {
+            "type": "boolean"
           }
         }
       },
@@ -4657,6 +4661,21 @@
           "mood"
         ],
         "type": "string"
+      },
+      "RoomMoodDto": {
+        "required": [
+          "member",
+          "textIgnored"
+        ],
+        "type": "object",
+        "properties": {
+          "member": {
+            "$ref": "#/components/schemas/RoomMemberDto"
+          },
+          "textIgnored": {
+            "type": "boolean"
+          }
+        }
       },
       "RoomPickDto": {
         "required": [
