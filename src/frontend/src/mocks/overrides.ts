@@ -10,3 +10,4 @@ export const slowUnavailableDeckCreate = (ms: number) =>
     return problem(503, 'ai.unavailable')
   })
 export const notHostStart = () => http.post(apiPath('/api/rooms/{code}/start'), () => problem(403, 'room.not_host'))
+export const failRoomVote = () => http.post(apiPath('/api/rooms/{code}/votes'), () => problem(500, 'server.error'))

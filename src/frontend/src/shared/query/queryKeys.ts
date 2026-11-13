@@ -28,7 +28,11 @@ export const queryKeys = {
   },
   rooms: {
     all: ['rooms'] as const,
+    // deck / progress / result sit under `detail`, so invalidating `detail(code)` (no `exact`) refetches the whole room.
     detail: (code: string) => ['rooms', 'detail', code] as const,
+    deck: (code: string) => ['rooms', 'detail', code, 'deck'] as const,
+    progress: (code: string) => ['rooms', 'detail', code, 'progress'] as const,
+    result: (code: string) => ['rooms', 'detail', code, 'result'] as const,
     preview: (code: string) => ['rooms', 'preview', code] as const,
   },
   library: {

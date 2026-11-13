@@ -9,7 +9,7 @@ import { BrowsePage } from '@/features/browse'
 import { CinemaPage } from '@/features/library'
 import { FilmPage } from '@/features/films'
 import { TonightPage } from '@/features/tonight'
-import { RoomPage, RoomsPage } from '@/features/rooms'
+import { RoomPage, RoomResultPage, RoomsPage, RoomSwipePage } from '@/features/rooms'
 
 /**
  * Route table. Paths follow the screens on the design canvas. `PlaceholderPage` marks screens a feature task
@@ -36,8 +36,8 @@ export const routes: RouteObject[] = [
       },
       { path: '/rooms', element: <RoomsPage /> },
       { path: '/rooms/:code', element: <RoomPage /> },
-      { path: '/rooms/:code/swipe', element: <PlaceholderPage title="Group swipe" feature="rooms" /> },
-      { path: '/rooms/:code/result', element: <PlaceholderPage title="It's a match" feature="rooms" /> },
+      { path: '/rooms/:code/swipe', element: <RoomSwipePage /> },
+      { path: '/rooms/:code/result', element: <RoomResultPage /> },
       { path: '/browse', element: <BrowsePage /> },
       { path: '/sign-in', element: <SignInPage /> },
       // Reference slice: the one real page.
