@@ -241,4 +241,23 @@ describe('Room mood step', () => {
     await joinSeedRoom()
     expect(screen.queryByRole('button', { name: "See who's here" })).toBeNull()
   })
+
+  it('does not ask for a mood in a just-swipe room', async () => {
+    const user = userEvent.setup()
+    renderAt('/rooms')
+    await user.type(await screen.findByLabelText('Room name'), 'Club')
+    await user.click(screen.getByRole('button', { name: 'Create room' }))
+    expect(await screen.findByRole('heading', { name: 'Club' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Your vibe for tonight' })).toBeNull()
+  })
+
+  it('keeps the hard nos private: they are sent to the server but never shown in the lobby', async () => {
+    const user = await joinSeedRoom()
+    await user.click(screen.getByRole('button', { name: 'Gore' }))
+    expect(screen.getByRole('button', { name: 'Gore' }).getAttribute('aria-pressed')).toBe('true')
+    await user.click(screen.getByRole('button', { name: "I'm ready" }))
+    await screen.findByText(/Waiting for Omar/)
+    expect(screen.queryByText('Gore')).toBeNull()
+  })
 })
+

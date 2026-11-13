@@ -23,6 +23,7 @@ export function RoomPage() {
   const session = useCurrentUser()
   const room = useRoom(key)
   useRoomLive(key, room.isSuccess)
+  // Kept here only: the server tells the member once (api-contract §6), so a reload deliberately forgets the note.
   const [textIgnored, setTextIgnored] = useState(false)
   const [skipped, setSkipped] = useState(false)
 
