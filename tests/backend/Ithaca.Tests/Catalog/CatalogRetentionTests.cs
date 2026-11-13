@@ -142,7 +142,7 @@ public sealed class CatalogRetentionTests(PostgresFixture postgres)
         foreach (var id in tmdbIds)
         {
             var film = Film.Create(id, $"Stale {id}", LongAgo);
-            film.UpdateDetails($"Stale {id}", 2001, $"Overview {id}", $"/poster-{id}.jpg", 100, ["Drama"], 1, LongAgo);
+            film.UpdateDetails($"Stale {id}", 2001, $"Overview {id}", $"/poster-{id}.jpg", 100, ["Drama"], 1, null, null, null, null, LongAgo);
             db.Films.Add(film);
         }
 

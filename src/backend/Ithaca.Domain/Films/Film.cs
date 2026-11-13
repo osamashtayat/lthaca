@@ -49,6 +49,19 @@ public sealed class Film
 
     public int? RuntimeMinutes { get; private set; }
 
+    /// <summary>TMDB backdrop path (details hero image); display only.</summary>
+    public string? BackdropPath { get; private set; }
+
+    /// <summary>TMDB score 0–10 at the last sync; display and browse filter only.</summary>
+    public double? VoteAverage { get; private set; }
+
+    public int? VoteCount { get; private set; }
+
+    /// <summary>ISO 639-1 code of the original language (e.g. <c>en</c>).</summary>
+    public string? OriginalLanguage { get; private set; }
+
+    public const int OriginalLanguageMaxLength = 10;
+
     public string[] Genres { get; private set; } = [];
 
     /// <summary>TMDB popularity at the last sync; used for ordering (e.g. the "Just swipe" sampler).</summary>
@@ -88,7 +101,8 @@ public sealed class Film
     /// <see cref="SyncedAt"/> (TMDB's 6-month caching limit is counted from it).
     /// </summary>
     public void UpdateDetails(
-        string title, int? releaseYear, string? overview, string? posterPath, int? runtimeMinutes, string[] genres, double? popularity, DateTimeOffset now)
+        string title, int? releaseYear, string? overview, string? posterPath, int? runtimeMinutes, string[] genres, double? popularity,
+        string? backdropPath, double? voteAverage, int? voteCount, string? originalLanguage, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(genres);
         Title = ValidTitle(title);
@@ -98,6 +112,10 @@ public sealed class Film
         RuntimeMinutes = runtimeMinutes;
         Genres = genres;
         Popularity = popularity;
+        BackdropPath = backdropPath;
+        VoteAverage = voteAverage;
+        VoteCount = voteCount;
+        OriginalLanguage = originalLanguage is { Length: > 0 and <= OriginalLanguageMaxLength } ? originalLanguage : null;
         IsAvailable = true;
         SyncedAt = now;
     }
@@ -111,6 +129,7 @@ public sealed class Film
     {
         Overview = null;
         PosterPath = null;
+        BackdropPath = null;
         IsAvailable = false;
         SyncedAt = now;
     }

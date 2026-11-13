@@ -331,6 +331,11 @@ type FilmTrailerDto = { trailer: { site: "YouTube"; key: string; name: string } 
   `sort`: `popular` (TMDB popularity at last sync — "Trending this week") | `newest` | `rating`.
 - `hideSeen` needs a user; for anonymous callers it is ignored.
 - Out of scope: "On my services" and "New on Netflix, Mubi & Prime" (where-to-watch data, P-01).
+- As built (BE-06): every filter that is set narrows the result (they combine). `search` and `genre` are trimmed; `genre`
+  is an exact match against the values of `GET /api/films/genres`. `maxRuntime`: `under90` = under 90 min, `upTo2h` = at
+  most 120 min, `any` = no filter; a film with no runtime never passes `under90`/`upTo2h`. `minVoteAverage` keeps films
+  at or above it (films without a score never pass). Every sort puts films missing the sorted value last and ends on
+  TMDB id, so pages are stable. Films TMDB no longer knows (`is_available = false`, A14) are not listed.
 
 ## 10. Changing this contract
 

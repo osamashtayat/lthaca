@@ -66,7 +66,7 @@ public sealed class CatalogSyncService(
                 var now = time.GetUtcNow();
                 var isNew = !existing.TryGetValue(d.TmdbId, out var film);
                 film ??= Film.Create(d.TmdbId, d.Title, now);
-                film.UpdateDetails(d.Title, d.ReleaseYear, d.Overview, d.PosterPath, d.RuntimeMinutes, [.. d.Genres], d.Popularity, now);
+                film.UpdateDetails(d.Title, d.ReleaseYear, d.Overview, d.PosterPath, d.RuntimeMinutes, [.. d.Genres], d.Popularity, d.BackdropPath, d.VoteAverage, d.VoteCount, d.OriginalLanguage, now);
                 if (isNew)
                 {
                     db.Films.Add(film);
@@ -152,7 +152,7 @@ public sealed class CatalogSyncService(
                 var now = time.GetUtcNow();
                 if (details.Value is { } d && Film.IsValidTitle(d.Title))
                 {
-                    film.UpdateDetails(d.Title, d.ReleaseYear, d.Overview, d.PosterPath, d.RuntimeMinutes, [.. d.Genres], d.Popularity, now);
+                    film.UpdateDetails(d.Title, d.ReleaseYear, d.Overview, d.PosterPath, d.RuntimeMinutes, [.. d.Genres], d.Popularity, d.BackdropPath, d.VoteAverage, d.VoteCount, d.OriginalLanguage, now);
                     refreshed++;
                 }
                 else

@@ -2,7 +2,7 @@ namespace Ithaca.Application.Films;
 
 /// <summary>
 /// <c>GET /api/films/{tmdbId}</c> response. Never return the <c>Film</c> entity itself. <see cref="BackdropPath"/>,
-/// <see cref="VoteAverage"/>, <see cref="VoteCount"/> and <see cref="OriginalLanguage"/> stay null until BE-06 syncs them.
+/// <see cref="VoteAverage"/>, <see cref="VoteCount"/> and <see cref="OriginalLanguage"/> are null until the sync has stored them.
 /// </summary>
 public sealed record FilmDto(
     int TmdbId,

@@ -9,9 +9,9 @@ internal sealed class FakeTmdbClient : ITmdbClient
     /// <summary>The sample films; also what <c>DevDataSeeder</c> puts into an empty development database.</summary>
     internal static readonly TmdbFilmDetails[] Films =
     [
-        new(550, "Fight Club", 1999, "An insomniac office worker crosses paths with a soap maker.", null, 139, ["Drama"], 100),
-        new(27205, "Inception", 2010, "A thief who steals secrets through dream-sharing technology.", null, 148, ["Action", "Science Fiction"], 99),
-        new(496243, "Parasite", 2019, "A poor family schemes to become employed by a wealthy household.", null, 133, ["Comedy", "Thriller", "Drama"], 98),
+        new(550, "Fight Club", 1999, "An insomniac office worker crosses paths with a soap maker.", null, 139, ["Drama"], 100, "/fight-club-backdrop.jpg", 8.4, 29000, "en"),
+        new(27205, "Inception", 2010, "A thief who steals secrets through dream-sharing technology.", null, 148, ["Action", "Science Fiction"], 99, "/inception-backdrop.jpg", 8.4, 37000, "en"),
+        new(496243, "Parasite", 2019, "A poor family schemes to become employed by a wealthy household.", null, 133, ["Comedy", "Thriller", "Drama"], 98, "/parasite-backdrop.jpg", 8.5, 19000, "ko"),
     ];
 
     public Task<Result<IReadOnlyList<TmdbFilmSummary>>> GetCatalogPageAsync(int page, CancellationToken ct) =>

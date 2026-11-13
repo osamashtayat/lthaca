@@ -45,7 +45,8 @@ internal sealed partial class TmdbHttpClient(HttpClient http, IOptions<TmdbOptio
             ? Result<TmdbFilmDetails?>.Success(null)
             : new TmdbFilmDetails(
                 m.Id, m.Title ?? "", YearOf(m.ReleaseDate), Blank(m.Overview), Blank(m.PosterPath),
-                m.Runtime is > 0 ? m.Runtime : null, m.Genres.Select(g => g.Name).ToList(), m.Popularity);
+                m.Runtime is > 0 ? m.Runtime : null, m.Genres.Select(g => g.Name).ToList(), m.Popularity,
+                Blank(m.BackdropPath), m.VoteAverage, m.VoteCount, Blank(m.OriginalLanguage));
     }
 
     public async Task<Result<IReadOnlyList<TmdbVideo>>> GetTrailersAsync(int tmdbId, CancellationToken ct)
@@ -136,6 +137,10 @@ internal sealed partial class TmdbHttpClient(HttpClient http, IOptions<TmdbOptio
         [property: JsonPropertyName("poster_path")] string? PosterPath,
         [property: JsonPropertyName("runtime")] int? Runtime,
         [property: JsonPropertyName("popularity")] double? Popularity,
+        [property: JsonPropertyName("backdrop_path")] string? BackdropPath,
+        [property: JsonPropertyName("vote_average")] double? VoteAverage,
+        [property: JsonPropertyName("vote_count")] int? VoteCount,
+        [property: JsonPropertyName("original_language")] string? OriginalLanguage,
         [property: JsonPropertyName("genres")] List<Genre> Genres);
 
     private sealed record Genre([property: JsonPropertyName("name")] string Name);
