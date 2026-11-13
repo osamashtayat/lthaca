@@ -3,6 +3,7 @@ using Ithaca.Application.Decks;
 using Ithaca.Application.Moods;
 using Ithaca.Domain.Decks;
 using Ithaca.Domain.Moods;
+using Ithaca.Domain.Rooms;
 
 namespace Ithaca.Application.Rooms;
 

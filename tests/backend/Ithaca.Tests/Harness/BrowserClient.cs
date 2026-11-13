@@ -1,4 +1,6 @@
+using System.Net;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Mvc.Testing.Handlers;
 
@@ -11,24 +13,32 @@ namespace Ithaca.Tests.Harness;
 /// </summary>
 internal static class BrowserClient
 {
+    private static readonly ConditionalWeakTable<HttpClient, CookieContainer> Cookies = new();
+
     public static async Task<HttpClient> StartAsync(WebApplicationFactory<Program> factory, CancellationToken ct)
     {
-        var client = factory.CreateDefaultClient(new Uri("http://localhost"), new XsrfHandler(), new CookieContainerHandler());
+        var cookies = new CookieContainer();
+        var client = factory.CreateDefaultClient(new Uri("http://localhost"), new XsrfHandler(), new CookieContainerHandler(cookies));
+        Cookies.Add(client, cookies);
         (await client.GetAsync(new Uri("/api/auth/me", UriKind.Relative), ct)).Dispose();
         return client;
     }
 
     /// <summary>A browser client signed in as a freshly registered user (unique email).</summary>
-    public static async Task<HttpClient> RegisteredAsync(WebApplicationFactory<Program> factory, CancellationToken ct)
+    public static async Task<HttpClient> RegisteredAsync(WebApplicationFactory<Program> factory, CancellationToken ct, string displayName = "Ada")
     {
         var client = await StartAsync(factory, ct);
         using var response = await client.PostAsJsonAsync(
             new Uri("/api/auth/register", UriKind.Relative),
-            new { email = UniqueEmail(), password = "correct horse", displayName = "Ada" },
+            new { email = UniqueEmail(), password = "correct horse", displayName },
             ct);
         response.EnsureSuccessStatusCode();
         return client;
     }
+
+    /// <summary>The <c>Cookie</c> header this client would send, e.g. for a SignalR connection made beside it.</summary>
+    public static string CookieHeader(HttpClient client) =>
+        Cookies.TryGetValue(client, out var cookies) ? cookies.GetCookieHeader(new Uri("http://localhost")) : "";
 
     public static string UniqueEmail() => $"user-{Guid.NewGuid():N}@example.com";
 

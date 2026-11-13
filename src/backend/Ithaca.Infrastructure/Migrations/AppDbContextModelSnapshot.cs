@@ -471,6 +471,118 @@ namespace Ithaca.Infrastructure.Migrations
                     b.ToTable("mood_queries", (string)null);
                 });
 
+            modelBuilder.Entity("Ithaca.Domain.Rooms.Room", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("closed_at");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("mode");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTimeOffset?>("StartsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("starts_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rooms");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ux_rooms_code");
+
+                    b.ToTable("rooms", (string)null);
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Rooms.RoomMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("GuestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("guest_id");
+
+                    b.Property<DateTimeOffset>("JoinedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("joined_at");
+
+                    b.Property<DateTimeOffset?>("LeftAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("left_at");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("room_id");
+
+                    b.Property<int>("Seat")
+                        .HasColumnType("integer")
+                        .HasColumnName("seat");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_room_members");
+
+                    b.HasIndex("GuestId")
+                        .HasDatabaseName("ix_room_members_guest_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_room_members_user_id");
+
+                    b.HasIndex("RoomId", "GuestId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_room_members_room_guest");
+
+                    b.HasIndex("RoomId", "Seat")
+                        .IsUnique()
+                        .HasDatabaseName("ux_room_members_present_seat")
+                        .HasFilter("left_at IS NULL");
+
+                    b.HasIndex("RoomId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_room_members_room_user");
+
+                    b.ToTable("room_members", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_room_members_seat", "seat BETWEEN 1 AND 8");
+
+                            t.HasCheckConstraint("ck_room_members_user_or_guest", "(user_id IS NULL) <> (guest_id IS NULL)");
+                        });
+                });
+
             modelBuilder.Entity("Ithaca.Domain.Users.Guest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -755,6 +867,28 @@ namespace Ithaca.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_mood_queries_users_user_id");
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Rooms.RoomMember", b =>
+                {
+                    b.HasOne("Ithaca.Domain.Users.Guest", null)
+                        .WithMany()
+                        .HasForeignKey("GuestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_room_members_guests_guest_id");
+
+                    b.HasOne("Ithaca.Domain.Rooms.Room", null)
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_room_members_rooms_room_id");
+
+                    b.HasOne("Ithaca.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_room_members_users_user_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>

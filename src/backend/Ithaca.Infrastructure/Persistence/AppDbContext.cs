@@ -4,6 +4,7 @@ using Ithaca.Domain.Decks;
 using Ithaca.Domain.Films;
 using Ithaca.Domain.Library;
 using Ithaca.Domain.Moods;
+using Ithaca.Domain.Rooms;
 using Ithaca.Domain.Users;
 using Ithaca.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -38,6 +39,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<DeckItem> DeckItems => Set<DeckItem>();
 
     public DbSet<Swipe> Swipes => Set<Swipe>();
+
+    public DbSet<Room> Rooms => Set<Room>();
+
+    public DbSet<RoomMember> RoomMembers => Set<RoomMember>();
 
     IQueryable<UserReadModel> IAppDbContext.Users =>
         Users.AsNoTracking().Select(u => new UserReadModel { Id = u.Id, Email = u.Email!, DisplayName = u.DisplayName });

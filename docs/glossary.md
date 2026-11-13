@@ -10,8 +10,8 @@ Use these names exactly in code (types, tables, routes, UI copy where it fits). 
 | `FilmFacts` | What Wikidata (CC0) says about a `Film` — genres, subjects, directors, cast, countries, languages, year, runtime, awards — and the embedding text built only from them. | The only film data AI may see (ADR-0017). Table `film_facts`, one row per matched film. |
 | `FilmTrailer` | The cached answer to "what is this film's trailer?": the first YouTube trailer TMDB lists, or none. | Table `film_trailers`, one row per film; refreshed after 30 days, never kept past 180 (ADR-0003, ADR-0017). |
 | `UserFilm` | A user's relation to a film: liked, watchlist, seen, personal rating (0.5–5 in half steps, shown as ticket stubs). No "watching" state. | Powers "My Cinema" (Library). Stored as half stars 1–10 (ADR-0024). |
-| `Room` | A group session with one shared deck, joined by link or code. | Stored in the DB; real-time via RoomHub. |
-| `RoomMember` | A `User` or `Guest` in a `Room`. | Host is a member with extra rights. |
+| `Room` | A group session with one shared deck, joined by link or code. | Stored in the DB (table `rooms`, codes like `POP-428`); real-time via RoomHub. |
+| `RoomMember` | A `User` or `Guest` in a `Room`. | Host is a member with extra rights: the one present longest (BE-10). Leaving keeps the row (`left_at`). Table `room_members`. |
 | `Deck` | A user's solo deck: how it was started (just swipe, mood, taste) and the `DeckItem`s dealt so far. | Table `decks`. A room's shared deck is the room's (BE-11). Proposed by BE-08 (A12). |
 | `DeckItem` | One card (a `Film`) at a position in a deck — solo or a room's shared deck. | Group "Just swipe" adds them in batches. |
 | `Swipe` | A user's gesture on a card in their own `Deck`: right, left or up (+ optional loved it / not for me). | Table `swipes`, one per `DeckItem`, keyed by the client's `swipeId`. A room member's is a `Vote`. Proposed by BE-08 (A12). |

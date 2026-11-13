@@ -36,10 +36,6 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
     /// <summary>Method, path, and a valid JSON body (so model validation passes and the stub answers).</summary>
     public static TheoryData<string, string, string?> Stubs => new()
     {
-        { "POST", "/api/rooms", """{"name":"Friday Film Club","mode":"justSwipe","startsAt":null}""" },
-        { "GET", $"{Room}/preview", null },
-        { "POST", $"{Room}/join", """{"displayName":"Omar"}""" },
-        { "GET", Room, null },
         { "PUT", $"{Room}/mood", """{"moods":["laugh"],"maxRuntime":"under90","hardNos":["horror"],"text":null}""" },
         { "POST", $"{Room}/start", null },
         { "GET", $"{Room}/deck?fromPosition=0", null },
@@ -47,8 +43,6 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
         { "GET", $"{Room}/progress", null },
         { "POST", $"{Room}/finish", null },
         { "GET", $"{Room}/result", null },
-        { "POST", $"{Room}/leave", null },
-        { "POST", $"{Room}/close", null },
     };
 
     [Theory]

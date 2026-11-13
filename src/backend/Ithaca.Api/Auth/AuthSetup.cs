@@ -64,6 +64,7 @@ public static class AuthSetup
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, GuestAwareAuthorizationResultHandler>();
 
         services.AddHttpContextAccessor();
+        services.AddScoped<HubCallerPrincipal>();
         services.AddScoped<ICurrentActor, HttpCurrentActor>();
         return services;
     }
