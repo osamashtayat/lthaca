@@ -378,7 +378,7 @@ lint, test, build.
 
 ## Library
 
-### BE-05 — My Cinema: UserFilm and catalog retention (ADR-0019) · `Todo`
+### BE-05 — My Cinema: UserFilm and catalog retention (ADR-0019) · `Done` (PR #18)
 - **Objective:** the user's library, and films users reference are refreshed, never purged.
 - **Deps:** BE-02. **Modules:** `Domain/Library`, `Application/Library`, `Api/Controllers/LibraryController.cs`,
   `CatalogSyncService`, configurations, migration.

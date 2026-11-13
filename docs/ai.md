@@ -84,10 +84,15 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
 - Never compare vectors from different models (`embedding_model` tells them apart).
 
 ## Catalog sync (ADR-0003)
-- `CatalogSyncService`: TMDB discover pages (most popular first) → upsert by `TmdbId` (display data) → delete films not
-  refreshed within `CatalogSync:MaxAgeDays` (≤ 180: TMDB's 6-month caching limit) → Wikidata enrichment (below) →
-  embeddings (above). Saves once per page and once per Wikidata or embedding batch. A Wikidata or embedding failure fails
-  the run (`wikidata.unavailable`, `ai.*`); the work before it is already saved.
+- `CatalogSyncService`: TMDB discover pages (most popular first) → upsert by `TmdbId` (display data) → **refresh by
+  reference** (ADR-0019): every film user data references (`user_films` today) that this run hasn't refreshed is
+  re-fetched by id; a TMDB 404 (or a reply without a valid title) keeps the row, clears overview and poster and sets
+  `is_available = false` (title, year, runtime and genres stay on purpose, so libraries can still name the film) → delete
+  **unreferenced** films not refreshed within `CatalogSync:MaxAgeDays` (≤ 180: TMDB's 6-month caching limit) → Wikidata
+  enrichment (below) → embeddings (above). "Referenced" is defined once (`ReferencedFilmIds`); deck items and votes join
+  it when they land. Every FK to `films` from user data is `ON DELETE RESTRICT`, so a purge bug fails loudly.
+- Saves once per page and once per refresh, Wikidata or embedding batch. A failure fails the run (`tmdb.unavailable`,
+  `wikidata.unavailable`, `ai.*`) with the work before it saved; a failure before the purge skips the purge.
 - Run once: `dotnet run --project src/backend/Ithaca.Api -- --sync-catalog`. Nightly: `CatalogSync:Enabled = true`.
 - Attribution: the footer notice is required wherever TMDB data is shown (notice + small TMDB logo in `AppFooter`, ADR-0017).
 
