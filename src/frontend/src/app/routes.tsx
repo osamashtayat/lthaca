@@ -4,6 +4,7 @@ import { PlaceholderPage } from '@/app/PlaceholderPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { RequireUser, SignInPage } from '@/features/auth'
 import { DeckPage, DeckStartPage, DeckTopPage } from '@/features/deck'
+import { MoodPage } from '@/features/mood'
 import { FilmPage } from '@/features/films'
 
 /**
@@ -22,7 +23,7 @@ export const routes: RouteObject[] = [
           { path: '/deck', element: <DeckStartPage /> },
           { path: '/deck/:deckId', element: <DeckPage /> },
           { path: '/deck/:deckId/top', element: <DeckTopPage /> },
-          { path: '/mood', element: <PlaceholderPage title="By mood" feature="mood" /> },
+          { path: '/mood', element: <MoodPage /> },
           { path: '/taste', element: <PlaceholderPage title="By taste" feature="taste" /> },
           { path: '/cinema', element: <PlaceholderPage title="My Cinema" feature="library" /> },
           { path: '/import', element: <PlaceholderPage title="Import from Letterboxd" feature="import" /> },

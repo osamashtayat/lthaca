@@ -62,6 +62,13 @@ export function DeckPage() {
         )}
       </div>
 
+      {deck.data.mood?.textIgnored && deck.data.swipeCount === 0 && (
+        // ADR-0022: a quiet note, not a toast; it goes away with the first swipe. Never repeats the user's text.
+        <p className="font-mono text-xs tracking-[0.12em] text-ink-muted">
+          We went with your moods; we couldn&apos;t make sense of the text.
+        </p>
+      )}
+
       {current && film ? (
         <>
           <div className="relative">

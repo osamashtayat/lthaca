@@ -2,6 +2,7 @@
 export { DeckStartPage } from './pages/DeckStartPage'
 export { DeckPage } from './pages/DeckPage'
 export { DeckTopPage } from './pages/DeckTopPage'
+export { useCreateDeck } from './api/useCreateDeck'
 export { SwipeCard } from './components/SwipeCard'
 export { useSwipeGesture } from './useSwipeGesture'
 export { directionFromDrag, SWIPE_THRESHOLD } from './swipeGesture'
