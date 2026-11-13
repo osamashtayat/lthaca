@@ -534,7 +534,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Scope:** in: this section and decisions L1–L8. Out: doing any of it.
 - **Acceptance:** every launch gap has a task or a decision. **Tests:** none (docs).
 
-### OPS-06 — Hosting decision (ADR) · `Todo` (L1, L2 decided: one VPS for site + API; provider still open)
+### OPS-06 — Hosting decision (ADR) · `Todo` (L1, L2 decided: Pages + Worker + VPS; VPS provider still open)
 - **Objective:** an ADR fixing where the API, database and site run, and how they stay one origin.
 - **Deps:** owner decisions L1, L2. **Modules:** `docs/decisions/`, `docs/architecture.md` (Runtime table).
 - **Contract:** none.
@@ -549,18 +549,28 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   - **Site, option B: Cloudflare Pages** + a Cloudflare Worker routing `/api/*` and `/hubs/*` (WebSockets) on the same
     domain to the VPS. Still one origin; one more piece to run.
   - **Rejected:** API on `api.<domain>` (cross-origin cookies, CORS, antiforgery changes, two ADRs reopened).
-- **Acceptance:** ADR accepted by the owner; architecture.md Runtime table has a "Production" column.
+- **Owner decision (2026-11-13): option B with a Worker ("B1").** Site on Cloudflare Pages; a Cloudflare Worker on the
+  same domain forwards `/api/*` and `/hubs/*` (incl. WebSocket upgrades, cookies and `X-XSRF-TOKEN` untouched) to the
+  VPS, which runs db + migrate + api only. One origin, so ADR-0009/0012 and the app code stay as they are. Rejected:
+  everything on the VPS (A: simpler, but the owner prefers Pages); `api.<domain>` subdomain ("B2": CORS, preflights,
+  antiforgery-cookie and client changes, a new ADR).
+- **Acceptance:** ADR accepted by the owner (records B1, the VPS provider and its region); architecture.md Runtime table
+  has a "Production" column.
 
 ### OPS-07 — Production deployment · `Todo`
 - **Objective:** the site runs on the domain over HTTPS and every merge to `main` can be deployed safely.
-- **Deps:** OPS-06. **Modules:** `docker-compose.prod.yml` (or override), `.github/workflows/deploy.yml`, `docs/`.
+- **Deps:** OPS-06. **Modules:** `docker-compose.prod.yml` (or override; no `web` service in production),
+  `.github/workflows/deploy.yml`, `deploy/cloudflare-worker/`, `docs/`.
 - **Contract:** none.
 - **Scope:** in: server setup (firewall, automatic security updates, non-root deploy user, SSH keys only), Cloudflare
-  DNS/proxy/TLS/WebSockets, production secrets on the server (never in the repo or CI logs), `ASPNETCORE_ENVIRONMENT=Production`
+  DNS/proxy/TLS/WebSockets; the Pages project for `src/frontend` (build `npm run build`, output `dist`, previews per PR);
+  the Worker (route `<domain>/api/*` and `<domain>/hubs/*` → the VPS origin, WebSocket pass-through, in the repo with its
+  own small test); the VPS reachable only through Cloudflare (firewall allows Cloudflare's IP ranges); production secrets on the server (never in the repo or CI logs), `ASPNETCORE_ENVIRONMENT=Production`
   (Secure cookies, no dev seed, no `/dev/*`), migrations run before the new API starts (the existing `migrate` service),
   a manual-approval deploy job from CI, a documented rollback. Out: backups (OPS-08), monitoring (OPS-09).
-- **Acceptance:** the domain serves the app over HTTPS; sign-in works (Secure cookies); a room works across two phones
-  (WebSockets through Cloudflare); a rollback was rehearsed once.
+- **Acceptance:** the domain serves the app from Pages over HTTPS; sign-in works through the Worker (Secure cookies,
+  antiforgery); a room works across two phones (WebSockets through the Worker); the VPS refuses direct traffic; site and
+  API rollbacks were each rehearsed once.
 - **Tests:** the Docker smoke test against the production compose file in CI.
 
 ### OPS-08 — Production data: backups, nightly sync, catalog size · `Todo`
@@ -630,7 +640,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Objective:** a room link pasted into WhatsApp or iMessage shows a proper title and image.
 - **Deps:** OPS-06. **Modules:** `index.html`, an Open Graph image, (option B) the Worker.
 - **Scope:** in: site-wide Open Graph/Twitter tags and image, app icons and theme colour. Per-room or per-film previews
-  only if OPS-06 picks the Worker (option B), which can inject them; otherwise generic. Out: SEO pages.
+  through the Worker (B1 chosen), which can inject per-room and per-film tags; generic tags first. Out: SEO pages.
 - **Acceptance:** a pasted link shows the Ithaca card in WhatsApp and iMessage.
 
 ### OPS-11 — Pre-launch quality pass · `Todo`
@@ -648,8 +658,8 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 ### Launch decisions for the owner
 | Id | Decision | Recommendation |
 |---|---|---|
-| L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker, behind Cloudflare.** Provider still to choose (OPS-06) |
-| L2 | Where the site runs | **Decided (2026-11-13): on the same VPS behind Cloudflare (option A).** |
+| L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker (db, migrate, api), behind Cloudflare.** Provider still to choose (OPS-06) |
+| L2 | Where the site runs | **Decided (2026-11-13): Cloudflare Pages + a Worker routing `/api` and `/hubs` to the VPS (B1).** |
 | L3 | Monthly AI budget (Anthropic + Voyage) | A hard cap you're comfortable with; BE-19 enforces a daily share of it |
 | L4 | Email provider for password reset | Any transactional provider that supports a custom domain (SPF/DKIM on Cloudflare DNS) |
 | L5 | Terms and Privacy texts | Written or approved by you (not legal advice from agents) |
