@@ -29,10 +29,10 @@ export const PROBLEM_MESSAGES = {
   'room.full': 'This room is full.',
   'room.invalid_state': 'The room has moved on. Refresh to catch up.',
   'room.no_result': "There's no result yet. Keep swiping.",
+  'mood.unclear': 'We couldn\'t find a mood in that. Try something like "funny and under 2 hours", or tap a mood above.',
   'ai.invalid_output': "We couldn't come up with picks this time. Try again.",
   'ai.unavailable': 'Our movie brain is taking a break. Try again in a minute.',
   'tmdb.unavailable': "We can't load film details right now. Try again in a moment.",
-  'mood.unclear': 'We couldn\'t find a mood in that. Try something like "funny and under 2 hours", or tap a mood above.',
   'ai.refused': "We can't help with that request. Try describing your mood differently.",
 } as const satisfies Record<string, string>
 
