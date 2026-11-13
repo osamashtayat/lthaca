@@ -391,7 +391,7 @@ lint, test, build.
 - **Acceptance:** with mocks: submit → ready; `mood.unclear` and `textIgnored` handled as in FE-06.
   **Tests:** submit + ready state; `mood.unclear`.
 
-### FE-11 — Group swipe and result · `In progress`
+### FE-11 — Group swipe and result · `Done`
 - **Objective:** the "Group — swipe", "It's a match" and "Close call" boards, and the desktop group swipe.
 - **Deps:** FE-09, FE-05. **Modules:** `src/features/rooms/`, `src/mocks/`.
 - **Contract:** §6 (deck, votes, progress, finish, result); events `voteCast`, `deckExtended`, `roomMatched`, `roomClosed`.

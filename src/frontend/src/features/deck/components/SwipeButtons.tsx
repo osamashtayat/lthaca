@@ -17,9 +17,9 @@ function RoundButton({ label, primary = false, onClick, children }: { label: str
 }
 
 /** The three round buttons under a card: "Not for me", "Seen it", "I'd watch it". Shared by the solo and the group deck. */
-export function SwipeButtons({ onSwipe, disabled = false }: { onSwipe: (direction: SwipeDirection) => void; disabled?: boolean }) {
+export function SwipeButtons({ onSwipe }: { onSwipe: (direction: SwipeDirection) => void }) {
   return (
-    <div className={`flex items-center justify-center gap-5 ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
+    <div className="flex items-center justify-center gap-5">
       <RoundButton label="Not for me" onClick={() => onSwipe('left')}>
         <CloseIcon />
       </RoundButton>

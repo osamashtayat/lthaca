@@ -40,6 +40,9 @@ export function RoomResultPage() {
   const result = useRoomResult(key, room.data?.status === 'result')
 
   if (room.isPending) return <LoadingState label="Opening the room…" />
+  if (room.isError && room.error instanceof ApiError && (room.error.status === 401 || room.error.code === 'room.not_member')) {
+    return <Navigate to={`/rooms/${encodeURIComponent(key)}`} replace /> // not in this room (yet): the join page
+  }
   if (room.isError) return <ErrorState error={room.error} onRetry={() => void room.refetch()} />
   const base = `/rooms/${encodeURIComponent(room.data.code)}`
   if (room.data.status === 'lobby') return <Navigate to={base} replace />

@@ -149,6 +149,11 @@ describe('Result', () => {
     expect(screen.getByText('Fight Club')).toBeTruthy()
   })
 
+  it('sends someone who is not in the room to the join page', async () => {
+    renderAt(`/rooms/${MOCK_ROOM_CODE}/result`)
+    expect(await screen.findByText('lobby screen')).toBeTruthy()
+  })
+
   it('sends a room that is still swiping back to the deck', async () => {
     const { code } = startedRoom()
     renderAt(`/rooms/${code}/result`)
