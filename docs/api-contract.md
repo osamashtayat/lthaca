@@ -298,6 +298,12 @@ type LibrarySummaryDto = { liked: number; watchlist: number; seen: number }
 - A rating implies `seen = true` (server rule; A8, decided). `liked` stays a separate flag; the Liked shelf shows the
   rating when there is one.
 - ADR-0019 lands here: referenced films are refreshed by the sync, never purged; FKs to `films` are `ON DELETE RESTRICT`.
+- As built (BE-05): `shelf` defaults to `liked`, `sort` to `recent` (last change first); `title` is A→Z; `rating` is
+  highest first, unrated last; every order ends on `tmdbId`. `genre` matches one of the film's genres exactly. An
+  untouched film's `updatedAt` is the current time (the field isn't nullable). The `/watchlist` pair removing the last
+  flag deletes the row, like `PUT`.
+- A14 (as built): a film TMDB no longer knows keeps its row with `overview`/`posterPath` cleared and is flagged
+  unavailable server-side (`films.is_available`); no screen needs the flag yet, so `FilmDto` doesn't carry it.
 
 ## 8. Film details
 

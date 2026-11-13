@@ -49,6 +49,10 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("text[]")
                         .HasColumnName("genres");
 
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_available");
+
                     b.Property<string>("Overview")
                         .HasColumnType("text")
                         .HasColumnName("overview");
@@ -173,6 +177,55 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasName("pk_film_facts");
 
                     b.ToTable("film_facts", (string)null);
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Library.UserFilm", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid>("FilmId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("film_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("Liked")
+                        .HasColumnType("boolean")
+                        .HasColumnName("liked");
+
+                    b.Property<bool>("OnWatchlist")
+                        .HasColumnType("boolean")
+                        .HasColumnName("on_watchlist");
+
+                    b.Property<int?>("Rating")
+                        .HasColumnType("integer")
+                        .HasColumnName("rating");
+
+                    b.Property<bool>("Seen")
+                        .HasColumnType("boolean")
+                        .HasColumnName("seen");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("UserId", "FilmId")
+                        .HasName("pk_user_films");
+
+                    b.HasIndex("FilmId")
+                        .HasDatabaseName("ix_user_films_film_id");
+
+                    b.HasIndex("UserId", "UpdatedAt")
+                        .HasDatabaseName("ix_user_films_user_id_updated_at");
+
+                    b.ToTable("user_films", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_user_films_rating", "rating IS NULL OR rating BETWEEN 1 AND 5");
+                        });
                 });
 
             modelBuilder.Entity("Ithaca.Domain.Users.Guest", b =>
@@ -379,6 +432,23 @@ namespace Ithaca.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_film_facts_films_film_id");
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Library.UserFilm", b =>
+                {
+                    b.HasOne("Ithaca.Domain.Films.Film", null)
+                        .WithMany()
+                        .HasForeignKey("FilmId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_films_films_film_id");
+
+                    b.HasOne("Ithaca.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_films_users_user_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>

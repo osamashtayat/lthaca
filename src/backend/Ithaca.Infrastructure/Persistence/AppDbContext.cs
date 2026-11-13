@@ -1,6 +1,7 @@
 using Ithaca.Application.Common;
 using Ithaca.Application.Users;
 using Ithaca.Domain.Films;
+using Ithaca.Domain.Library;
 using Ithaca.Domain.Users;
 using Ithaca.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -23,6 +24,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<FilmFacts> FilmFacts => Set<FilmFacts>();
 
     public DbSet<Guest> Guests => Set<Guest>();
+
+    public DbSet<UserFilm> UserFilms => Set<UserFilm>();
 
     IQueryable<UserReadModel> IAppDbContext.Users =>
         Users.AsNoTracking().Select(u => new UserReadModel { Id = u.Id, Email = u.Email!, DisplayName = u.DisplayName });

@@ -4,6 +4,7 @@ using Ithaca.Application.Tmdb;
 using Ithaca.Application.Wikidata;
 using Ithaca.Domain.Films;
 using Ithaca.Infrastructure.Persistence;
+using Ithaca.Infrastructure.Tmdb;
 using Ithaca.Infrastructure.Wikidata;
 using Ithaca.Tests.Harness;
 using Microsoft.EntityFrameworkCore;
@@ -140,7 +141,8 @@ public sealed class WikidataEnricherTests(PostgresFixture postgres)
                 page == 1 ? new[] { new TmdbFilmSummary(550, Film.Title, 1999, 50) } : []);
 
         public Task<Result<TmdbFilmDetails?>> GetFilmDetailsAsync(int tmdbId, CancellationToken ct) =>
-            Task.FromResult(Result<TmdbFilmDetails?>.Success(tmdbId == 550 ? Film : null));
+            // Other sample films answer as the Fake does: the refresh step re-fetches films other tests' users reference.
+            Task.FromResult(Result<TmdbFilmDetails?>.Success(tmdbId == 550 ? Film : FakeTmdbClient.Films.FirstOrDefault(f => f.TmdbId == tmdbId)));
 
         public Task<Result<IReadOnlyList<TmdbVideo>>> GetTrailersAsync(int tmdbId, CancellationToken ct) =>
             Task.FromResult<Result<IReadOnlyList<TmdbVideo>>>(Array.Empty<TmdbVideo>());

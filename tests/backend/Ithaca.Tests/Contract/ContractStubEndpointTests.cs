@@ -56,12 +56,6 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
         { "POST", $"{Room}/leave", null },
         { "POST", $"{Room}/close", null },
 
-        { "GET", "/api/library?shelf=watchlist&sort=title&page=1&pageSize=20", null },
-        { "GET", "/api/library/summary", null },
-        { "GET", "/api/library/550", null },
-        { "PUT", "/api/library/550", """{"liked":true,"onWatchlist":false,"seen":true,"rating":4}""" },
-        { "PUT", "/api/library/550/watchlist", null },
-        { "DELETE", "/api/library/550/watchlist", null },
 
         { "GET", "/api/films?search=club&maxRuntime=under90&minVoteAverage=7.5&hideSeen=true&sort=rating", null },
         { "GET", "/api/films/genres", null },
