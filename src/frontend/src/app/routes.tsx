@@ -5,6 +5,7 @@ import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { RequireUser, SignInPage } from '@/features/auth'
 import { DeckPage, DeckStartPage, DeckTopPage } from '@/features/deck'
 import { MoodPage } from '@/features/mood'
+import { BrowsePage } from '@/features/browse'
 import { CinemaPage } from '@/features/library'
 import { FilmPage } from '@/features/films'
 
@@ -35,7 +36,7 @@ export const routes: RouteObject[] = [
       { path: '/rooms/:code', element: <PlaceholderPage title="Room lobby" feature="rooms" /> },
       { path: '/rooms/:code/swipe', element: <PlaceholderPage title="Group swipe" feature="rooms" /> },
       { path: '/rooms/:code/result', element: <PlaceholderPage title="It's a match" feature="rooms" /> },
-      { path: '/browse', element: <PlaceholderPage title="Browse" feature="browse" /> },
+      { path: '/browse', element: <BrowsePage /> },
       { path: '/sign-in', element: <SignInPage /> },
       // Reference slice: the one real page.
       { path: '/films/:tmdbId', element: <FilmPage /> },

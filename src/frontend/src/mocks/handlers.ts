@@ -19,6 +19,39 @@ const filmHandlers = [
   http.get(apiPath('/api/films/genres'), () =>
     HttpResponse.json<ResponseOf<'/api/films/genres', 'get', 200>>([...new Set(mockFilms.flatMap((f) => f.genres))].sort()),
   ),
+  http.get(apiPath('/api/films'), ({ request }) => {
+    const q = new URL(request.url).searchParams
+    const page = Number(q.get('page') ?? 1)
+    const pageSize = Number(q.get('pageSize') ?? 20)
+    const sort = q.get('sort') ?? 'popular'
+    const search = q.get('search')?.toLowerCase() ?? ''
+    if (page < 1 || pageSize < 1 || pageSize > 100 || search.length > 100 || !['popular', 'newest', 'rating'].includes(sort)) {
+      return problem(400, 'validation', { query: ['Check search, sort, page and pageSize.'] })
+    }
+    const limit = { under90: 90, upTo2h: 120 }[q.get('maxRuntime') ?? ''] ?? Infinity
+    const genre = q.get('genre')
+    // Catalog order stands in for TMDB popularity. "Hide seen" needs a user, like the real API.
+    const seen =
+      q.get('hideSeen') === 'true' && getMockSession()
+        ? new Set(listMockUserFilms().filter((i) => i.seen).map((i) => i.film.tmdbId))
+        : new Set<number>()
+    const matches = mockFilms.filter(
+      (f) =>
+        f.title.toLowerCase().includes(search) &&
+        (!genre || f.genres.includes(genre)) &&
+        (f.runtimeMinutes ?? 0) <= limit &&
+        (f.voteAverage ?? 0) >= Number(q.get('minVoteAverage') ?? 0) &&
+        !seen.has(f.tmdbId),
+    )
+    if (sort === 'newest') matches.sort((a, b) => (b.releaseYear ?? 0) - (a.releaseYear ?? 0))
+    if (sort === 'rating') matches.sort((a, b) => (b.voteAverage ?? 0) - (a.voteAverage ?? 0))
+    const items = matches
+      .slice((page - 1) * pageSize, page * pageSize)
+      .map(({ tmdbId, title, releaseYear, posterPath, runtimeMinutes, genres, voteAverage }) => ({
+        tmdbId, title, releaseYear, posterPath, runtimeMinutes, genres, voteAverage,
+      }))
+    return HttpResponse.json<ResponseOf<'/api/films', 'get', 200>>({ items, page, pageSize, totalCount: matches.length })
+  }),
   http.get(apiPath('/api/films/{tmdbId}'), ({ params }) => {
     const film = findMockFilm(Number(params.tmdbId))
     return film ? HttpResponse.json<ResponseOf<'/api/films/{tmdbId}', 'get', 200>>(film) : problem(404, 'film.not_found')
