@@ -1,6 +1,6 @@
 # ADR-0024: Letterboxd import and half-star ratings
 
-- **Status:** Accepted (owner, 2026-11-13) for decisions 1–9; the open questions below are not decided
+- **Status:** Accepted (owner, 2026-11-13), decisions 1–9 and the answers to Q1–Q5 (see Outcome)
 - **Date:** 2026-11-13
 
 ## Context
@@ -75,8 +75,7 @@ Facts that shape the decision (checked on Letterboxd's own help pages, 2026-11-1
   Whether there is enough history is decided by the server (BE-14a exposes it), never by the screen.
 - That screen and `/import` have a **"?" help** that opens short, phone-friendly steps for getting the ZIP, including
   that Letterboxd's export needs the desktop version of its website.
-- The import itself is `/import` (FE-14), reachable from My Cinema (its link exists) and, assumed until Q3 is answered,
-  from Profile (FE-15).
+- The import itself is `/import` (FE-14), reachable from My Cinema (its link exists) and from Profile (FE-15) (Q3).
 
 The contract is [api-contract.md §13](../api-contract.md#13-import-letterboxd) and the §7 rating change; the tasks are
 OPS-12, BE-15a, BE-15, BE-20, FE-13, FE-14, FE-20, with scope added to BE-14a, BE-14, BE-16a, BE-19 and FE-15, in
@@ -111,7 +110,7 @@ above own those sections from here on ("as built").
   need them, so we don't keep them.
 - **Import overwrites Ithaca data, or mirrors deletions.** Surprising and destructive; an export is a snapshot, not a sync.
 
-## Open questions (owner)
+## Open questions (owner) — answered, see Outcome
 | Id | Question | Recommendation | Assumed until decided |
 |---|---|---|---|
 | Q1 | Guests and import: guests have no library (ADR-0012) and solo needs an account (A3). Where would a guest's import live? (a) create an account first, then import; (b) a temporary, room-scoped import used only for that room's group taste and deleted with the room; (c) no import for guests. | **(a)**: keeps ADR-0012 intact, one import path, and guest upgrade already keeps their room votes. (b) needs a second, room-scoped store, a new retention rule and group-taste logic for half-anonymous data; (c) is a dead end for exactly the people we want to convert. | (a): `/import` sends guests to sign in or create an account |
@@ -119,3 +118,14 @@ above own those sections from here on ("as built").
 | Q3 | Extra entry point: My Cinema, Profile, or both? | **Both**: My Cinema already links to `/import`; Profile gets a "Letterboxd · Import" row | both |
 | Q4 | Grow the catalog first (L6) so imports match more of it locally? | Not a blocker: the import adds missing films itself. A bigger catalog (L6) just means fewer TMDB lookups per import | import does not wait for L6 |
 | Q5 | A re-import whose rating differs from an earlier **imported** rating (the user re-rated on Letterboxd): update it? | **Yes**: remember where a rating came from (Ithaca or import); later imports may update imported ratings, never Ithaca ones. One extra column in BE-20's migration | No: any existing rating wins (decision 6 as written) |
+
+## Outcome (owner, 2026-11-13)
+The owner accepted the assumption column for all five questions. These are now decisions:
+- **Q1:** guests create an account before importing; `/api/imports` stays user-only and `/import` sends guests to sign in
+  or create an account (guest upgrade keeps their room votes). No room-scoped import.
+- **Q2:** By taste is ready with at least **10** films liked, rated ≥ 3.5 or "loved it" (a config value; BE-14a/§12
+  exposes readiness, BE-14 owns the rule).
+- **Q3:** the import is reachable from both My Cinema and Profile.
+- **Q4:** the import does not wait for a bigger catalog (L6); it adds missing films itself.
+- **Q5:** **no**: any existing rating wins on a re-import, whether it was made in Ithaca or imported earlier (decision 6
+  as written). No rating-source column; the recommendation to track the source is not taken.

@@ -296,7 +296,7 @@ lint, test, build.
 - **Deps:** BE-04. **Modules:** `docs/api-contract.md` (new §12), DTOs, stubs, `openapi.json`, `schema.d.ts`.
 - **Contract:** writes §12: `GET /api/taste`, `source: "taste"` for decks, `mode: "taste"` for rooms (additive enum values).
   `GET /api/taste` must say whether the caller has **enough history** for By taste (e.g. `ready`, `signalCount`,
-  `signalsNeeded`; threshold assumed in api-contract A16 / ADR-0024 Q2), so FE-13 can show the import screen without
+  `signalsNeeded`; threshold decided in api-contract A16 / ADR-0024 Q2: 10), so FE-13 can show the import screen without
   deciding anything itself. Creating a taste deck without enough history → a 422 code of its own (§12).
 - **Scope:** in: as BE-01, for §12. Out: logic.
 - **Acceptance:** §12 endpoints in `openapi.json`, answering 501. **Tests:** stub slice test.
@@ -443,8 +443,7 @@ lint, test, build.
   `UserFilm` (no `× 2` scattered in services); the half-step rule defined once on `UserFilm` (e.g.
   `UserFilm.IsValidRating(decimal)`), called by both the request's validation attribute (→ 400 `errors.rating`) and
   the domain guard; `rating` sort on the stored value; `export-openapi.sh`; `npm run api:types` (only
-  `schema.d.ts`, no other frontend file). If the owner answers ADR-0024 Q5 "yes" before this starts, also add the
-  rating's source (Ithaca / import) in the same migration. Out: frontend (FE-20), import (BE-15).
+  `schema.d.ts`, no other frontend file). No rating-source column (ADR-0024 Q5: no). Out: frontend (FE-20), import (BE-15).
 - **Acceptance:** `PUT` accepts 0.5, 3.5, 5 and returns them unchanged; 0, 5.5, 3.25, 7 → 400 `errors.rating`; existing
   ratings read back as before after the migration; `sort=rating` orders 4.5 above 4 and unrated last; migration drift
   check green.
@@ -610,7 +609,7 @@ lint, test, build.
 - **Objective:** the "Profile & settings" board. **Deps:** BE-16a, BE-15a, FE-03. **Modules:** `src/features/profile/`,
   `src/mocks/`. **Contract:** §14, §13 (latest import, read-only). **Scope:** in: `/profile` per the board, plus a
   "Letterboxd" row: "Import your history" → `/import`, or the latest import's date and counts when there is one
-  (ADR-0024; the second entry point next to My Cinema's link, assumed until Q3 is answered).
+  (ADR-0024 Q3: the second entry point next to My Cinema's link).
 
 ## Tonight
 
@@ -660,7 +659,7 @@ lint, test, build.
 - **Acceptance:** every owner decision is in the ADR and the contract; each change to merged work has a task with deps;
   open questions Q1–Q5 are listed for the owner. **Tests:** none (docs).
 
-### OPS-13 — Record the owner's answers to ADR-0024 Q1–Q5 · `In progress`
+### OPS-13 — Record the owner's answers to ADR-0024 Q1–Q5 · `Done`
 - **Objective:** turn ADR-0024's open questions into decisions in the ADR, contract and backlog.
 - **Deps:** OPS-12. **Modules:** `docs/decisions/0024-…`, `docs/api-contract.md` §11, `docs/backlog.md`.
 - **Contract:** A15–A17 become decided (no shape changes). **Scope:** in: docs only. **Tests:** none (docs).
@@ -816,7 +815,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 | L3 | Monthly AI budget (Anthropic + Voyage) | A hard cap you're comfortable with; BE-19 enforces a daily share of it |
 | L4 | Email provider for password reset | Any transactional provider that supports a custom domain (SPF/DKIM on Cloudflare DNS) |
 | L5 | Terms and Privacy texts | Written or approved by you (not legal advice from agents) |
-| L6 | Catalog size at launch | Enough for varied decks, e.g. several thousand films (843 today) |
+| L6 | Catalog size at launch | Enough for varied decks, e.g. several thousand films (843 today). Not a prerequisite for the Letterboxd import (ADR-0024 Q4, decided) |
 | L7 | Error tracking: logs only or an error service | Start with logs + uptime alerts; add a service if errors are hard to find |
 | L8 | Analytics at launch? | None at launch (no cookie banner needed); decide later |
 | P-02 | Google / Apple sign-in at launch? | Not required for launch; email works |
@@ -839,6 +838,3 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 Contract assumptions A1–A14 are in [api-contract.md §11](api-contract.md#11-open-questions). Also:
 - **Glossary:** the solo deck's parent record and the solo swipe need names (BE-08 proposes them, A12).
 - **Task order:** Wikidata and Voyage (BE-03, BE-04) come right after auth as requested, although only BE-13 and BE-14 need them.
-- **Letterboxd import (ADR-0024 Q1–Q5):** guests and import, how much history is "enough", the second entry point
-  (My Cinema and/or Profile), whether the catalog grows first (L6), and whether a re-import updates earlier imported
-  ratings. Recommendations and the assumptions tasks use until then are in the ADR.
