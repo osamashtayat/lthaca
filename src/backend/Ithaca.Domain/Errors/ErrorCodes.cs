@@ -44,4 +44,7 @@ public static class ErrorCodes
     public const string AiRefused = "ai.refused";
 
     public const string TmdbUnavailable = "tmdb.unavailable";
+
+    /// <summary>Catalog sync only; never reaches a user request.</summary>
+    public const string WikidataUnavailable = "wikidata.unavailable";
 }
