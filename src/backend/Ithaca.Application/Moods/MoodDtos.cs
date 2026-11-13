@@ -5,19 +5,15 @@ namespace Ithaca.Application.Moods;
 
 /// <summary>
 /// What the person picked on the mood screen (part of <c>CreateDeckRequest</c>). Only <see cref="Text"/> goes to the LLM
-/// (mood-parse.v1); moods, runtime and language are plain filters (docs/ai.md).
+/// (mood-parse.v2); moods, runtime and language are plain filters (docs/ai.md). Limits live on <see cref="MoodQuery"/>.
 /// </summary>
 public sealed record MoodInput(
-    [MaxLength(MoodInput.MaxMoods)] IReadOnlyList<Mood> Moods,
+    [MaxLength(MoodQuery.MaxMoods)] IReadOnlyList<Mood> Moods,
     RuntimeLimit MaxRuntime,
-    [StringLength(2, MinimumLength = 2)] string? Language,
-    [MaxLength(MoodInput.TextMaxLength)] string? Text)
-{
-    public const int MaxMoods = 2;
-    public const int TextMaxLength = 280;
-}
+    [StringLength(MoodQuery.LanguageLength, MinimumLength = MoodQuery.LanguageLength)] string? Language,
+    [MaxLength(MoodQuery.TextMaxLength)] string? Text);
 
-/// <summary>The filters we derived from a <c>MoodQuery</c>: mood-parse.v1's validated output after our own checks.</summary>
+/// <summary>The filters we derived from a <c>MoodQuery</c>: mood-parse.v2's validated output after our own checks.</summary>
 public sealed record MoodFiltersDto(
     IReadOnlyList<string> IncludeGenres,
     IReadOnlyList<string> ExcludeGenres,

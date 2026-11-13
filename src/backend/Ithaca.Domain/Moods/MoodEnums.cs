@@ -28,3 +28,15 @@ public enum HardNo
     Musicals,
     SadEndings,
 }
+
+/// <summary>The one meaning of <see cref="RuntimeLimit"/> in minutes, for browse and moods alike.</summary>
+public static class RuntimeLimits
+{
+    /// <summary>The longest runtime that passes: under 90 → 89, up to 2h → 120, any → no limit.</summary>
+    public static int? MaxMinutes(this RuntimeLimit limit) => limit switch
+    {
+        RuntimeLimit.Under90 => 89,
+        RuntimeLimit.UpTo2h => 120,
+        _ => null,
+    };
+}

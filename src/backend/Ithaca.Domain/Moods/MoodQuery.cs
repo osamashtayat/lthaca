@@ -18,6 +18,9 @@ public sealed class MoodQuery
     public const int MaxKeywords = 10;
     public const int KeywordMaxLength = 50;
 
+    /// <summary>Release years before this aren't a real filter (the first films).</summary>
+    public const int EarliestYear = 1870;
+
     private MoodQuery(Guid userId, DateTimeOffset now)
     {
         Id = SequentialGuid.NewV7(now);
@@ -92,7 +95,8 @@ public sealed class MoodQuery
 
     /// <summary>
     /// Stores the derived filters. The caller has already validated genres against the catalog; lists are de-duplicated and
-    /// capped here, an included genre is never also excluded, and an inverted year range is dropped.
+    /// capped here, an included genre is never also excluded, a year outside <see cref="EarliestYear"/>…next year is dropped,
+    /// and so is an inverted year range.
     /// </summary>
     public void SetFilters(
         IEnumerable<string> includeGenres, IEnumerable<string> excludeGenres, int? maxRuntimeMinutes, int? minReleaseYear, int? maxReleaseYear,
@@ -104,9 +108,9 @@ public sealed class MoodQuery
         IncludeGenres = includeGenres.Distinct(StringComparer.Ordinal).Take(MaxGenres).ToArray();
         ExcludeGenres = excludeGenres.Distinct(StringComparer.Ordinal).Except(IncludeGenres, StringComparer.Ordinal).Take(MaxGenres).ToArray();
         MaxRuntimeMinutes = maxRuntimeMinutes is > 0 ? maxRuntimeMinutes : null;
-        (MinReleaseYear, MaxReleaseYear) = minReleaseYear is { } min && maxReleaseYear is { } max && min > max
-            ? (null, null)
-            : (minReleaseYear, maxReleaseYear);
+        var from = PlausibleYear(minReleaseYear);
+        var to = PlausibleYear(maxReleaseYear);
+        (MinReleaseYear, MaxReleaseYear) = from is { } min && to is { } max && min > max ? (null, null) : (from, to);
         Keywords = keywords
             .Select(k => k.Trim())
             .Where(k => k.Length is > 0 and <= KeywordMaxLength)
@@ -115,4 +119,6 @@ public sealed class MoodQuery
             .ToArray();
         TextIgnored = textIgnored;
     }
+
+    private int? PlausibleYear(int? year) => year is { } y && y >= EarliestYear && y <= CreatedAt.Year + 1 ? y : null;
 }

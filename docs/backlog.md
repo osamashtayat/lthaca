@@ -262,7 +262,7 @@ lint, test, build.
 - **Acceptance:** `openapi.json` and `schema.d.ts` show the new shapes; `ErrorStatusCodesTests` green.
 - **Tests:** existing stub and mapping tests.
 
-### BE-09 — Decks by mood · `In progress`
+### BE-09 — Decks by mood · `Done` (PR #36)
 - **Objective:** start a deck from tapped moods and free text.
 - **Deps:** BE-08, BE-09a. **Modules:** `Domain/Moods`, `Application/Moods`, `Application/Decks`, `Application/Ai`,
   `prompts/`, `evals/`, migration.

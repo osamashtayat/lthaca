@@ -78,4 +78,25 @@ public sealed class MoodRulesTests
         query.MaxReleaseYear.ShouldBeNull();
         query.Keywords.Length.ShouldBe(MoodQuery.MaxKeywords);
     }
+
+    [Theory]
+    [InlineData(-5, null)]
+    [InlineData(3000, null)]
+    [InlineData(1869, null)]
+    [InlineData(1990, 1990)]
+    public void SetFilters_DropsImplausibleYears(int year, int? kept)
+    {
+        var query = MoodQuery.Create(Guid.NewGuid(), [], RuntimeLimit.Any, null, null, Now);
+
+        query.SetFilters([], [], null, year, year, [], textIgnored: false);
+
+        query.MinReleaseYear.ShouldBe(kept);
+        query.MaxReleaseYear.ShouldBe(kept);
+    }
+
+    [Theory]
+    [InlineData(RuntimeLimit.Under90, 89)]
+    [InlineData(RuntimeLimit.UpTo2h, 120)]
+    [InlineData(RuntimeLimit.Any, null)]
+    public void RuntimeLimit_MaxMinutes(RuntimeLimit limit, int? minutes) => limit.MaxMinutes().ShouldBe(minutes);
 }

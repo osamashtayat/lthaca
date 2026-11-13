@@ -11,8 +11,6 @@ namespace Ithaca.Application.Films;
 /// </summary>
 public sealed class FilmQueryService(IAppDbContext db, ICurrentActor current)
 {
-    private const int Under90Minutes = 90;
-    private const int UpTo2hMinutes = 120;
 
     public async Task<Result<FilmDto>> GetByTmdbIdAsync(int tmdbId, CancellationToken ct)
     {
@@ -49,12 +47,10 @@ public sealed class FilmQueryService(IAppDbContext db, ICurrentActor current)
             films = films.Where(f => f.Genres.Contains(genre));
         }
 
-        films = request.MaxRuntime switch
+        if (request.MaxRuntime?.MaxMinutes() is { } maxMinutes)
         {
-            RuntimeLimit.Under90 => films.Where(f => f.RuntimeMinutes < Under90Minutes),
-            RuntimeLimit.UpTo2h => films.Where(f => f.RuntimeMinutes <= UpTo2hMinutes),
-            _ => films,
-        };
+            films = films.Where(f => f.RuntimeMinutes <= maxMinutes);
+        }
 
         if (request.MinVoteAverage is { } minVote)
         {

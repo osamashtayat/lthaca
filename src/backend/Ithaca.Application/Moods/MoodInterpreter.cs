@@ -30,7 +30,7 @@ public sealed class MoodInterpreter(IAppDbContext db, ILlmClient llm, IPromptLib
         var now = time.GetUtcNow();
         var query = MoodQuery.Create(userId, input.Moods, input.MaxRuntime, input.Language, input.Text, now);
         var chips = MoodChips.For(query.Moods);
-        var runtime = RuntimeMinutes(query.MaxRuntime);
+        var runtime = query.MaxRuntime.MaxMinutes();
 
         if (query.Text is null)
         {
@@ -73,7 +73,7 @@ public sealed class MoodInterpreter(IAppDbContext db, ILlmClient llm, IPromptLib
 
         var known = genres.ToDictionary(g => g, g => g, StringComparer.OrdinalIgnoreCase);
         var include = chips.IncludeGenres.Concat(Known(text.IncludeGenres, known));
-        var exclude = chips.ExcludeGenres.Concat(Known(text.ExcludeGenres, known)).Except(chips.IncludeGenres, StringComparer.Ordinal);
+        var exclude = chips.ExcludeGenres.Concat(Known(text.ExcludeGenres, known)); // SetFilters drops any included genre
         query.SetFilters(
             include,
             exclude,
@@ -84,14 +84,6 @@ public sealed class MoodInterpreter(IAppDbContext db, ILlmClient llm, IPromptLib
             textIgnored: false);
         return query;
     }
-
-    /// <summary><see cref="RuntimeLimit"/> as minutes: under 90 → 89, up to 2h → 120, any → none.</summary>
-    public static int? RuntimeMinutes(RuntimeLimit limit) => limit switch
-    {
-        RuntimeLimit.Under90 => 89,
-        RuntimeLimit.UpTo2h => 120,
-        _ => null,
-    };
 
     /// <summary>The model's genres that exist in our catalog, in our spelling; anything else is dropped.</summary>
     private static IEnumerable<string> Known(IEnumerable<string> genres, Dictionary<string, string> known) =>
