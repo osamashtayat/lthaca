@@ -8,6 +8,7 @@ Use these names exactly in code (types, tables, routes, UI copy where it fits). 
 | `Guest` | Someone who joined a room from a shared link without an account. | Can vote in that room only. |
 | `Film` | A movie in **our** catalog, synced from TMDB, with an optional embedding and the model that made it. | Public id is `TmdbId`. Table `films`. Refreshed at least every 180 days (TMDB terms); films user data references are refreshed by id and never purged (ADR-0019). |
 | `FilmFacts` | What Wikidata (CC0) says about a `Film` — genres, subjects, directors, cast, countries, languages, year, runtime, awards — and the embedding text built only from them. | The only film data AI may see (ADR-0017). Table `film_facts`, one row per matched film. |
+| `FilmTrailer` | The cached answer to "what is this film's trailer?": the first YouTube trailer TMDB lists, or none. | Table `film_trailers`, one row per film; refreshed after 30 days, never kept past 180 (ADR-0003, ADR-0017). |
 | `UserFilm` | A user's relation to a film: liked, watchlist, seen, personal rating (1–5). No "watching" state. | Powers "My Cinema" (Library). |
 | `Room` | A group session with one shared deck, joined by link or code. | Stored in the DB; real-time via RoomHub. |
 | `RoomMember` | A `User` or `Guest` in a `Room`. | Host is a member with extra rights. |

@@ -133,6 +133,33 @@ public sealed class CatalogRetentionTests(PostgresFixture postgres)
         (await db.Films.AnyAsync(f => f.TmdbId == 774001, Ct)).ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task Sync_PurgesCachedTrailersOlderThanMaxAge()
+    {
+        await using var factory = await IthacaApiFactory.StartAsync(postgres.ConnectionString);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await AddStaleFilmsAsync(db, 776001, 776002);
+        var user = await BrowserClient.RegisteredAsync(factory, Ct);
+        await LikeAsync(user, 776001); // referenced, so the film itself stays
+        await LikeAsync(user, 776002);
+        var films = await db.Films.Where(f => f.TmdbId == 776001 || f.TmdbId == 776002).ToDictionaryAsync(f => f.TmdbId, f => f.Id, Ct);
+        var old = FilmTrailer.Create(films[776001]);
+        old.Set("old-key", "Old trailer", DateTimeOffset.UtcNow - FilmTrailer.MaxAge - TimeSpan.FromDays(1));
+        var recent = FilmTrailer.Create(films[776002]);
+        recent.Set("new-key", "New trailer", DateTimeOffset.UtcNow.AddDays(-1));
+        db.FilmTrailers.AddRange(old, recent);
+        await db.SaveChangesAsync(Ct);
+
+        var result = await Sync(scope, db, new StubTmdb(known: new() { [776001] = "One", [776002] = "Two" })).RunAsync(Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.TrailersPurged.ShouldBeGreaterThanOrEqualTo(1);
+        db.ChangeTracker.Clear();
+        (await db.FilmTrailers.AnyAsync(t => t.FilmId == films[776001], Ct)).ShouldBeFalse("TMDB data isn't kept past 6 months");
+        (await db.FilmTrailers.AnyAsync(t => t.FilmId == films[776002], Ct)).ShouldBeTrue();
+    }
+
     private static CatalogSyncService Sync(AsyncServiceScope scope, AppDbContext db, ITmdbClient tmdb) =>
         new(db, tmdb, scope.ServiceProvider.GetRequiredService<WikidataEnricher>(), scope.ServiceProvider.GetRequiredService<FilmEmbedder>(),
             Options.Create(new CatalogSyncOptions { Pages = 1, MaxAgeDays = 180 }), TimeProvider.System);

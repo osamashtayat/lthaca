@@ -18,6 +18,9 @@ public interface IAppDbContext
     /// <summary>Wikidata facts per film (ADR-0017): the only film data AI may see.</summary>
     DbSet<FilmFacts> FilmFacts { get; }
 
+    /// <summary>The trailer cache (ADR-0003): TMDB data, at most <see cref="FilmTrailer.MaxAge"/> old (ADR-0017).</summary>
+    DbSet<FilmTrailer> FilmTrailers { get; }
+
     /// <summary>Registered users, read-only: accounts are created and changed through <c>ISessionManager</c> (Identity).</summary>
     IQueryable<UserReadModel> Users { get; }
 

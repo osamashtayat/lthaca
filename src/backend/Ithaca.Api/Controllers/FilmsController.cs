@@ -1,5 +1,4 @@
 using Ithaca.Api.Errors;
-using Ithaca.Api.OpenApi;
 using Ithaca.Application.Common;
 using Ithaca.Application.Films;
 using Microsoft.AspNetCore.Mvc;
@@ -36,7 +35,6 @@ public sealed class FilmsController(FilmQueryService films, FilmTrailerService t
     [ProducesResponseType<FilmTrailerDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
-    [ContractStub]
     public async Task<ActionResult<FilmTrailerDto>> Trailer(int tmdbId, CancellationToken ct) =>
         this.ToActionResult(await trailers.GetAsync(tmdbId, ct));
 }
