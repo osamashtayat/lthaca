@@ -1,4 +1,4 @@
-export { Button, type ButtonVariant } from './Button'
+export { Button, ButtonLink, type ButtonVariant } from './Button'
 export { Chip, ToggleChip } from './Chip'
 export { ErrorState } from './ErrorState'
 export { IconButton } from './IconButton'

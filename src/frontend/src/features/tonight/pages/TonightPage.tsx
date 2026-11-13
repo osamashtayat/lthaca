@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { isUser, RoomCodeForm, useCurrentUser } from '@/features/auth'
-import { LoadingState, MonoLabel, SegmentedControl, TicketCard } from '@/shared/ui'
+import { Button, ButtonLink, MonoLabel, SegmentedControl, TicketCard } from '@/shared/ui'
 import { dayLabelFor, greetingFor } from '../greeting'
 
 type Who = 'solo' | 'group'
@@ -9,9 +8,6 @@ const WHO = [
   { value: 'solo', label: 'Just me' },
   { value: 'group', label: 'With friends' },
 ] as const
-
-const ticketLink =
-  'inline-flex min-h-11 items-center justify-center rounded-full border-2 border-ink bg-ink px-5 font-extrabold text-cream no-underline'
 
 /**
  * "Tonight": the home screen. A visitor can toggle and join by code; every other action leads to `/sign-in` (with
@@ -22,11 +18,11 @@ export function TonightPage({ now: given }: { now?: Date }) {
   const session = useCurrentUser()
   const [who, setWho] = useState<Who>('solo')
 
-  if (session.isPending) return <LoadingState label="Loading…" />
   const user = isUser(session.data) ? session.data : null
   const signedIn = user !== null
   // FE-12 acceptance: visitors may toggle and join by code; every other action (hosting a room included) leads to sign-in.
-  const to = (path: string) => (signedIn ? path : `/sign-in?next=${encodeURIComponent(path)}`)
+  // While the session loads the links point at the real page: its own guard sends a visitor to sign-in anyway.
+  const to = (path: string) => (signedIn || session.isPending ? path : `/sign-in?next=${encodeURIComponent(path)}`)
   const name = user?.displayName ?? null
 
   return (
@@ -55,9 +51,9 @@ export function TonightPage({ now: given }: { now?: Date }) {
                 ? 'Swipe a deck: right if you would watch it, left if not, up if you have seen it.'
                 : 'Share a link, everyone swipes, and the room finds the film you all agree on.'}
             </p>
-            <Link to={who === 'solo' ? to('/deck') : to('/rooms')} className={ticketLink}>
+            <ButtonLink to={who === 'solo' ? to('/deck') : to('/rooms')}>
               {who === 'solo' ? 'Just swipe' : 'Start a room'}
-            </Link>
+            </ButtonLink>
           </div>
         </TicketCard>
 
@@ -65,9 +61,9 @@ export function TonightPage({ now: given }: { now?: Date }) {
           <div className="flex flex-col gap-3">
             <h2 className="text-xl font-extrabold tracking-tight">By mood</h2>
             <p className="text-ink-muted">Tell us the vibe and we deal a deck to match.</p>
-            <Link to={to('/mood')} className={ticketLink}>
+            <ButtonLink to={to('/mood')}>
               Pick a mood
-            </Link>
+            </ButtonLink>
           </div>
         </TicketCard>
 
@@ -75,12 +71,9 @@ export function TonightPage({ now: given }: { now?: Date }) {
           <div className="flex flex-col gap-3">
             <h2 className="text-xl font-extrabold tracking-tight">By taste</h2>
             <p className="text-ink-muted">Soon: a deck built from what you have loved.</p>
-            <span
-              aria-disabled="true"
-              className="inline-flex min-h-11 items-center justify-center rounded-full border-2 border-ink bg-beige px-5 font-extrabold text-ink-muted"
-            >
+            <Button variant="outline" disabled>
               Coming soon
-            </span>
+            </Button>
           </div>
         </TicketCard>
       </div>
