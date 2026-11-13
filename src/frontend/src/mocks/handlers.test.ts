@@ -35,4 +35,19 @@ describe('mock API', () => {
     const { data } = await api.GET('/api/health')
     expect(data?.status).toBe('degraded')
   })
+
+  it.each([3.25, 0, 5.5, 7])('rejects the rating %s with a 400 on `rating` (half steps 0.5 to 5 only)', async (rating) => {
+    const error = await rejection(
+      api.PUT('/api/library/{tmdbId}', { params: { path: { tmdbId: 550 } }, body: { liked: false, onWatchlist: false, seen: true, rating } }),
+    )
+    expect(error).toMatchObject({ status: 400, code: 'validation', fieldErrors: { rating: expect.any(Array) as string[] } })
+  })
+
+  it.each([0.5, 3.5, 5])('accepts the rating %s', async (rating) => {
+    const { data } = await api.PUT('/api/library/{tmdbId}', {
+      params: { path: { tmdbId: 550 } },
+      body: { liked: false, onWatchlist: false, seen: true, rating },
+    })
+    expect(data?.rating).toBe(rating)
+  })
 })

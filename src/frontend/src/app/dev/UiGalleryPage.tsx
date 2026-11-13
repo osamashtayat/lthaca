@@ -84,7 +84,12 @@ export function UiGalleryPage() {
       </Section>
 
       <Section title="StubRating">
-        <StubRating label="Your rating" value={rating} onChange={setRating} />
+        <div className="flex flex-col gap-3">
+          <StubRating label="Your rating" value={rating} onChange={setRating} />
+          <StubRating label="Unrated (0)" value={null} onChange={() => undefined} />
+          <StubRating label="Half rating (2.5)" value={2.5} onChange={() => undefined} />
+          <StubRating label="Full rating (5)" value={5} onChange={() => undefined} />
+        </div>
       </Section>
 
       <Section title="TicketCard">

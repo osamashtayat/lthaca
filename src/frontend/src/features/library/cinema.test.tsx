@@ -87,6 +87,12 @@ describe('My Cinema', () => {
     expect(titles()[0]).toContain('Inception')
   })
 
+  it('shows a half rating as "YOU · 3.5/5"', async () => {
+    putMockUserFilm(550, state({ liked: true, rating: 3.5 }))
+    renderCinema()
+    expect(await screen.findByText('YOU · 3.5/5')).toBeTruthy()
+  })
+
   it('pages with load more', async () => {
     for (const film of mockFilms) putMockUserFilm(film.tmdbId, state({ liked: true }))
     const user = userEvent.setup()
