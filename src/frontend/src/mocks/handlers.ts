@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { addMockAccount, findMockAccount, getMockSession, isMockEmailTaken, setMockSession } from './authStore'
 import { findMockFilm, mockFilms, mockTrailers } from './fixtures'
 import { createMockDeck, mockDeckDto, parseMockMood, mockDeckTop, nextMockBatch, recordMockSwipe } from './deckStore'
+import { addMockRoomMember, createMockRoom, findMockRoom, mockRoomFor, removeMockRoomMember, setMockRoomStatus, MOCK_MAX_MEMBERS } from './roomStore'
 import { getMockUserFilm, listMockUserFilms, putMockUserFilm, setMockWatchlist } from './libraryStore'
 import { apiPath, problem, type RequestOf, type ResponseOf } from './http'
 
@@ -217,4 +218,81 @@ const deckHandlers = [
   }),
 ]
 
-export const handlers = [...healthHandlers, ...authHandlers, ...filmHandlers, ...libraryHandlers, ...watchlistHandlers, ...deckHandlers]
+const roomHandlers = [
+  http.post(apiPath('/api/rooms'), async ({ request }) => {
+    const session = getMockSession()
+    if (session?.kind !== 'user') return problem(401, 'auth.unauthenticated')
+    const body = (await request.json()) as RequestOf<'/api/rooms', 'post'>
+    const name = body.name.trim()
+    if (name.length < 1 || name.length > 40) return problem(400, 'validation', { name: ['Use 1 to 40 characters.'] })
+    const room = createMockRoom(name, body.mode, session)
+    return HttpResponse.json<ResponseOf<'/api/rooms', 'post', 201>>(room, {
+      status: 201,
+      headers: { Location: `/api/rooms/${room.code}` },
+    })
+  }),
+  http.get(apiPath('/api/rooms/{code}/preview'), ({ params }) => {
+    const room = findMockRoom(String(params.code))
+    if (!room) return problem(404, 'room.not_found')
+    const host = room.members.find((m) => m.isHost)
+    return HttpResponse.json<ResponseOf<'/api/rooms/{code}/preview', 'get', 200>>({
+      code: room.code,
+      name: room.name,
+      hostDisplayName: host?.displayName ?? '',
+      mode: room.mode,
+      status: room.status,
+      memberCount: room.members.length,
+      maxMembers: room.maxMembers,
+    })
+  }),
+  http.post(apiPath('/api/rooms/{code}/join'), async ({ request, params }) => {
+    const room = findMockRoom(String(params.code))
+    if (!room) return problem(404, 'room.not_found')
+    const body = (await request.json()) as RequestOf<'/api/rooms/{code}/join', 'post'>
+    const session = getMockSession()
+    const existing = mockRoomFor(room.code)
+    if (existing) return HttpResponse.json<ResponseOf<'/api/rooms/{code}/join', 'post', 200>>(existing)
+    if (room.status === 'closed') return problem(409, 'room.closed')
+    if (room.members.length >= MOCK_MAX_MEMBERS) return problem(409, 'room.full')
+    const name = body.displayName?.trim() ?? ''
+    if (!session && (name.length < 1 || name.length > 30)) {
+      return problem(400, 'validation', { displayName: ['Use 1 to 30 characters.'] })
+    }
+    // A signed-in user joins under their own name and id; an anonymous visitor becomes a guest (cookie → session).
+    const isUser = session?.kind === 'user'
+    const member = addMockRoomMember(room.code, isUser ? session.displayName : name, {
+      kind: isUser ? 'user' : 'guest',
+      ...(isUser ? { id: session.id } : {}),
+    })
+    if (member && !isUser) {
+      setMockSession({ kind: 'guest', id: member.id, displayName: member.displayName, email: null, roomCode: room.code })
+    }
+    const joined = mockRoomFor(room.code)
+    return joined ? HttpResponse.json<ResponseOf<'/api/rooms/{code}/join', 'post', 200>>(joined) : problem(500, 'server.error')
+  }),
+  http.get(apiPath('/api/rooms/{code}'), ({ params }) => {
+    if (!findMockRoom(String(params.code))) return problem(404, 'room.not_found')
+    if (!getMockSession()) return problem(401, 'auth.unauthenticated')
+    const room = mockRoomFor(String(params.code))
+    return room ? HttpResponse.json<ResponseOf<'/api/rooms/{code}', 'get', 200>>(room) : problem(403, 'room.not_member')
+  }),
+  http.post(apiPath('/api/rooms/{code}/start'), ({ params }) => {
+    if (!findMockRoom(String(params.code))) return problem(404, 'room.not_found')
+    const room = mockRoomFor(String(params.code))
+    if (!room) return problem(403, 'room.not_member')
+    if (!room.me.isHost) return problem(403, 'room.not_host')
+    if (room.status !== 'lobby') return problem(409, 'room.invalid_state')
+    setMockRoomStatus(room.code, 'swiping')
+    const started = mockRoomFor(room.code)
+    return started ? HttpResponse.json<ResponseOf<'/api/rooms/{code}/start', 'post', 200>>(started) : problem(500, 'server.error')
+  }),
+  http.post(apiPath('/api/rooms/{code}/leave'), ({ params }) => {
+    if (!findMockRoom(String(params.code))) return problem(404, 'room.not_found')
+    const room = mockRoomFor(String(params.code))
+    if (!room) return problem(403, 'room.not_member')
+    removeMockRoomMember(room.code, room.me.id)
+    return new HttpResponse(null, { status: 204 })
+  }),
+]
+
+export const handlers = [...healthHandlers, ...authHandlers, ...filmHandlers, ...libraryHandlers, ...watchlistHandlers, ...deckHandlers, ...roomHandlers]

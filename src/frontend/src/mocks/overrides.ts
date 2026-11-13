@@ -9,3 +9,4 @@ export const slowUnavailableDeckCreate = (ms: number) =>
     await new Promise((resolve) => setTimeout(resolve, ms))
     return problem(503, 'ai.unavailable')
   })
+export const notHostStart = () => http.post(apiPath('/api/rooms/{code}/start'), () => problem(403, 'room.not_host'))
