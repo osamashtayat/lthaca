@@ -392,7 +392,7 @@ lint, test, build.
 - **Tests:** slice tests per endpoint/error; retention (referenced vs orphan, TMDB 404).
 - **Docs:** api-contract.md §7; docs/ai.md catalog sync.
 
-### FE-07 — My Cinema screen · `In progress`
+### FE-07 — My Cinema screen · `Done` (PR #17)
 - **Objective:** the "My Cinema" board. **Deps:** BE-01, FE-02, FE-03. **Modules:** `src/features/library/`, `src/mocks/`.
 - **Contract:** §7.
 - **Scope:** in: `/cinema`: counts, shelves Liked / Watchlist / Seen (no Watching tab: A9), genre filter, sort, poster grid, empty

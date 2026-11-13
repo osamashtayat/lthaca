@@ -1,8 +1,9 @@
 import { Link, useSearchParams } from 'react-router'
+import { useGenres } from '@/features/films'
 import { Button, ErrorState, LoadingState, MonoLabel, Poster, SegmentedControl, tmdbImageUrl } from '@/shared/ui'
 import { useLibrary } from '../api/useLibrary'
 import { useLibrarySummary } from '../api/useLibrarySummary'
-import { filtersFromParams, GENRES, SHELVES, SORTS } from '../cinemaFilters'
+import { filtersFromParams, SHELVES, SORTS } from '../cinemaFilters'
 import type { LibrarySort, LibraryShelf } from '../types'
 
 /** "My Cinema": the shelves (Liked / Watchlist / Seen) with counts, genre filter, sort, poster grid and load more. Filters live in the URL. */
@@ -11,6 +12,7 @@ export function CinemaPage() {
   const filters = filtersFromParams(params)
   const summary = useLibrarySummary()
   const library = useLibrary(filters)
+  const genres = useGenres().data ?? []
 
   function update(next: Partial<typeof filters>) {
     const merged = { ...filters, ...next }
@@ -47,7 +49,7 @@ export function CinemaPage() {
             className="min-h-12 rounded-control border-2 border-ink bg-cream px-3 text-base text-ink"
           >
             <option value="">All genres</option>
-            {GENRES.map((g) => (
+            {genres.map((g) => (
               <option key={g} value={g}>
                 {g}
               </option>
@@ -86,7 +88,7 @@ export function CinemaPage() {
         </div>
       ) : (
         <>
-          <ul className="grid grid-cols-3 gap-3" aria-label={`${SHELVES.find((s) => s.value === filters.shelf)?.label} films`}>
+          <ul className="grid grid-cols-3 gap-3" aria-label={`${SHELVES.find((s) => s.value === filters.shelf)?.label ?? ''} films`}>
             {items.map(({ film, rating }) => (
               <li key={film.tmdbId}>
                 <Link to={`/films/${film.tmdbId}`} className="flex flex-col gap-1.5 text-ink no-underline">
@@ -99,7 +101,7 @@ export function CinemaPage() {
           </ul>
           {library.hasNextPage && (
             <Button variant="outline" disabled={library.isFetchingNextPage} onClick={() => void library.fetchNextPage()} className="self-center">
-              {library.isFetchingNextPage ? 'Loading…' : "Load more"}
+              {library.isFetchingNextPage ? 'Loading…' : 'Load more'}
             </Button>
           )}
         </>

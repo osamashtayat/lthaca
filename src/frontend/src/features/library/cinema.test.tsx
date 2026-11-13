@@ -81,6 +81,7 @@ describe('My Cinema', () => {
     await user.selectOptions(screen.getByLabelText('Sort'), 'title')
     await waitFor(() => expect(titles()[0]).toContain('Fight Club'))
 
+    await screen.findByRole('option', { name: 'Science Fiction' })
     await user.selectOptions(screen.getByLabelText('Genre'), 'Science Fiction')
     await waitFor(() => expect(titles()).toHaveLength(1))
     expect(titles()[0]).toContain('Inception')

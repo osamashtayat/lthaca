@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { addMockAccount, findMockAccount, getMockSession, isMockEmailTaken, setMockSession } from './authStore'
-import { findMockFilm, mockTrailers } from './fixtures'
+import { findMockFilm, mockFilms, mockTrailers } from './fixtures'
 import { createMockDeck, mockDeckDto, parseMockMood, mockDeckTop, nextMockBatch, recordMockSwipe } from './deckStore'
 import { getMockUserFilm, listMockUserFilms, putMockUserFilm, setMockWatchlist } from './libraryStore'
 import { apiPath, problem, type RequestOf, type ResponseOf } from './http'
@@ -15,6 +15,10 @@ const healthHandlers = [
 ]
 
 const filmHandlers = [
+  // Before `/api/films/{tmdbId}`, or "genres" would be taken for an id.
+  http.get(apiPath('/api/films/genres'), () =>
+    HttpResponse.json<ResponseOf<'/api/films/genres', 'get', 200>>([...new Set(mockFilms.flatMap((f) => f.genres))].sort()),
+  ),
   http.get(apiPath('/api/films/{tmdbId}'), ({ params }) => {
     const film = findMockFilm(Number(params.tmdbId))
     return film ? HttpResponse.json<ResponseOf<'/api/films/{tmdbId}', 'get', 200>>(film) : problem(404, 'film.not_found')
