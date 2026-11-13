@@ -382,7 +382,7 @@ lint, test, build.
 - **Tests:** join form validation; lobby readiness; hub handlers invalidate the right keys.
 - **Docs:** docs/realtime.md client section.
 
-### FE-10 — Room mood step · `Todo`
+### FE-10 — Room mood step · `In progress`
 - **Objective:** the "Group — your mood tonight" board. **Deps:** FE-09, FE-06, BE-09a. **Modules:** `src/features/rooms/`,
   `src/mocks/`.
 - **Contract:** §6 (`PUT …/mood` → `RoomMoodDto`).
