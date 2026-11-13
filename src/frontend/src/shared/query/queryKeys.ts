@@ -24,5 +24,7 @@ export const queryKeys = {
   library: {
     all: ['library'] as const,
     detail: (tmdbId: number) => ['library', 'detail', tmdbId] as const,
+    list: (filters: { shelf: string; sort: string; genre: string | null }) => ['library', 'list', filters] as const,
+    summary: ['library', 'summary'] as const,
   },
 } as const
