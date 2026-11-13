@@ -86,3 +86,8 @@ export function listMockUserFilms(): UserFilmDto[] {
     .reverse()
     .flatMap((tmdbId) => getMockUserFilm(tmdbId) ?? [])
 }
+
+/** Dev server only (browser.ts): a first-time visitor already has one half-star rating, so My Cinema shows "YOU · 3.5/5". */
+export function seedMockLibrary() {
+  if (store.size === 0) putMockUserFilm(27205, { liked: true, onWatchlist: false, seen: true, rating: 3.5 })
+}

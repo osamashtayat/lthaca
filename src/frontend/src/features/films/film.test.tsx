@@ -78,11 +78,14 @@ describe('FilmPage', () => {
     const user = userEvent.setup()
     renderFilm()
     const group = await screen.findByRole('radiogroup', { name: 'Your rating' })
-    await waitFor(() => expect((screen.getByRole('radio', { name: '1 of 5' }) as HTMLInputElement).disabled).toBe(false))
+    await waitFor(() => expect((screen.getByRole('radio', { name: '1 of 5 stubs' }) as HTMLInputElement).disabled).toBe(false))
     await user.tab() // walk to the rating group's single tab stop
     while (!group.contains(document.activeElement)) await user.tab()
-    await user.keyboard('{ArrowRight}{ArrowRight}')
-    await waitFor(() => expect((screen.getByRole('radio', { name: '3 of 5' }) as HTMLInputElement).checked).toBe(true))
+    // One half step at a time, each saved before the next (the rating is a PUT with optimistic update and refetch).
+    for (const value of ['1', '1.5']) {
+      await user.keyboard('{ArrowRight}')
+      await waitFor(() => expect((screen.getByRole('radio', { name: `${value} of 5 stubs` }) as HTMLInputElement).checked).toBe(true), { timeout: 3000 })
+    }
     await waitFor(async () => expect((await chip('Seen it')).getAttribute('aria-pressed')).toBe('true'))
   })
 

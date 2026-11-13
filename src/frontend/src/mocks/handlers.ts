@@ -146,7 +146,10 @@ const libraryHandlers = [
   http.put(apiPath('/api/library/{tmdbId}'), async ({ params, request }) => {
     if (!getMockSession()) return problem(401, 'auth.unauthenticated')
     const body = (await request.json()) as RequestOf<'/api/library/{tmdbId}', 'put'>
-    if (body.rating !== null && (body.rating < 1 || body.rating > 5)) return problem(400, 'validation', { rating: ['Use 1 to 5.'] })
+    // §7 Half stars: 0.5, 1, 1.5 … 5 or null; anything else (0, 5.5, 3.25) is a 400 on `rating`.
+    if (body.rating !== null && !(body.rating >= 0.5 && body.rating <= 5 && Number.isInteger(body.rating * 2))) {
+      return problem(400, 'validation', { rating: ['Use half steps from 0.5 to 5.'] })
+    }
     const item = putMockUserFilm(Number(params.tmdbId), body)
     return item ? HttpResponse.json<ResponseOf<'/api/library/{tmdbId}', 'put', 200>>(item) : problem(404, 'film.not_found')
   }),

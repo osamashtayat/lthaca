@@ -1,42 +1,80 @@
-import { useId } from 'react'
+import { useId, useRef } from 'react'
+import type { KeyboardEvent, MouseEvent } from 'react'
+import { nextRating } from './stubRatingValue'
 
 const STUBS = [1, 2, 3, 4, 5] as const
 
 type StubRatingProps = {
   /** Accessible name, e.g. "Your rating". */
   label: string
-  /** 1–5, or null when unrated. */
+  /** 0.5–5 in half steps, or null when unrated. */
   value: number | null
   onChange: (value: number) => void
   disabled?: boolean
 }
 
-/** The user's own rating: five ticket stubs, pink when on. Native radios: arrow keys select, one tab stop. */
+/**
+ * The user's own rating: five ticket stubs, each fully pink, left-half pink, or off. Touch and mouse: every target is a
+ * whole stub (never a half-width one); tapping stub n sets n, tapping it again sets n − 0.5. Keyboard and screen reader:
+ * ten visually hidden native radios (0.5 … 5), so arrows move by 0.5 with one tab stop; Home / End jump to 0.5 / 5.
+ */
 export function StubRating({ label, value, onChange, disabled = false }: StubRatingProps) {
-  const name = useId()
+  const id = useId()
+  const group = useRef<HTMLDivElement>(null)
+
+  function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (disabled || (e.key !== 'Home' && e.key !== 'End')) return
+    e.preventDefault()
+    const target = e.key === 'Home' ? 0.5 : 5
+    onChange(target)
+    group.current?.querySelector<HTMLInputElement>(`input[value="${target}"]`)?.focus()
+  }
+
+  function onTap(e: MouseEvent<HTMLLabelElement>, n: number) {
+    // The label would "click" radio n, which does nothing when it is already checked: decide here instead.
+    e.preventDefault()
+    if (!disabled) onChange(nextRating(value, n))
+  }
+
   return (
-    <div role="radiogroup" aria-label={label} className="flex gap-1.5">
+    // The radios are the keyboard / screen-reader interface; Home and End are handled for the whole group.
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions
+    <div ref={group} role="radiogroup" tabIndex={-1} aria-label={label} onKeyDown={onKeyDown} className="flex gap-1.5">
       {STUBS.map((n) => {
-        const on = value !== null && n <= value
+        const fill = value === null ? 'off' : value >= n ? 'full' : value === n - 0.5 ? 'half' : 'off'
         return (
-          <label key={n} className="flex h-11 min-w-11 flex-1 items-center">
-            <input
-              type="radio"
-              name={name}
-              value={n}
-              aria-label={`${n} of 5`}
-              checked={value === n}
-              disabled={disabled}
-              onChange={() => onChange(n)}
-              className="peer sr-only"
-            />
-            <span
+          <div key={n} className="relative flex h-11 min-w-11 flex-1 items-center has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-pink-text">
+            {[n - 0.5, n].map((v) => (
+              <input
+                key={v}
+                id={`${id}-${v}`}
+                type="radio"
+                name={id}
+                value={v}
+                aria-label={`${v} of 5 stubs`}
+                checked={value === v}
+                disabled={disabled}
+                onChange={() => onChange(v)}
+                className="sr-only"
+              />
+            ))}
+            {/* The label is the whole 44px-tall stub: one tap target; the dashed stub is drawn inside it. */}
+            {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
+            <label
+              htmlFor={`${id}-${n}`}
               aria-hidden="true"
-              className={`flex h-9 w-full items-center justify-center rounded-md border-2 border-dashed border-ink font-mono text-sm font-medium peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-pink-text ${on ? 'bg-pink text-ink' : 'bg-cream text-ink-muted'}`}
+              onClick={(e) => onTap(e, n)}
+              className={`flex h-11 w-full items-center ${disabled ? '' : 'cursor-pointer'}`}
             >
-              {n}
-            </span>
-          </label>
+              <span
+                className={`flex h-9 w-full items-center justify-center rounded-md border-2 border-dashed border-ink font-mono text-sm font-medium text-ink ${
+                  fill === 'full' ? 'bg-pink' : fill === 'half' ? 'bg-linear-to-r from-pink from-50% to-cream to-50%' : 'bg-cream text-ink-muted'
+                }`}
+              >
+                {n}
+              </span>
+            </label>
+          </div>
         )
       })}
     </div>

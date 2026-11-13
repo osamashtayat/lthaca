@@ -1,5 +1,6 @@
 import { setupWorker } from 'msw/browser'
 import { handlers } from './handlers'
+import { seedMockLibrary } from './libraryStore'
 
 /**
  * Starts the mock API in the browser: dev server only, loaded by a dynamic import in main.tsx, so production bundles
@@ -8,4 +9,5 @@ import { handlers } from './handlers'
 export async function startMockApi() {
   const worker = setupWorker(...handlers)
   await worker.start({ onUnhandledFrame: 'bypass', quiet: true })
+  seedMockLibrary()
 }
