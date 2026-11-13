@@ -138,6 +138,7 @@ export type MockMoodOutcome =
  * mood (422 mood.unclear without chips; with chips the deck is built from them and `textIgnored` is true). Anything
  * else is a usable mood. Empty text makes no "LLM call".
  */
+// The limits (2 moods, 280 characters) mirror api-contract §5; mocks can't import them from the mood feature.
 export function parseMockMood(input: MoodInput): MockMoodOutcome {
   const text = input.text?.trim() ?? ''
   if (input.text !== null && input.text.length > 280) return { kind: 'error', status: 400, code: 'validation' }

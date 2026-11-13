@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockDeckDto } from '@/mocks/deckStore'
-import { slowDeckCreate } from '@/mocks/overrides'
+import { slowUnavailableDeckCreate } from '@/mocks/overrides'
 import { server } from '@/mocks/server'
 import { DeckPage } from '@/features/deck'
 import { MoodPage } from './pages/MoodPage'
@@ -84,7 +84,7 @@ describe('By mood', () => {
   })
 
   it('shows a loading state while the deck is being made', async () => {
-    server.use(slowDeckCreate(100))
+    server.use(slowUnavailableDeckCreate(100))
     const user = userEvent.setup()
     renderMood()
     await user.click(deal())
