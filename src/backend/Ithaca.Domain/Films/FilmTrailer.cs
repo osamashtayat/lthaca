@@ -17,7 +17,7 @@ public sealed class FilmTrailer
     public static readonly TimeSpan RefreshAfter = TimeSpan.FromDays(30);
 
     /// <summary>TMDB's terms cap caching at 6 months (ADR-0017): never served past this, and the nightly sync deletes it.</summary>
-    public static readonly TimeSpan MaxAge = TimeSpan.FromDays(180);
+    public static readonly TimeSpan MaxAge = TimeSpan.FromDays(Film.TmdbMaxCacheDays);
 
     private FilmTrailer(Guid filmId)
     {
@@ -39,14 +39,17 @@ public sealed class FilmTrailer
 
     public DateTimeOffset FetchedAt { get; private set; }
 
-    public static FilmTrailer Create(Guid filmId)
+    /// <summary>A cache row holding TMDB's answer as of <paramref name="now"/> (see <see cref="Set"/>).</summary>
+    public static FilmTrailer Create(Guid filmId, string? key, string? name, DateTimeOffset now)
     {
         if (filmId == Guid.Empty)
         {
             throw new DomainException(ErrorCodes.Validation, "filmId is required.");
         }
 
-        return new FilmTrailer(filmId);
+        var trailer = new FilmTrailer(filmId);
+        trailer.Set(key, name, now);
+        return trailer;
     }
 
     /// <summary>The one key rule: 1–<see cref="KeyMaxLength"/> characters, not blank.</summary>

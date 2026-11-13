@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Ithaca.Application.Common;
+using Ithaca.Domain.Films;
 
 namespace Ithaca.Application.Catalog;
 
@@ -27,6 +28,6 @@ public sealed class CatalogSyncOptions : IConfigSection
     public int EmbeddingBatchSize { get; init; } = 100;
 
     /// <summary>Films not refreshed for this long are deleted. TMDB's terms cap caching at 6 months.</summary>
-    [Range(1, 180)]
-    public int MaxAgeDays { get; init; } = 180;
+    [Range(1, Film.TmdbMaxCacheDays)]
+    public int MaxAgeDays { get; init; } = Film.TmdbMaxCacheDays;
 }

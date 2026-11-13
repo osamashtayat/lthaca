@@ -2,6 +2,7 @@ using Ithaca.Application.Common;
 using Ithaca.Application.Tmdb;
 using Ithaca.Domain.Films;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Ithaca.Application.Films;
 
@@ -11,7 +12,7 @@ namespace Ithaca.Application.Films;
 /// one is refreshed, and served if TMDB fails while it is younger than <see cref="FilmTrailer.MaxAge"/> (ADR-0017).
 /// <c>tmdb.unavailable</c> only when TMDB fails and nothing servable is cached. "No trailer" is cached too.
 /// </summary>
-public sealed class FilmTrailerService(IAppDbContext db, ITmdbClient tmdb, TimeProvider time)
+public sealed partial class FilmTrailerService(IAppDbContext db, ITmdbClient tmdb, TimeProvider time, ILogger<FilmTrailerService> logger)
 {
     private const string YouTube = "YouTube";
 
@@ -48,24 +49,32 @@ public sealed class FilmTrailerService(IAppDbContext db, ITmdbClient tmdb, TimeP
 
         var first = videos.Value.FirstOrDefault(v =>
             string.Equals(v.Site, YouTube, StringComparison.OrdinalIgnoreCase) && FilmTrailer.IsValidKey(v.Key));
+        var inserted = cached is null;
         if (cached is null)
         {
-            cached = FilmTrailer.Create(film.Id);
+            cached = FilmTrailer.Create(film.Id, first?.Key, first?.Name, now);
             db.FilmTrailers.Add(cached);
         }
+        else
+        {
+            cached.Set(first?.Key, first?.Name, now);
+        }
 
-        cached.Set(first?.Key, first?.Name, now);
         try
         {
             await db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException) when (inserted)
         {
             // Two first requests for the same film raced and the other one cached it: the answer in hand is just as good.
+            LogInsertRace(logger, tmdbId);
         }
 
         return ToDto(cached);
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Trailer cache insert for TMDB id {TmdbId} lost a race; served the fetched answer")]
+    private static partial void LogInsertRace(ILogger logger, int tmdbId);
 
     private static FilmTrailerDto ToDto(FilmTrailer trailer) =>
         new(trailer.Key is { } key ? new TrailerDto(TrailerSite.YouTube, key, trailer.Name ?? "") : null);

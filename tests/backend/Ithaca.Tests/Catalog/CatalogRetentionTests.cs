@@ -144,10 +144,8 @@ public sealed class CatalogRetentionTests(PostgresFixture postgres)
         await LikeAsync(user, 776001); // referenced, so the film itself stays
         await LikeAsync(user, 776002);
         var films = await db.Films.Where(f => f.TmdbId == 776001 || f.TmdbId == 776002).ToDictionaryAsync(f => f.TmdbId, f => f.Id, Ct);
-        var old = FilmTrailer.Create(films[776001]);
-        old.Set("old-key", "Old trailer", DateTimeOffset.UtcNow - FilmTrailer.MaxAge - TimeSpan.FromDays(1));
-        var recent = FilmTrailer.Create(films[776002]);
-        recent.Set("new-key", "New trailer", DateTimeOffset.UtcNow.AddDays(-1));
+        var old = FilmTrailer.Create(films[776001], "old-key", "Old trailer", DateTimeOffset.UtcNow - FilmTrailer.MaxAge - TimeSpan.FromDays(1));
+        var recent = FilmTrailer.Create(films[776002], "new-key", "New trailer", DateTimeOffset.UtcNow.AddDays(-1));
         db.FilmTrailers.AddRange(old, recent);
         await db.SaveChangesAsync(Ct);
 

@@ -9,6 +9,7 @@ using Ithaca.Infrastructure.Persistence;
 using Ithaca.Tests.Harness;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Ithaca.Tests.Films;
 
@@ -142,6 +143,28 @@ public sealed class FilmTrailerTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ConcurrentFirstRequest_ThatCachedItFirst_StillGetsTheAnswer()
+    {
+        var filmId = await AddFilmAsync(781008);
+        var tmdb = new CountingTmdb
+        {
+            Videos = [YouTubeTrailer],
+            // Another request caches the film's trailer while this one waits for TMDB.
+            OnCall = async () =>
+            {
+                await using var scope = _factory.Services.CreateAsyncScope();
+                var other = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                other.FilmTrailers.Add(FilmTrailer.Create(filmId, "other-key", "Other", DateTimeOffset.UtcNow));
+                await other.SaveChangesAsync(Ct);
+            },
+        };
+
+        var result = await GetAsync(781008, tmdb, new Clock());
+
+        result.Value.Trailer?.Key.ShouldBe("yt-key");
+    }
+
+    [Fact]
     public async Task Endpoint_ReturnsTheDto_AndNotFoundProblem()
     {
         using var client = _factory.CreateClient();
@@ -159,10 +182,10 @@ public sealed class FilmTrailerTests(PostgresFixture postgres) : IAsyncLifetime
     {
         await using var scope = _factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        return await new FilmTrailerService(db, tmdb, clock).GetAsync(tmdbId, Ct);
+        return await new FilmTrailerService(db, tmdb, clock, NullLogger<FilmTrailerService>.Instance).GetAsync(tmdbId, Ct);
     }
 
-    private async Task AddFilmAsync(int tmdbId, bool unavailable = false)
+    private async Task<Guid> AddFilmAsync(int tmdbId, bool unavailable = false)
     {
         await using var scope = _factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -174,6 +197,7 @@ public sealed class FilmTrailerTests(PostgresFixture postgres) : IAsyncLifetime
 
         db.Films.Add(film);
         await db.SaveChangesAsync(Ct);
+        return film.Id;
     }
 
     /// <summary>A TMDB that lists <see cref="Videos"/> (already filtered to trailers, like the real client) or fails, counting calls.</summary>
@@ -185,16 +209,23 @@ public sealed class FilmTrailerTests(PostgresFixture postgres) : IAsyncLifetime
 
         public int Calls { get; private set; }
 
+        public Func<Task>? OnCall { get; init; }
+
         public Task<Result<IReadOnlyList<TmdbFilmSummary>>> GetCatalogPageAsync(int page, CancellationToken ct) =>
             throw new InvalidOperationException("The trailer service never pages the catalog.");
 
         public Task<Result<TmdbFilmDetails?>> GetFilmDetailsAsync(int tmdbId, CancellationToken ct) =>
             throw new InvalidOperationException("The trailer service never fetches details.");
 
-        public Task<Result<IReadOnlyList<TmdbVideo>>> GetTrailersAsync(int tmdbId, CancellationToken ct)
+        public async Task<Result<IReadOnlyList<TmdbVideo>>> GetTrailersAsync(int tmdbId, CancellationToken ct)
         {
             Calls++;
-            return Task.FromResult(Fail ? Result<IReadOnlyList<TmdbVideo>>.Failure(TmdbErrors.Unavailable) : Result<IReadOnlyList<TmdbVideo>>.Success(Videos));
+            if (OnCall is not null)
+            {
+                await OnCall();
+            }
+
+            return Fail ? Result<IReadOnlyList<TmdbVideo>>.Failure(TmdbErrors.Unavailable) : Result<IReadOnlyList<TmdbVideo>>.Success(Videos);
         }
     }
 
