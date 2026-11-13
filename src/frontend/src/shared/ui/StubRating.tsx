@@ -2,8 +2,6 @@ import { useId, useRef } from 'react'
 import type { KeyboardEvent, MouseEvent } from 'react'
 import { nextRating } from './stubRatingValue'
 
-/** Half steps from 0.5 to 5 (ADR-0024): 0.5, 1, 1.5 … 5. */
-const VALUES = Array.from({ length: 10 }, (_, i) => (i + 1) / 2)
 const STUBS = [1, 2, 3, 4, 5] as const
 
 type StubRatingProps = {
@@ -46,7 +44,7 @@ export function StubRating({ label, value, onChange, disabled = false }: StubRat
         const fill = value === null ? 'off' : value >= n ? 'full' : value === n - 0.5 ? 'half' : 'off'
         return (
           <div key={n} className="relative flex h-11 min-w-11 flex-1 items-center has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-pink-text">
-            {VALUES.filter((v) => v === n || v === n - 0.5).map((v) => (
+            {[n - 0.5, n].map((v) => (
               <input
                 key={v}
                 id={`${id}-${v}`}
@@ -60,17 +58,21 @@ export function StubRating({ label, value, onChange, disabled = false }: StubRat
                 className="sr-only"
               />
             ))}
-            {/* The whole stub is one tap target; the label's `for` keeps it tied to the radio for pointer users' hit-testing. */}
+            {/* The label is the whole 44px-tall stub: one tap target; the dashed stub is drawn inside it. */}
             {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
             <label
               htmlFor={`${id}-${n}`}
               aria-hidden="true"
               onClick={(e) => onTap(e, n)}
-              className={`flex h-9 w-full items-center justify-center rounded-md border-2 border-dashed border-ink font-mono text-sm font-medium text-ink ${
-                fill === 'full' ? 'bg-pink' : fill === 'half' ? 'bg-linear-to-r from-pink from-50% to-cream to-50%' : 'bg-cream text-ink-muted'
-              }`}
+              className={`flex h-11 w-full items-center ${disabled ? '' : 'cursor-pointer'}`}
             >
-              {n}
+              <span
+                className={`flex h-9 w-full items-center justify-center rounded-md border-2 border-dashed border-ink font-mono text-sm font-medium text-ink ${
+                  fill === 'full' ? 'bg-pink' : fill === 'half' ? 'bg-linear-to-r from-pink from-50% to-cream to-50%' : 'bg-cream text-ink-muted'
+                }`}
+              >
+                {n}
+              </span>
             </label>
           </div>
         )
