@@ -80,15 +80,25 @@ public sealed class FilmFactsTests
             .Code.ShouldBe(ErrorCodes.Validation);
 
     [Fact]
-    public void Update_ReportsWhetherTheEmbeddingTextChanged()
+    public void Update_ChangesTheTextHashOnlyWhenTheTextChanges()
     {
         var facts = FilmFacts.Create(Guid.NewGuid(), FightClub(), Now);
+        var hash = facts.EmbeddingTextHash;
+        hash.ShouldBe(FilmFacts.HashOf(facts.EmbeddingText));
+        hash.Length.ShouldBe(Film.EmbeddingSourceHashLength);
 
-        facts.Update(FightClub(), Now.AddDays(31)).ShouldBeFalse();
+        facts.Update(FightClub(), Now.AddDays(31));
+        facts.EmbeddingTextHash.ShouldBe(hash);
         facts.FetchedAt.ShouldBe(Now.AddDays(31));
-        facts.Update(FightClub() with { MainSubjects = ["insomnia"] }, Now.AddDays(62)).ShouldBeTrue();
+
+        facts.Update(FightClub() with { MainSubjects = ["insomnia"] }, Now.AddDays(62));
         facts.EmbeddingText.ShouldContain("Subjects: insomnia");
+        facts.EmbeddingTextHash.ShouldNotBe(hash);
     }
+
+    [Fact]
+    public void HashOf_IsLowercaseHexSha256() =>
+        FilmFacts.HashOf("abc").ShouldBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
 
     /// <summary>
     /// ADR-0017: TMDB-derived text must never reach the embedding model. The builder's only input is Wikidata's record, and

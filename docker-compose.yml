@@ -56,7 +56,7 @@ services:
       Wikidata__Client: ${Wikidata__Client:-Fake}
       CatalogSync__Enabled: ${CatalogSync__Enabled:-false}
       CatalogSync__Pages: ${CatalogSync__Pages:-50}
-      CatalogSync__EmbedOverviews: ${CatalogSync__EmbedOverviews:-false}
+      CatalogSync__EmbeddingBatchSize: ${CatalogSync__EmbeddingBatchSize:-100}
     # No `ports:`: only the web proxy reaches the API (same origin, no CORS).
     depends_on:
       migrate:

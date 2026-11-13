@@ -23,7 +23,7 @@ public sealed class IthacaApiFactory(string connectionString, IReadOnlyDictionar
         }
     }
 
-    /// <param name="settings">Extra configuration, e.g. <c>["CatalogSync:EmbedOverviews"] = "true"</c>.</param>
+    /// <param name="settings">Extra configuration, e.g. <c>["CatalogSync:EmbeddingBatchSize"] = "1"</c>.</param>
     public static async Task<IthacaApiFactory> StartAsync(string connectionString, IReadOnlyDictionary<string, string>? settings = null)
     {
         // Migrate before the host starts, so the dev seeder finds the table.

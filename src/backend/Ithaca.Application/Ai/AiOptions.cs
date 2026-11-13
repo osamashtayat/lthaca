@@ -16,7 +16,7 @@ public enum EmbeddingProvider
 {
     Fake,
 
-    /// <summary>Voyage AI (ADR-0013). Client not built yet: needs a Voyage key.</summary>
+    /// <summary>Voyage AI (ADR-0013); needs <see cref="AiOptions.EmbeddingApiKey"/>.</summary>
     Voyage,
 }
 
@@ -28,6 +28,14 @@ public sealed class AiOptions : IConfigSection
     public LlmProvider LlmProvider { get; init; } = LlmProvider.Fake;
 
     public EmbeddingProvider EmbeddingProvider { get; init; } = EmbeddingProvider.Fake;
+
+    /// <summary>
+    /// The Voyage model (ADR-0013). 4-series models share one vector space; changing it re-embeds the catalog on the next
+    /// sync, because each vector records its model.
+    /// </summary>
+    [Required]
+    [StringLength(100)]
+    public string EmbeddingModel { get; init; } = "voyage-4";
 
     /// <summary>Default model for every prompt.</summary>
     [Required]

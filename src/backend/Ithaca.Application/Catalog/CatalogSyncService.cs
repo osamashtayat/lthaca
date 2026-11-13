@@ -1,4 +1,3 @@
-using Ithaca.Application.Ai;
 using Ithaca.Application.Common;
 using Ithaca.Application.Tmdb;
 using Ithaca.Domain.Films;
@@ -8,24 +7,25 @@ using Microsoft.Extensions.Options;
 namespace Ithaca.Application.Catalog;
 
 /// <summary>
-/// TMDB → <c>films</c> sync (ADR-0003). Pages through TMDB's most popular films, upserts each by <c>TmdbId</c>, optionally
-/// embeds it (off by default, ADR-0017), then deletes films not refreshed within <see cref="CatalogSyncOptions.MaxAgeDays"/>
-/// (TMDB's 6-month caching limit), then gives the remaining films their Wikidata facts
-/// (<see cref="WikidataEnricher"/>). Saves once per page (and once per Wikidata batch), so a failure mid-run keeps
-/// the work already done; the next run continues. Called by <c>CatalogSyncJob</c> and the <c>--sync-catalog</c> command.
+/// TMDB → <c>films</c> sync (ADR-0003). Pages through TMDB's most popular films and upserts each by <c>TmdbId</c> (display
+/// data only), deletes films not refreshed within <see cref="CatalogSyncOptions.MaxAgeDays"/> (TMDB's 6-month caching
+/// limit), gives the remaining films their Wikidata facts (<see cref="WikidataEnricher"/>), then embeds the facts' text
+/// (<see cref="FilmEmbedder"/>; never TMDB text, ADR-0017). Saves once per page and once per Wikidata or embedding batch,
+/// so a failure mid-run keeps the work already done; the next run continues. Called by <c>CatalogSyncJob</c> and the
+/// <c>--sync-catalog</c> command.
 /// </summary>
 public sealed class CatalogSyncService(
     IAppDbContext db,
     ITmdbClient tmdb,
-    IEmbeddingClient embeddings,
     WikidataEnricher facts,
+    FilmEmbedder embedder,
     IOptions<CatalogSyncOptions> options,
     TimeProvider time)
 {
     public async Task<Result<CatalogSyncReport>> RunAsync(CancellationToken ct)
     {
         var settings = options.Value;
-        int pages = 0, added = 0, updated = 0, skipped = 0, embedded = 0;
+        int pages = 0, added = 0, updated = 0, skipped = 0;
 
         for (var page = 1; page <= settings.Pages; page++)
         {
@@ -60,7 +60,7 @@ public sealed class CatalogSyncService(
                 var now = time.GetUtcNow();
                 var isNew = !existing.TryGetValue(d.TmdbId, out var film);
                 film ??= Film.Create(d.TmdbId, d.Title, now);
-                var textChanged = film.UpdateDetails(d.Title, d.ReleaseYear, d.Overview, d.PosterPath, d.RuntimeMinutes, [.. d.Genres], d.Popularity, now);
+                film.UpdateDetails(d.Title, d.ReleaseYear, d.Overview, d.PosterPath, d.RuntimeMinutes, [.. d.Genres], d.Popularity, now);
                 if (isNew)
                 {
                     db.Films.Add(film);
@@ -69,12 +69,6 @@ public sealed class CatalogSyncService(
                 else
                 {
                     updated++;
-                }
-
-                if (settings.EmbedOverviews && (textChanged || film.EmbeddingModel != embeddings.ModelName))
-                {
-                    film.SetEmbedding(await embeddings.EmbedAsync(EmbeddingText(film), ct), embeddings.ModelName);
-                    embedded++;
                 }
             }
 
@@ -92,9 +86,13 @@ public sealed class CatalogSyncService(
             return enrichment.Error;
         }
 
-        return new CatalogSyncReport(pages, added, updated, skipped, embedded, purged, enrichment.Value.Enriched, enrichment.Value.Unmatched);
-    }
+        var embedded = await embedder.RunAsync(ct);
+        if (!embedded.IsSuccess)
+        {
+            return embedded.Error;
+        }
 
-    /// <summary>What a film's vector represents. Changing this means re-embedding the catalog.</summary>
-    private static string EmbeddingText(Film film) => $"{film.Title}\n{string.Join(", ", film.Genres)}\n{film.Overview}";
+        return new CatalogSyncReport(
+            pages, added, updated, skipped, embedded.Value, purged, enrichment.Value.Enriched, enrichment.Value.Unmatched);
+    }
 }

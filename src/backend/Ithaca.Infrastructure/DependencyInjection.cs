@@ -50,7 +50,7 @@ public static class DependencyInjection
 
     /// <summary>
     /// TMDB, Wikidata, LLM and embedding clients, each picked by config (docs/ai.md). Built: Fake everywhere, Anthropic (LLM),
-    /// Http (TMDB, Wikidata).
+    /// Voyage (embeddings), Http (TMDB, Wikidata).
     /// A real provider without its key, or a provider that isn't built, fails at startup with a clear message.
     /// </summary>
     private static void AddExternalClients(this IServiceCollection services, IConfiguration configuration)
@@ -58,7 +58,8 @@ public static class DependencyInjection
         services.AddValidatedOptions<AiOptions>(configuration)
             .Validate(o => o.LlmProvider is LlmProvider.Fake or LlmProvider.Anthropic, "Ai:LlmProvider: only 'Fake' and 'Anthropic' are implemented.")
             .Validate(o => o.LlmProvider != LlmProvider.Anthropic || !string.IsNullOrWhiteSpace(o.ApiKey), "Ai:ApiKey is required when Ai:LlmProvider is 'Anthropic' (user-secrets or Ai__ApiKey).")
-            .Validate(o => o.EmbeddingProvider == EmbeddingProvider.Fake, "Ai:EmbeddingProvider: only 'Fake' is implemented so far (Voyage: ADR-0013).");
+            .Validate(o => o.EmbeddingProvider is EmbeddingProvider.Fake or EmbeddingProvider.Voyage, "Ai:EmbeddingProvider: only 'Fake' and 'Voyage' are implemented.")
+            .Validate(o => o.EmbeddingProvider != EmbeddingProvider.Voyage || !string.IsNullOrWhiteSpace(o.EmbeddingApiKey), "Ai:EmbeddingApiKey is required when Ai:EmbeddingProvider is 'Voyage' (user-secrets or Ai__EmbeddingApiKey).");
         services.AddValidatedOptions<TmdbOptions>(configuration)
             .Validate(o => o.Client != TmdbClientKind.Http || !string.IsNullOrWhiteSpace(o.ApiKey), "Tmdb:ApiKey is required when Tmdb:Client is 'Http' (user-secrets or Tmdb__ApiKey).");
 
@@ -74,9 +75,15 @@ public static class DependencyInjection
             var other => throw NotImplemented("LLM", other),
         });
 
-        services.AddSingleton<IEmbeddingClient>(sp => sp.GetRequiredService<IOptions<AiOptions>>().Value.EmbeddingProvider switch
+        services.AddHttpClient<VoyageEmbeddingClient>(http =>
+        {
+            http.BaseAddress = new Uri("https://api.voyageai.com/v1/");
+            http.Timeout = TimeSpan.FromSeconds(60);
+        });
+        services.AddTransient<IEmbeddingClient>(sp => sp.GetRequiredService<IOptions<AiOptions>>().Value.EmbeddingProvider switch
         {
             EmbeddingProvider.Fake => new FakeEmbeddingClient(),
+            EmbeddingProvider.Voyage => sp.GetRequiredService<VoyageEmbeddingClient>(),
             var other => throw NotImplemented("embedding", other),
         });
 
