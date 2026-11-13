@@ -534,7 +534,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Scope:** in: this section and decisions L1–L8. Out: doing any of it.
 - **Acceptance:** every launch gap has a task or a decision. **Tests:** none (docs).
 
-### OPS-06 — Hosting decision (ADR) · `Todo` (needs L1, L2)
+### OPS-06 — Hosting decision (ADR) · `Todo` (L1, L2 decided: one VPS for site + API; provider still open)
 - **Objective:** an ADR fixing where the API, database and site run, and how they stay one origin.
 - **Deps:** owner decisions L1, L2. **Modules:** `docs/decisions/`, `docs/architecture.md` (Runtime table).
 - **Contract:** none.
@@ -648,8 +648,8 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 ### Launch decisions for the owner
 | Id | Decision | Recommendation |
 |---|---|---|
-| L1 | Where the API and database run | One VPS with Docker, behind Cloudflare (OPS-06) |
-| L2 | Where the site runs | On the same VPS behind Cloudflare (option A); Pages + Worker if you prefer Pages (option B) |
+| L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker, behind Cloudflare.** Provider still to choose (OPS-06) |
+| L2 | Where the site runs | **Decided (2026-11-13): on the same VPS behind Cloudflare (option A).** |
 | L3 | Monthly AI budget (Anthropic + Voyage) | A hard cap you're comfortable with; BE-19 enforces a daily share of it |
 | L4 | Email provider for password reset | Any transactional provider that supports a custom domain (SPF/DKIM on Cloudflare DNS) |
 | L5 | Terms and Privacy texts | Written or approved by you (not legal advice from agents) |
