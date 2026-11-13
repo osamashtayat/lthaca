@@ -5,6 +5,7 @@ import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { RequireUser, SignInPage } from '@/features/auth'
 import { DeckPage, DeckStartPage, DeckTopPage } from '@/features/deck'
 import { MoodPage } from '@/features/mood'
+import { CinemaPage } from '@/features/library'
 import { FilmPage } from '@/features/films'
 
 /**
@@ -25,7 +26,7 @@ export const routes: RouteObject[] = [
           { path: '/deck/:deckId/top', element: <DeckTopPage /> },
           { path: '/mood', element: <MoodPage /> },
           { path: '/taste', element: <PlaceholderPage title="By taste" feature="taste" /> },
-          { path: '/cinema', element: <PlaceholderPage title="My Cinema" feature="library" /> },
+          { path: '/cinema', element: <CinemaPage /> },
           { path: '/import', element: <PlaceholderPage title="Import from Letterboxd" feature="import" /> },
           { path: '/profile', element: <PlaceholderPage title="Profile & settings" feature="profile" /> },
         ],

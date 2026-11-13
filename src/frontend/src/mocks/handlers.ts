@@ -1,8 +1,8 @@
 import { http, HttpResponse } from 'msw'
 import { addMockAccount, findMockAccount, getMockSession, isMockEmailTaken, setMockSession } from './authStore'
-import { findMockFilm, mockTrailers } from './fixtures'
+import { findMockFilm, mockFilms, mockTrailers } from './fixtures'
 import { createMockDeck, mockDeckDto, parseMockMood, mockDeckTop, nextMockBatch, recordMockSwipe } from './deckStore'
-import { getMockUserFilm, putMockUserFilm, setMockWatchlist } from './libraryStore'
+import { getMockUserFilm, listMockUserFilms, putMockUserFilm, setMockWatchlist } from './libraryStore'
 import { apiPath, problem, type RequestOf, type ResponseOf } from './http'
 
 /**
@@ -15,6 +15,10 @@ const healthHandlers = [
 ]
 
 const filmHandlers = [
+  // Before `/api/films/{tmdbId}`, or "genres" would be taken for an id.
+  http.get(apiPath('/api/films/genres'), () =>
+    HttpResponse.json<ResponseOf<'/api/films/genres', 'get', 200>>([...new Set(mockFilms.flatMap((f) => f.genres))].sort()),
+  ),
   http.get(apiPath('/api/films/{tmdbId}'), ({ params }) => {
     const film = findMockFilm(Number(params.tmdbId))
     return film ? HttpResponse.json<ResponseOf<'/api/films/{tmdbId}', 'get', 200>>(film) : problem(404, 'film.not_found')
@@ -68,6 +72,38 @@ const authHandlers = [
 ]
 
 const libraryHandlers = [
+  http.get(apiPath('/api/library'), ({ request }) => {
+    if (!getMockSession()) return problem(401, 'auth.unauthenticated')
+    const q = new URL(request.url).searchParams
+    const shelf = (q.get('shelf') ?? 'liked') as 'liked' | 'watchlist' | 'seen'
+    const sort = q.get('sort') ?? 'recent'
+    const genre = q.get('genre')
+    const page = Number(q.get('page') ?? 1)
+    const pageSize = Number(q.get('pageSize') ?? 20)
+    if (!['liked', 'watchlist', 'seen'].includes(shelf) || !['recent', 'title', 'rating'].includes(sort) || page < 1 || pageSize < 1 || pageSize > 100) {
+      return problem(400, 'validation', { query: ['Check shelf, sort, page and pageSize.'] })
+    }
+    const onShelf = { liked: (i: { liked: boolean }) => i.liked, watchlist: (i: { onWatchlist: boolean }) => i.onWatchlist, seen: (i: { seen: boolean }) => i.seen }[shelf]
+    const items = listMockUserFilms()
+      .filter((i) => onShelf(i) && (!genre || i.film.genres.includes(genre)))
+    if (sort === 'title') items.sort((a, b) => a.film.title.localeCompare(b.film.title))
+    if (sort === 'rating') items.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+    return HttpResponse.json<ResponseOf<'/api/library', 'get', 200>>({
+      items: items.slice((page - 1) * pageSize, page * pageSize),
+      page,
+      pageSize,
+      totalCount: items.length,
+    })
+  }),
+  http.get(apiPath('/api/library/summary'), () => {
+    if (!getMockSession()) return problem(401, 'auth.unauthenticated')
+    const all = listMockUserFilms()
+    return HttpResponse.json<ResponseOf<'/api/library/summary', 'get', 200>>({
+      liked: all.filter((i) => i.liked).length,
+      watchlist: all.filter((i) => i.onWatchlist).length,
+      seen: all.filter((i) => i.seen).length,
+    })
+  }),
   http.get(apiPath('/api/library/{tmdbId}'), ({ params }) => {
     if (!getMockSession()) return problem(401, 'auth.unauthenticated')
     const item = getMockUserFilm(Number(params.tmdbId))

@@ -14,6 +14,7 @@ export const queryKeys = {
   films: {
     all: ['films'] as const,
     detail: (tmdbId: number) => ['films', 'detail', tmdbId] as const,
+    genres: ['films', 'genres'] as const,
     trailer: (tmdbId: number) => ['films', 'trailer', tmdbId] as const,
   },
   decks: {
@@ -24,5 +25,7 @@ export const queryKeys = {
   library: {
     all: ['library'] as const,
     detail: (tmdbId: number) => ['library', 'detail', tmdbId] as const,
+    list: (filters: { shelf: string; sort: string; genre: string | null }) => ['library', 'list', filters] as const,
+    summary: ['library', 'summary'] as const,
   },
 } as const

@@ -51,8 +51,8 @@ export function getMockUserFilm(tmdbId: number): UserFilmDto | undefined {
 /** PUT semantics (api-contract §7): replaces the state; a rating implies seen; all false + no rating removes it. */
 export function putMockUserFilm(tmdbId: number, body: UpdateUserFilmRequest): UserFilmDto | undefined {
   const next = { ...body, seen: body.seen || body.rating !== null }
-  if (!next.liked && !next.onWatchlist && !next.seen && next.rating === null) store.delete(tmdbId)
-  else store.set(tmdbId, next)
+  store.delete(tmdbId) // re-inserted below, so the Map order is the order of last change
+  if (next.liked || next.onWatchlist || next.seen || next.rating !== null) store.set(tmdbId, next)
   persist()
   return getMockUserFilm(tmdbId)
 }
@@ -75,4 +75,14 @@ export function setMockWatchlist(tmdbId: number, onWatchlist: boolean) {
 
 export function isOnMockWatchlist(tmdbId: number): boolean {
   return store.get(tmdbId)?.onWatchlist ?? false
+}
+
+/**
+ * Every film the user has touched, newest change first (the Map keeps the order of last change: a PUT moves the film
+ * to the end). Only films that exist in the mock catalog are listed.
+ */
+export function listMockUserFilms(): UserFilmDto[] {
+  return [...store.keys()]
+    .reverse()
+    .flatMap((tmdbId) => getMockUserFilm(tmdbId) ?? [])
 }
