@@ -30,7 +30,7 @@ authorization stays in one place. Group name per room: `RoomEvents.GroupFor(room
   services read users and guests the same way as over HTTP. A principal is fixed when the connection starts, so a client
   that joins a room (or signs in) over HTTP reconnects before calling `JoinRoom`.
 - Known gap: connections of a member who left, or of a closed room, stay in the group until they disconnect or call
-  `LeaveRoom`; events carry only ids, and every refetch is authorized.
+  `LeaveRoom`; events carry only ids, and every refetch is authorized (issue #40).
 - Publishers: `memberJoined`/`memberLeft`/`roomClosed` BE-10; `memberReady` (after `PUT …/mood`, mood rooms only),
   `roomStarted` (after `POST …/start`), `voteCast`, `deckExtended` BE-11; `roomMatched` BE-12.
 - Hub methods are thin: call one Application service, return. Group membership changes happen only after the service

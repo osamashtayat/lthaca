@@ -313,7 +313,8 @@ Rules (all in services; see docs/realtime.md for when each event is published):
   `room.not_member` / `room.not_host` (403). A guest is a member only of the room their cookie names; their cookie gets
   403 `room.not_member` anywhere else.
 - **Host** (owner's rule): the member present longest. The creator hosts while in the room; when the host leaves, hosting
-  passes to the next longest-present member, guest or user. The last member to leave closes the room (`roomClosed`).
+  passes to the next longest-present member, guest or user. The last member to leave closes the room (`roomClosed`;
+  known gap: two last members leaving at the same moment can leave it open, issue #39).
 - **Join:** a present member gets 200 and no event (idempotent, even once closed). Otherwise `room.closed` once the
   room is `result` or `closed`, then `room.full` with 8 present members. A user joins under their account name
   (`displayName` ignored) and, after leaving, comes back as the same member (no longer host). Anyone else, including a

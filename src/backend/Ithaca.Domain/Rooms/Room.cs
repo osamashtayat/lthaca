@@ -51,7 +51,10 @@ public sealed class Room
     public DateTimeOffset? ClosedAt { get; private set; }
 
     /// <summary>New members may join in the lobby and while swiping ("late arrivals can still hop in"), not once finished or closed.</summary>
-    public bool AcceptsJoins => Status is RoomStatus.Lobby or RoomStatus.Swiping;
+    public bool AcceptsJoins => AcceptsJoinsIn(Status);
+
+    /// <summary>The join rule for a status alone (for reads that project the status instead of loading the room).</summary>
+    public static bool AcceptsJoinsIn(RoomStatus status) => status is RoomStatus.Lobby or RoomStatus.Swiping;
 
     public static Room Create(string code, string name, RoomMode mode, DateTimeOffset? startsAt, DateTimeOffset now)
     {
@@ -74,15 +77,16 @@ public sealed class Room
         return new Room(code, trimmed, mode, startsAt, now);
     }
 
-    /// <summary>Ends the room for everyone. Closing a closed room changes nothing.</summary>
-    public void Close(DateTimeOffset now)
+    /// <summary>Ends the room for everyone. False when it was already closed (nothing changed, nothing to announce).</summary>
+    public bool Close(DateTimeOffset now)
     {
         if (Status == RoomStatus.Closed)
         {
-            return;
+            return false;
         }
 
         Status = RoomStatus.Closed;
         ClosedAt = now;
+        return true;
     }
 }
