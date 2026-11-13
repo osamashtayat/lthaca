@@ -484,7 +484,7 @@ lint, test, build.
 
 ## Tonight
 
-### FE-12 — Tonight (home) · `Todo`
+### FE-12 — Tonight (home) · `In progress`
 - **Objective:** the home screen, direction **A**: "Tonight — Just me" and "Tonight — With friends" (ignore "Direction B
   (refined)"), plus "Desktop — Tonight" at ≥ lg.
 - **Deps:** FE-05, FE-07, FE-09. **Modules:** `src/features/tonight/`, `src/app/routes.tsx`.
