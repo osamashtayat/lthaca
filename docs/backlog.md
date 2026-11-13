@@ -451,7 +451,7 @@ lint, test, build.
   still holds; `UserFilm` unit tests for the conversion.
 - **Docs:** api-contract.md §7 as built; glossary (already says 0.5–5).
 
-### FE-20 — Half-stub rating (ADR-0024) · `Todo`
+### FE-20 — Half-stub rating (ADR-0024) · `In progress`
 - **Objective:** users rate in half stubs, by touch, keyboard and screen reader, wherever a rating shows.
 - **Deps:** OPS-12 (the §7 design), FE-02, FE-04, FE-07; check against the real API once BE-20 is Done. **Modules:** `src/shared/ui/StubRating.tsx` (+ test),
   `src/app/dev/UiGalleryPage.tsx`, `src/features/films/components/FilmActions.tsx`, `src/features/library/pages/CinemaPage.tsx`,
