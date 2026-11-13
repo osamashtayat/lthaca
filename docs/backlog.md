@@ -53,7 +53,7 @@ flowchart LR
 `contracts/openapi.json` (ADR-0020). Frontend tasks need only the *contract* (BE-01, or BE-14a / BE-15a / BE-16a for the
 second wave), never the backend logic. When the matching BE task is Done, the frontend checks the screen against the real
 API (`VITE_API_MOCKS=off`) and fixes any gap in its next task or a follow-up issue. FE-01 and FE-02 need nothing from the
-backend and can start at once (FE-01 after the owner approves the asset). Ops: OPS-02 any time; OPS-03 after BE-08 + FE-05.
+backend and can start at once (FE-01 after the owner approves the asset). Ops: OPS-02 any time; OPS-03 after BE-08 + FE-05. Launch tasks (OPS-06…OPS-11, BE-18a/18/19, FE-16…19) follow the product lanes; their order is in the Launch section.
 
 | Lane | Order | Notes |
 |---|---|---|
@@ -519,6 +519,144 @@ lint, test, build.
 - **Contract:** §2 (`server.not_implemented` removed).
 - **Scope:** in: delete the code everywhere once nothing returns it. **Acceptance:** grep finds no
   `server.not_implemented`. **Tests:** `ErrorStatusCodesTests`.
+
+---
+
+## Launch
+
+Everything here is needed (or flagged optional) before real users get the link. Several tasks start with an owner
+decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so far: the domain is registered at
+**Cloudflare** and Cloudflare will sit in front of the site.
+
+### OPS-05 — Launch plan in the backlog · `Done`
+- **Objective:** list what going live needs so it is planned, not discovered at the end.
+- **Deps:** OPS-01. **Modules:** `docs/backlog.md`. **Contract:** none.
+- **Scope:** in: this section and decisions L1–L8. Out: doing any of it.
+- **Acceptance:** every launch gap has a task or a decision. **Tests:** none (docs).
+
+### OPS-06 — Hosting decision (ADR) · `Todo` (needs L1, L2)
+- **Objective:** an ADR fixing where the API, database and site run, and how they stay one origin.
+- **Deps:** owner decisions L1, L2. **Modules:** `docs/decisions/`, `docs/architecture.md` (Runtime table).
+- **Contract:** none.
+- **Scope:** in: the options below, the choice, cost, and what it means for ADR-0009 (HTTP locally, TLS in front),
+  ADR-0012 (cookies) and ADR-0016 (single instance). Out: provisioning (OPS-07).
+  - **API + database (recommended): one VPS** (2–4 GB RAM) running the existing `docker compose` stack (db, migrate,
+    api), Cloudflare proxied DNS in front (TLS "Full (strict)" with a Cloudflare origin certificate, WebSockets on).
+    Cloudflare Workers can't run ASP.NET Core and Cloudflare has no Postgres with pgvector, so the backend can't live on
+    Cloudflare itself. Alternative: a managed container host + managed Postgres with pgvector (more cost, less upkeep).
+  - **Site, option A (recommended): also on the VPS** (the existing `web` nginx container), cached by Cloudflare. One
+    origin, no code change.
+  - **Site, option B: Cloudflare Pages** + a Cloudflare Worker routing `/api/*` and `/hubs/*` (WebSockets) on the same
+    domain to the VPS. Still one origin; one more piece to run.
+  - **Rejected:** API on `api.<domain>` (cross-origin cookies, CORS, antiforgery changes, two ADRs reopened).
+- **Acceptance:** ADR accepted by the owner; architecture.md Runtime table has a "Production" column.
+
+### OPS-07 — Production deployment · `Todo`
+- **Objective:** the site runs on the domain over HTTPS and every merge to `main` can be deployed safely.
+- **Deps:** OPS-06. **Modules:** `docker-compose.prod.yml` (or override), `.github/workflows/deploy.yml`, `docs/`.
+- **Contract:** none.
+- **Scope:** in: server setup (firewall, automatic security updates, non-root deploy user, SSH keys only), Cloudflare
+  DNS/proxy/TLS/WebSockets, production secrets on the server (never in the repo or CI logs), `ASPNETCORE_ENVIRONMENT=Production`
+  (Secure cookies, no dev seed, no `/dev/*`), migrations run before the new API starts (the existing `migrate` service),
+  a manual-approval deploy job from CI, a documented rollback. Out: backups (OPS-08), monitoring (OPS-09).
+- **Acceptance:** the domain serves the app over HTTPS; sign-in works (Secure cookies); a room works across two phones
+  (WebSockets through Cloudflare); a rollback was rehearsed once.
+- **Tests:** the Docker smoke test against the production compose file in CI.
+
+### OPS-08 — Production data: backups, nightly sync, catalog size · `Todo`
+- **Objective:** user data survives a broken server; the catalog is fresh and big enough for good decks.
+- **Deps:** OPS-07, BE-03, BE-04. **Modules:** server scripts, `appsettings.Production.json` (no secrets), `docs/`.
+- **Scope:** in: nightly `pg_dump` to off-server storage (e.g. Cloudflare R2) with retention, a tested restore;
+  `CatalogSync:Enabled=true`; a catalog size target (L6) and the sync settings to reach it within TMDB's rate limits;
+  embeddings for the whole catalog within Voyage limits (OPS-10). Out: analytics.
+- **Acceptance:** a restore into a fresh database was done once and is documented; the catalog meets L6.
+
+### OPS-09 — Monitoring and alerts · `Todo`
+- **Objective:** know about errors and downtime before users report them.
+- **Deps:** OPS-07. **Modules:** API logging setup, server, `docs/`.
+- **Scope:** in: uptime check on `/api/health` with alerts to the owner; error tracking (the JSON logs shipped somewhere
+  searchable, or an error service: L7); disk and memory alerts on the VPS; AI/TMDB/Voyage failure counts visible. Never
+  log emails, mood text or keys (backend-conventions.md). Out: product analytics.
+- **Acceptance:** a forced 500 and a stopped API both reach the owner within minutes.
+
+### OPS-10 — Paid API accounts, keys and budgets · `Todo` (owner)
+- **Objective:** production keys with spending limits, so a busy day can't run up a surprise bill.
+- **Deps:** L3. **Modules:** provider dashboards (owner), production secrets (OPS-07).
+- **Scope:** in: Anthropic production key with a monthly spend limit; Voyage payment method (today's free tier has very
+  low rate limits); TMDB terms check for a public, possibly commercial site (ADR-0017); a separate key per environment.
+- **Acceptance:** each provider has a production key and a limit at or below L3.
+
+### BE-19 — Rate limits and AI spend cap · `Todo`
+- **Objective:** one person or a bot can't flood the API or burn the AI budget.
+- **Deps:** BE-09, L3. **Modules:** `Program.cs` (ASP.NET Core rate limiter), `Application/Ai`, `ErrorCodes`,
+  `ErrorStatusCodes`, `problem.ts`, options class.
+- **Contract:** §2 adds 429 `rate.limited` with `Retry-After` (contract change in this task; no FE task waits on it).
+- **Scope:** in: per-user and per-IP limits on sign-in/register, room join, deck creation and every AI-backed call;
+  a daily global AI budget counter that switches mood parsing off (chips still work, ADR-0022) when reached; limits in
+  config. Out: billing.
+- **Acceptance:** exceeding a limit → 429 `rate.limited` with `Retry-After`; when the budget is reached, mood text gets
+  `textIgnored` with chips or a clear message without.
+- **Tests:** limiter slice tests with `FakeTimeProvider`; budget switch.
+
+### BE-18a — Password reset contract and stubs · `Todo` (needs L4)
+- **Objective:** unblock FE-16. **Deps:** BE-02, L4. **Modules:** `docs/api-contract.md` (§4), DTOs, stubs, contracts.
+- **Contract:** writes `POST /api/auth/forgot-password` (always 204, never reveals whether the email exists) and
+  `POST /api/auth/reset-password` (token + new password).
+- **Scope:** in: as BE-01. **Acceptance:** both in `openapi.json`, answering 501.
+
+### BE-18 — Password reset by email · `Todo`
+- **Objective:** users who forget their password can get back in.
+- **Deps:** BE-18a. **Modules:** `Application/Users`, an `IEmailSender` (Application) + provider client
+  (Infrastructure), options, templates.
+- **Scope:** in: Identity reset tokens (short expiry, single use), the email via the provider chosen in L4 (SPF/DKIM on the
+  Cloudflare domain), rate-limited (BE-19). Out: marketing email.
+- **Acceptance:** reset works end to end on staging; unknown emails get the same response; tokens expire.
+- **Tests:** stub email sender; token expiry and reuse.
+
+### FE-16 — Forgot / reset password screens · `Todo`
+- **Objective:** the screens for BE-18. **Deps:** BE-18a, FE-03. **Modules:** `src/features/auth/`, `src/mocks/`.
+- **Scope:** in: "Forgot password?" on `/sign-in`, `/reset-password?token=…`. **Acceptance:** with mocks, both flows and
+  their errors.
+
+### FE-17 — Terms, Privacy and account deletion · `Todo` (needs L5)
+- **Objective:** the legal pages the Welcome board links to, and a way to delete an account.
+- **Deps:** L5 (the texts), BE-16 (delete account), FE-15. **Modules:** `src/app/pages/`, routes, footer, `/profile`.
+- **Scope:** in: `/terms`, `/privacy` (owner-provided text; mention TMDB, Wikidata, Anthropic, Voyage and the email
+  provider as processors where relevant), footer links, "Delete account" in profile with confirmation. Out: cookie
+  banner (only essential cookies are used; revisit if analytics are added, L8).
+- **Acceptance:** pages reachable from Welcome and the footer; deletion removes the account and signs out.
+
+### FE-18 — Link previews for shared rooms and films · `Todo`
+- **Objective:** a room link pasted into WhatsApp or iMessage shows a proper title and image.
+- **Deps:** OPS-06. **Modules:** `index.html`, an Open Graph image, (option B) the Worker.
+- **Scope:** in: site-wide Open Graph/Twitter tags and image, app icons and theme colour. Per-room or per-film previews
+  only if OPS-06 picks the Worker (option B), which can inject them; otherwise generic. Out: SEO pages.
+- **Acceptance:** a pasted link shows the Ithaca card in WhatsApp and iMessage.
+
+### OPS-11 — Pre-launch quality pass · `Todo`
+- **Objective:** check the finished app the way users will meet it.
+- **Deps:** OPS-07, FE-12. **Modules:** tests, `docs/`.
+- **Scope:** in: accessibility pass on phones (VoiceOver and TalkBack: sign-in, deck, room); speed on a mid-range
+  phone over 4G (first load, swipe); OPS-03's Playwright smoke extended to a two-browser room; fix list as issues.
+- **Acceptance:** no blocker issues open; the numbers are recorded in the PR.
+
+### FE-19 — Installable app (PWA) · `Todo` (optional)
+- **Objective:** "Add to Home Screen" with an icon and a full-screen launch. **Deps:** FE-18.
+- **Scope:** in: web app manifest, icons, a minimal service worker for the shell only (never caching `/api`). Out:
+  offline mode, push notifications (ADR-0014).
+
+### Launch decisions for the owner
+| Id | Decision | Recommendation |
+|---|---|---|
+| L1 | Where the API and database run | One VPS with Docker, behind Cloudflare (OPS-06) |
+| L2 | Where the site runs | On the same VPS behind Cloudflare (option A); Pages + Worker if you prefer Pages (option B) |
+| L3 | Monthly AI budget (Anthropic + Voyage) | A hard cap you're comfortable with; BE-19 enforces a daily share of it |
+| L4 | Email provider for password reset | Any transactional provider that supports a custom domain (SPF/DKIM on Cloudflare DNS) |
+| L5 | Terms and Privacy texts | Written or approved by you (not legal advice from agents) |
+| L6 | Catalog size at launch | Enough for varied decks, e.g. several thousand films (843 today) |
+| L7 | Error tracking: logs only or an error service | Start with logs + uptime alerts; add a service if errors are hard to find |
+| L8 | Analytics at launch? | None at launch (no cookie banner needed); decide later |
+| P-02 | Google / Apple sign-in at launch? | Not required for launch; email works |
 
 ---
 
