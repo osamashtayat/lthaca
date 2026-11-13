@@ -13,6 +13,8 @@ type MoodPickerProps = {
   textRef?: Ref<HTMLTextAreaElement>
   /** Rooms (FE-10) have no language filter. */
   showLanguage?: boolean
+  /** The runtime question; rooms ask "How long can you stay up?". */
+  runtimeLabel?: string
   disabled?: boolean
 }
 
@@ -20,7 +22,7 @@ type MoodPickerProps = {
  * The shared mood controls: up to two mood chips, "How long have you got?", language and "Describe it your way".
  * Controlled and free of requests, so the solo screen and the room mood step (FE-10) both use it.
  */
-export function MoodPicker({ value, onChange, textError, textRef, showLanguage = true, disabled = false }: MoodPickerProps) {
+export function MoodPicker({ value, onChange, textError, textRef, showLanguage = true, runtimeLabel = 'How long have you got?', disabled = false }: MoodPickerProps) {
   const full = value.moods.length >= MAX_MOODS
 
   return (
@@ -49,9 +51,9 @@ export function MoodPicker({ value, onChange, textError, textRef, showLanguage =
       </fieldset>
 
       <div className="flex flex-col gap-2">
-        <MonoLabel>How long have you got?</MonoLabel>
+        <MonoLabel>{runtimeLabel}</MonoLabel>
         <SegmentedControl
-          label="How long have you got?"
+          label={runtimeLabel}
           options={RUNTIME_OPTIONS}
           value={value.maxRuntime}
           onChange={(maxRuntime) => onChange({ ...value, maxRuntime })}

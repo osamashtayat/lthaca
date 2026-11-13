@@ -76,6 +76,9 @@ describe('Joining', () => {
     expect(await screen.findByText('Use 1 to 30 characters.')).toBeTruthy()
     await user.type(screen.getByLabelText('Your name'), 'Sam')
     await user.click(screen.getByRole('button', { name: 'Join as a guest' }))
+    expect(await screen.findByRole('heading', { name: 'Your vibe for tonight' })).toBeTruthy() // mood room: answer first
+    await user.click(screen.getByRole('button', { name: 'Cozy' }))
+    await user.click(screen.getByRole('button', { name: "I'm ready" }))
     expect(await screen.findByText('Sam')).toBeTruthy()
     expect(screen.getByText('Guest')).toBeTruthy()
     expect(screen.queryByRole('button', { name: /Start swiping/ })).toBeNull() // host-only control
@@ -86,6 +89,8 @@ describe('Joining', () => {
     renderAt(`/rooms/${MOCK_ROOM_CODE.toLowerCase()}`)
     expect(screen.queryByLabelText('Your name')).toBeNull()
     await user.click(await screen.findByRole('button', { name: 'Join the room' }))
+    await user.click(await screen.findByRole('button', { name: 'Cozy' }))
+    await user.click(screen.getByRole('button', { name: "I'm ready" }))
     expect(await screen.findByText('Lina')).toBeTruthy()
     expect(screen.getByText(/Waiting for Omar to start/)).toBeTruthy()
   })
@@ -126,15 +131,19 @@ describe('Lobby', () => {
     await user.type(await screen.findByLabelText('Room name'), 'Club')
     await user.click(screen.getByRole('radio', { name: 'By mood' }))
     await user.click(screen.getByRole('button', { name: 'Create room' }))
+    await user.click(await screen.findByRole('button', { name: "See who's here" })) // the host may skip their own answer
     expect(await screen.findByRole('button', { name: 'Start swiping · 0 OF 1 READY' })).toBeTruthy()
   })
 
   it('shows members with their ready state', async () => {
     renderAt(`/rooms/${MOCK_ROOM_CODE}`)
-    await userEvent.setup().click(await screen.findByRole('button', { name: 'Join the room' }))
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'Join the room' }))
+    await user.click(await screen.findByRole('button', { name: 'Cozy' }))
+    await user.click(screen.getByRole('button', { name: "I'm ready" }))
     await screen.findByText('Lina')
-    expect(screen.getAllByText('Ready')).toHaveLength(1) // Omar; Noor and Lina are waiting
-    expect(screen.getAllByText('Waiting')).toHaveLength(2)
+    expect(screen.getAllByText('Ready')).toHaveLength(2) // Omar and Lina; Noor is waiting
+    expect(screen.getAllByText('Waiting')).toHaveLength(1)
     expect(screen.getByText('Host')).toBeTruthy()
   })
 
@@ -152,6 +161,7 @@ describe('Lobby', () => {
     await user.type(await screen.findByLabelText('Room name'), 'Club')
     await user.click(screen.getByRole('radio', { name: 'By mood' }))
     await user.click(screen.getByRole('button', { name: 'Create room' }))
+    await user.click(await screen.findByRole('button', { name: "See who's here" }))
     await screen.findByRole('heading', { name: 'Club' })
     const code = screen.getByTestId('where').textContent?.split('/').pop() ?? ''
     const friend = addMockRoomMember(code, 'Noor')
@@ -174,5 +184,61 @@ describe('Lobby', () => {
     await user.click(screen.getByRole('button', { name: 'Leave room' }))
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/'))
     expect(mockRoomFor(code)).toBeUndefined()
+  })
+})
+
+describe('Room mood step', () => {
+  async function joinSeedRoom() {
+    const user = userEvent.setup()
+    renderAt(`/rooms/${MOCK_ROOM_CODE}`)
+    await user.click(await screen.findByRole('button', { name: 'Join the room' }))
+    await screen.findByRole('heading', { name: 'Your vibe for tonight' })
+    return user
+  }
+
+  it('asks for a mood in room wording, with private hard nos', async () => {
+    await joinSeedRoom()
+    expect(screen.getByText('How long can you stay up?', { selector: 'span' })).toBeTruthy()
+    expect(screen.getByText(/the group never sees these/)).toBeTruthy()
+    expect(screen.queryByLabelText('Language')).toBeNull()
+    expect(screen.getByText('1 OF 3 READY')).toBeTruthy()
+  })
+
+  it('submits the answer and moves on to the lobby with the member ready', async () => {
+    const user = await joinSeedRoom()
+    await user.click(screen.getByRole('button', { name: 'Cozy' }))
+    await user.click(screen.getByRole('button', { name: 'Horror' }))
+    await user.click(screen.getByRole('button', { name: "I'm ready" }))
+    expect(await screen.findByText(/Waiting for Omar to start · 2 OF 3 READY/)).toBeTruthy()
+    expect(screen.queryByText(/couldn't make sense/)).toBeNull()
+  })
+
+  it('shows mood.unclear under the text, keeps the text and stays on the step', async () => {
+    const user = await joinSeedRoom()
+    await user.type(screen.getByRole('textbox', { name: 'Describe it your way' }), 'asdf')
+    await user.click(screen.getByRole('button', { name: "I'm ready" }))
+    expect(await screen.findByText(/couldn't find a mood in that/)).toBeTruthy()
+    expect((screen.getByRole('textbox', { name: 'Describe it your way' }) as HTMLTextAreaElement).value).toBe('asdf')
+    expect(screen.getByRole('heading', { name: 'Your vibe for tonight' })).toBeTruthy()
+  })
+
+  it('goes on with the chips and tells the member quietly when the text was ignored', async () => {
+    const user = await joinSeedRoom()
+    await user.click(screen.getByRole('button', { name: 'Cozy' }))
+    await user.type(screen.getByRole('textbox', { name: 'Describe it your way' }), 'asdf')
+    await user.click(screen.getByRole('button', { name: "I'm ready" }))
+    expect(await screen.findByText(/We went with your moods; we couldn't make sense of the text/)).toBeTruthy()
+  })
+
+  it('lets the host skip ahead to the lobby, but not other members', async () => {
+    const user = userEvent.setup()
+    renderAt('/rooms')
+    await user.type(await screen.findByLabelText('Room name'), 'Club')
+    await user.click(screen.getByRole('radio', { name: 'By mood' }))
+    await user.click(screen.getByRole('button', { name: 'Create room' }))
+    expect(await screen.findByRole('button', { name: "See who's here" })).toBeTruthy()
+    cleanup()
+    await joinSeedRoom()
+    expect(screen.queryByRole('button', { name: "See who's here" })).toBeNull()
   })
 })
