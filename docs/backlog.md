@@ -245,7 +245,7 @@ lint, test, build.
 
 ## Mood
 
-### BE-09a — Mood-guard contract and stubs (ADR-0022) · `Todo`
+### BE-09a — Mood-guard contract and stubs (ADR-0022) · `In progress`
 - **Objective:** put ADR-0022's contract into code so FE-06 and FE-10 can mock it.
 - **Deps:** BE-01. **Modules:** `ErrorCodes.cs`, `ErrorStatusCodes.cs`, `src/frontend/src/shared/api/problem.ts`,
   `Application/Moods` (`MoodQueryDto`), `Application/Rooms` (`RoomMoodDto`), `RoomsController`, `contracts/openapi.json`,
