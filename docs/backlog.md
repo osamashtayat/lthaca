@@ -660,6 +660,11 @@ lint, test, build.
 - **Acceptance:** every owner decision is in the ADR and the contract; each change to merged work has a task with deps;
   open questions Q1–Q5 are listed for the owner. **Tests:** none (docs).
 
+### OPS-13 — Record the owner's answers to ADR-0024 Q1–Q5 · `In progress`
+- **Objective:** turn ADR-0024's open questions into decisions in the ADR, contract and backlog.
+- **Deps:** OPS-12. **Modules:** `docs/decisions/0024-…`, `docs/api-contract.md` §11, `docs/backlog.md`.
+- **Contract:** A15–A17 become decided (no shape changes). **Scope:** in: docs only. **Tests:** none (docs).
+
 ### BE-17 — Remove the contract-stub plumbing · `Todo`
 - **Objective:** no stubs left. **Deps:** BE-12, BE-14, BE-15, BE-16. **Modules:** `ErrorCodes.cs`,
   `ErrorStatusCodes.cs`, `problem.ts`, stub test.
