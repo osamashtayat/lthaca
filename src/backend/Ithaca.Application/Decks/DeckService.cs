@@ -24,6 +24,9 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimePro
 
     private const int TopPicks = 3;
 
+    /// <summary>Tries at dealing a batch when concurrent requests for the same deck collide.</summary>
+    private const int DealAttempts = 3;
+
     public async Task<Result<DeckDto>> CreateAsync(CreateDeckRequest request, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -74,22 +77,35 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimePro
             return DeckErrors.NotFound;
         }
 
-        var dealt = await db.DeckItems.CountAsync(i => i.DeckId == deckId, ct);
         var signals = await SignalsAsync(deckId, userId, ct);
-        var added = await DealAsync(deckId, userId, dealt, signals, time.GetUtcNow(), ct);
-        if (added.Count == 0)
+        for (var attempt = 1; ; attempt++)
         {
-            return Array.Empty<DeckItemDto>();
-        }
+            var dealt = await db.DeckItems.CountAsync(i => i.DeckId == deckId, ct);
+            var added = await DealAsync(deckId, userId, dealt, signals, time.GetUtcNow(), ct);
+            if (added.Count == 0)
+            {
+                return Array.Empty<DeckItemDto>();
+            }
 
-        await db.SaveChangesAsync(ct);
-        return Result<IReadOnlyList<DeckItemDto>>.Success(await ItemDtosAsync(db.DeckItems.Where(i => added.Contains(i.Id)), userId, ct));
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                var ids = added.Select(i => i.Id).ToList();
+                return Result<IReadOnlyList<DeckItemDto>>.Success(await ItemDtosAsync(db.DeckItems.Where(i => ids.Contains(i.Id)), userId, ct));
+            }
+            catch (Exception e) when (WriteConflicts.IsWriteConflict(e) && attempt < DealAttempts)
+            {
+                // A concurrent request for the same deck took these positions or films: drop this batch and deal again.
+                db.DeckItems.RemoveRange(added);
+            }
+        }
     }
 
     /// <summary>
     /// Records a swipe. The same <c>swipeId</c> again is a no-op success; another swipe on a swiped card is
     /// <c>deck.already_swiped</c>. "Up" marks the film seen in the library, and liked with "loved" (§5); right and left
-    /// don't touch the library (A2).
+    /// don't touch the library (A2). Known gap: if the same film's library row is created by another request at the same
+    /// moment (an "up" in another deck, or a library <c>PUT</c>), the unique key rejects this save and it is a 500.
     /// </summary>
     public async Task<Result> SwipeAsync(Guid deckId, SwipeRequest request, CancellationToken ct)
     {
@@ -146,7 +162,7 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimePro
         {
             await db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException)
+        catch (Exception e) when (WriteConflicts.IsWriteConflict(e))
         {
             // A concurrent request swiped this card first: the same swipeId is a retry, another one a conflict.
             if (await RetriedAsync(request, deckId, ct) is { } raced)
@@ -202,7 +218,7 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimePro
     /// Adds up to <see cref="Deck.BatchSize"/> new items (positions after <paramref name="dealt"/>), never past
     /// <see cref="Deck.MaxItems"/>. Not saved here: the caller saves once.
     /// </summary>
-    private async Task<List<Guid>> DealAsync(Guid deckId, Guid userId, int dealt, IReadOnlyList<SignalRow> signals, DateTimeOffset now, CancellationToken ct)
+    private async Task<List<DeckItem>> DealAsync(Guid deckId, Guid userId, int dealt, IReadOnlyList<SignalRow> signals, DateTimeOffset now, CancellationToken ct)
     {
         var count = Math.Min(Deck.BatchSize, Deck.MaxItems - dealt);
         if (count <= 0)
@@ -227,7 +243,7 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimePro
         var picked = DeckSampler.Pick(candidates, deckSignals, count, Random.Shared);
         var items = picked.Select((filmId, i) => DeckItem.Create(deckId, filmId, dealt + i + 1, now)).ToList();
         db.DeckItems.AddRange(items);
-        return items.Select(i => i.Id).ToList();
+        return items;
     }
 
     /// <summary>This deck's swipes (full weight) and the user's most recent library rows (<see cref="DeckSignals"/>).</summary>

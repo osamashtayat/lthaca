@@ -231,6 +231,31 @@ public sealed class DecksEndpointTests(PostgresFixture postgres) : IAsyncLifetim
     }
 
     [Fact]
+    public async Task Items_TwoConcurrentRequests_BothSucceed_WithoutDuplicates()
+    {
+        var client = await BrowserClient.RegisteredAsync(_factory, Ct);
+        var deck = await CreateAsync(client);
+        var id = deck.GetProperty("id").GetString()!;
+
+        var responses = await Task.WhenAll(
+            client.PostAsync(new Uri($"/api/decks/{id}/items", UriKind.Relative), null, Ct),
+            client.PostAsync(new Uri($"/api/decks/{id}/items", UriKind.Relative), null, Ct));
+
+        foreach (var r in responses)
+        {
+            r.StatusCode.ShouldBe(HttpStatusCode.OK, await r.Content.ReadAsStringAsync(Ct));
+        }
+        var full = await client.GetFromJsonAsync<JsonElement>($"/api/decks/{id}", Ct);
+        var films = Items(full).Select(TmdbId).ToList();
+        films.Distinct().Count().ShouldBe(films.Count);
+        Items(full).Select(i => i.GetProperty("position").GetInt32()).ShouldBe(Enumerable.Range(1, films.Count));
+        foreach (var response in responses)
+        {
+            response.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task Items_ShowTheCallersWatchlist()
     {
         var client = await BrowserClient.RegisteredAsync(_factory, Ct);

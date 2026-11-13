@@ -12,7 +12,7 @@ internal sealed class SwipeConfiguration : IEntityTypeConfiguration<Swipe>
     public void Configure(EntityTypeBuilder<Swipe> builder)
     {
         builder.ToTable("swipes", t =>
-            t.HasCheckConstraint("ck_swipes_seen_verdict", "seen_verdict IS NULL OR direction = 'Up'"));
+            t.HasCheckConstraint("ck_swipes_seen_verdict", $"seen_verdict IS NULL OR direction = '{nameof(SwipeDirection.Up)}'"));
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Id).ValueGeneratedNever();
         builder.Property(s => s.Direction).HasConversion<string>().HasMaxLength(10);

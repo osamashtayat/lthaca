@@ -64,7 +64,7 @@ public sealed partial class FilmTrailerService(IAppDbContext db, ITmdbClient tmd
         {
             await db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException) when (inserted)
+        catch (Exception e) when (inserted && WriteConflicts.IsWriteConflict(e))
         {
             // Two first requests for the same film raced and the other one cached it: the answer in hand is just as good.
             LogInsertRace(logger, tmdbId);
