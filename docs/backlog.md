@@ -306,6 +306,13 @@ lint, test, build.
 
 ## Rooms
 
+### BE-10a — Lobby events contract · `Done`
+- **Objective:** let the lobby learn "member ready" and "room started" from the hub instead of polling (issue #23).
+- **Deps:** BE-01. **Modules:** `contracts/realtime-events.json`, `RoomEvents.cs`, `docs/realtime.md`, `docs/api-contract.md` §6.
+- **Scope:** in: events `memberReady { roomId, memberId }` and `roomStarted { roomId }`. Out: publishing them (BE-11 owns
+  mood and start, which are still stubs), the frontend handlers and removing the polling (a frontend task).
+- **Acceptance:** `RealtimeContractTests` green. **Tests:** the existing contract drift test.
+
 ### BE-10 — Rooms core: create, preview, join, leave, close, hub membership · `Todo`
 - **Objective:** rooms with a share code, guests joining without an account, and hub groups only for members.
 - **Deps:** BE-02. **Modules:** `Domain/Rooms`, `Application/Rooms`, `Api/Controllers/RoomsController.cs`,
@@ -322,7 +329,7 @@ lint, test, build.
 ### BE-11 — Room swiping: mood step, start, shared deck, votes, progress · `Todo`
 - **Objective:** everyone swipes the same deck; votes are HTTP (ADR-0015).
 - **Deps:** BE-10, BE-08, BE-09. **Modules:** `Application/Rooms`, `Application/Decks`, `Domain/Rooms`, migration.
-- **Contract:** §6 (mood, start, deck, votes, progress); events `voteCast`, `deckExtended`.
+- **Contract:** §6 (mood, start, deck, votes, progress); events `memberReady`, `roomStarted` (BE-10a), `voteCast`, `deckExtended`.
 - **Scope:** in: per-member mood + private hard nos with the ADR-0022 rules (`RoomMoodDto.textIgnored`, `mood.unclear`),
   readiness, start (first batch from the combined moods or the sampler,
   hard nos excluded), idempotent votes, progress, extension near the end. Out: match/compromise (BE-12).
