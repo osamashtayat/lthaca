@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { addMockAccount, findMockAccount, getMockSession, isMockEmailTaken, setMockSession } from './authStore'
 import { findMockFilm, mockFilms, mockTrailers } from './fixtures'
 import { createMockDeck, mockDeckDto, parseMockMood, mockDeckTop, nextMockBatch, recordMockSwipe } from './deckStore'
-import { setMockMemberReady, addMockRoomMember, createMockRoom, findMockRoom, mockRoomFor, removeMockRoomMember, setMockRoomStatus, MOCK_MAX_MEMBERS } from './roomStore'
+import { castMockVote, finishMockRoom, mockRoomDeck, mockRoomProgress, mockRoomResult, setMockMemberReady, addMockRoomMember, createMockRoom, findMockRoom, mockRoomFor, removeMockRoomMember, setMockRoomStatus, MOCK_MAX_MEMBERS } from './roomStore'
 import { getMockUserFilm, listMockUserFilms, putMockUserFilm, setMockWatchlist } from './libraryStore'
 import { apiPath, problem, type RequestOf, type ResponseOf } from './http'
 
@@ -302,6 +302,47 @@ const roomHandlers = [
     setMockRoomStatus(room.code, 'swiping')
     const started = mockRoomFor(room.code)
     return started ? HttpResponse.json<ResponseOf<'/api/rooms/{code}/start', 'post', 200>>(started) : problem(500, 'server.error')
+  }),
+  http.get(apiPath('/api/rooms/{code}/deck'), ({ request, params }) => {
+    if (!findMockRoom(String(params.code))) return problem(404, 'room.not_found')
+    const room = mockRoomFor(String(params.code))
+    if (!room) return problem(403, 'room.not_member')
+    if (room.status === 'lobby') return problem(409, 'room.invalid_state')
+    const from = Number(new URL(request.url).searchParams.get('fromPosition') ?? 0)
+    return HttpResponse.json<ResponseOf<'/api/rooms/{code}/deck', 'get', 200>>(mockRoomDeck(room.code, from) ?? [])
+  }),
+  http.post(apiPath('/api/rooms/{code}/votes'), async ({ request, params }) => {
+    if (!findMockRoom(String(params.code))) return problem(404, 'room.not_found')
+    const room = mockRoomFor(String(params.code))
+    if (!room) return problem(403, 'room.not_member')
+    if (room.status === 'closed') return problem(409, 'room.closed')
+    if (room.status !== 'swiping') return problem(409, 'room.invalid_state')
+    const body = (await request.json()) as RequestOf<'/api/rooms/{code}/votes', 'post'>
+    const outcome = castMockVote(room.code, room.me.id, body)
+    if (outcome === 'item_not_found') return problem(404, 'deck.item_not_found')
+    if (outcome === 'already_voted') return problem(409, 'room.already_voted')
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.get(apiPath('/api/rooms/{code}/progress'), ({ params }) => {
+    if (!findMockRoom(String(params.code))) return problem(404, 'room.not_found')
+    if (!mockRoomFor(String(params.code))) return problem(403, 'room.not_member')
+    const progress = mockRoomProgress(String(params.code))
+    return progress ? HttpResponse.json<ResponseOf<'/api/rooms/{code}/progress', 'get', 200>>(progress) : problem(404, 'room.not_found')
+  }),
+  http.post(apiPath('/api/rooms/{code}/finish'), ({ params }) => {
+    if (!findMockRoom(String(params.code))) return problem(404, 'room.not_found')
+    const room = mockRoomFor(String(params.code))
+    if (!room) return problem(403, 'room.not_member')
+    if (!room.me.isHost) return problem(403, 'room.not_host')
+    if (room.status !== 'swiping' && room.status !== 'result') return problem(409, 'room.invalid_state')
+    const result = finishMockRoom(room.code)
+    return result ? HttpResponse.json<ResponseOf<'/api/rooms/{code}/finish', 'post', 200>>(result) : problem(404, 'room.not_found')
+  }),
+  http.get(apiPath('/api/rooms/{code}/result'), ({ params }) => {
+    if (!findMockRoom(String(params.code))) return problem(404, 'room.not_found')
+    if (!mockRoomFor(String(params.code))) return problem(403, 'room.not_member')
+    const result = mockRoomResult(String(params.code))
+    return result ? HttpResponse.json<ResponseOf<'/api/rooms/{code}/result', 'get', 200>>(result) : problem(409, 'room.no_result')
   }),
   http.post(apiPath('/api/rooms/{code}/leave'), ({ params }) => {
     if (!findMockRoom(String(params.code))) return problem(404, 'room.not_found')
