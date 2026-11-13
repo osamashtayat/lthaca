@@ -26,6 +26,11 @@ export const queryKeys = {
     all: ['browse'] as const,
     list: (query: object) => ['browse', 'list', query] as const,
   },
+  rooms: {
+    all: ['rooms'] as const,
+    detail: (code: string) => ['rooms', 'detail', code] as const,
+    preview: (code: string) => ['rooms', 'preview', code] as const,
+  },
   library: {
     all: ['library'] as const,
     detail: (tmdbId: number) => ['library', 'detail', tmdbId] as const,

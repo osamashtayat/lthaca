@@ -28,3 +28,6 @@ export function statusOf(connection: HubConnection): RoomHubStatus {
       return 'disconnected'
   }
 }
+
+/** Hub methods the client may invoke (docs/realtime.md → Hub). Membership is checked by the server before it joins the group. */
+export const HUB_METHODS = { joinRoom: 'JoinRoom', leaveRoom: 'LeaveRoom' } as const

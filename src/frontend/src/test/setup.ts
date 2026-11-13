@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll } from 'vitest'
 import { resetMockAuth } from '@/mocks/authStore'
 import { resetMockDecks } from '@/mocks/deckStore'
 import { resetMockLibrary } from '@/mocks/libraryStore'
+import { resetMockRooms } from '@/mocks/roomStore'
 import { server } from '@/mocks/server'
 
 // jsdom (used by component tests, opted in per file) doesn't implement the modal <dialog> API; this minimal stand-in
@@ -27,6 +28,7 @@ afterEach(() => {
   resetMockAuth()
   resetMockLibrary()
   resetMockDecks()
+  resetMockRooms()
 })
 
 afterAll(() => server.close())

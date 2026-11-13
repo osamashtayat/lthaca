@@ -341,7 +341,7 @@ lint, test, build.
 - **Tests:** rule units (ties); concurrency; slice tests.
 - **Docs:** api-contract.md §6; glossary if Match / Best compromise wording changes.
 
-### FE-09 — Rooms: create, join, lobby · `Todo`
+### FE-09 — Rooms: create, join, lobby · `Done`
 - **Objective:** the "Group — lobby" board and the way in for guests.
 - **Deps:** BE-01, FE-02, FE-03. **Modules:** `src/features/rooms/`, `src/shared/realtime/` (hub invocation),
   `src/mocks/`.
