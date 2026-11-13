@@ -171,7 +171,7 @@ lint, test, build.
 
 ## Catalog & AI
 
-### BE-03 — Wikidata enricher (ADR-0017) · `Todo`
+### BE-03 — Wikidata enricher (ADR-0017) · `In progress`
 - **Objective:** AI-safe film facts from Wikidata (CC0), and the embedding text built only from them.
 - **Deps:** BE-02 (order only). **Modules:** `Application/Catalog`, `Infrastructure/Wikidata` (typed `HttpClient`),
   `Domain/Films`, migration, `CatalogSyncService`.
