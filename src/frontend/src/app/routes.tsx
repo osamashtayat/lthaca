@@ -8,6 +8,7 @@ import { MoodPage } from '@/features/mood'
 import { BrowsePage } from '@/features/browse'
 import { CinemaPage } from '@/features/library'
 import { FilmPage } from '@/features/films'
+import { TonightPage } from '@/features/tonight'
 import { RoomPage, RoomsPage } from '@/features/rooms'
 
 /**
@@ -18,7 +19,7 @@ export const routes: RouteObject[] = [
   {
     element: <AppShell />,
     children: [
-      { index: true, element: <PlaceholderPage title="Tonight" feature="tonight" /> },
+      { index: true, element: <TonightPage /> },
       // User-only screens (api-contract: decks, library, profile need a signed-in User). Add new ones inside this group.
       {
         element: <RequireUser />,
