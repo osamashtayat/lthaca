@@ -223,7 +223,7 @@ lint, test, build.
 
 ## Deck
 
-### BE-08 — Solo deck: Just swipe · `Todo`
+### BE-08 — Solo deck: Just swipe · `In progress`
 - **Objective:** a user's solo deck with a sampler that adapts as they swipe.
 - **Deps:** BE-02, BE-05. **Modules:** `Domain/Decks`, `Application/Decks`, `Api/Controllers/DecksController.cs`,
   configurations, migration.
