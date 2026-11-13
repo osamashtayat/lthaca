@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, requireData } from '@/shared/api'
 import { notify } from '@/shared/notify'
 import { queryKeys } from '@/shared/query'
-import type { UserFilmState } from '../types'
+import { toUserFilmState, type UserFilmState } from '../types'
 
 /**
  * `PUT /api/library/{tmdbId}` replaces the whole state (api-contract §7, last write wins). The cache is updated
@@ -16,8 +16,7 @@ export function useUpdateUserFilm(tmdbId: number) {
     mutationKey: ['library', 'update', tmdbId],
     mutationFn: async (state: UserFilmState): Promise<UserFilmState> => {
       const { data } = await api.PUT('/api/library/{tmdbId}', { params: { path: { tmdbId } }, body: state })
-      const { liked, onWatchlist, seen, rating } = requireData(data)
-      return { liked, onWatchlist, seen, rating }
+      return toUserFilmState(requireData(data))
     },
     onMutate: async (state) => {
       await queryClient.cancelQueries({ queryKey: key })

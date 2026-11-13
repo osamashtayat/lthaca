@@ -2,17 +2,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { setMockSession } from '@/mocks/authStore'
-import { apiPath, problem } from '@/mocks/http'
+import { failLibraryUpdate } from '@/mocks/overrides'
 import { server } from '@/mocks/server'
 import { FilmPage } from './pages/FilmPage'
 
-const notifyError = vi.hoisted(() => vi.fn())
+const notifyError = vi.hoisted(() => vi.fn<(message?: unknown) => void>())
 vi.mock('@/shared/notify', () => ({
-  notify: { apiError: notifyError, error: notifyError, success: vi.fn(), info: vi.fn() },
+  notify: { apiError: notifyError, error: notifyError, success: vi.fn<(message: string) => void>(), info: vi.fn<(message: string) => void>() },
 }))
 
 afterEach(() => {
@@ -65,7 +64,7 @@ describe('FilmPage', () => {
   })
 
   it('rolls back and toasts when the PUT fails', async () => {
-    server.use(http.put(apiPath('/api/library/{tmdbId}'), () => problem(500, 'server.error')))
+    server.use(failLibraryUpdate())
     const user = userEvent.setup()
     renderFilm()
     const saved = await chip('Saved')
@@ -109,7 +108,6 @@ describe('FilmPage', () => {
   })
 
   it('shows the not-found message for an unknown film', async () => {
-    server.use(http.get(apiPath('/api/films/{tmdbId}'), () => HttpResponse.json({ code: 'film.not_found', status: 404, traceId: 't' }, { status: 404 })))
     renderFilm('/films/1')
     expect(await screen.findByRole('alert')).toBeTruthy()
   })
