@@ -29,6 +29,7 @@ internal sealed class FilmConfiguration : IEntityTypeConfiguration<Film>
         builder.HasIndex(f => f.TmdbId).IsUnique().HasDatabaseName(TmdbIdIndex);
         builder.Property(f => f.Title).HasMaxLength(Film.TitleMaxLength).IsRequired();
         builder.Property(f => f.Genres).IsRequired();
+        builder.Property(f => f.OriginalLanguage).HasMaxLength(Film.OriginalLanguageMaxLength);
 
         builder.Property(f => f.Embedding)
             .HasColumnType($"vector({Film.EmbeddingDimensions})")

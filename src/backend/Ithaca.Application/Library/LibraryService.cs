@@ -55,7 +55,7 @@ public sealed class LibraryService(IAppDbContext db, ICurrentActor current, Time
                 r.UserFilm.OnWatchlist,
                 r.UserFilm.Seen,
                 r.UserFilm.Rating,
-                new FilmSummaryDto(r.Film.TmdbId, r.Film.Title, r.Film.ReleaseYear, r.Film.PosterPath, r.Film.RuntimeMinutes, r.Film.Genres, null),
+                new FilmSummaryDto(r.Film.TmdbId, r.Film.Title, r.Film.ReleaseYear, r.Film.PosterPath, r.Film.RuntimeMinutes, r.Film.Genres, r.Film.VoteAverage),
                 r.UserFilm.UpdatedAt))
             .ToPagedResultAsync(request, ct);
     }
@@ -180,7 +180,7 @@ public sealed class LibraryService(IAppDbContext db, ICurrentActor current, Time
     {
         var film = await db.Films.AsNoTracking()
             .Where(f => f.Id == filmId)
-            .Select(f => new FilmSummaryDto(f.TmdbId, f.Title, f.ReleaseYear, f.PosterPath, f.RuntimeMinutes, f.Genres, null))
+            .Select(f => new FilmSummaryDto(f.TmdbId, f.Title, f.ReleaseYear, f.PosterPath, f.RuntimeMinutes, f.Genres, f.VoteAverage))
             .SingleAsync(ct);
         return userFilm is null
             ? new UserFilmDto(false, false, false, null, film, time.GetUtcNow())

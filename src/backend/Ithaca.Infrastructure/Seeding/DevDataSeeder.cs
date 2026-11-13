@@ -33,7 +33,7 @@ public static partial class DevDataSeeder
             foreach (var sample in FakeTmdbClient.Films)
             {
                 var film = Film.Create(sample.TmdbId, sample.Title, time.GetUtcNow());
-                film.UpdateDetails(sample.Title, sample.ReleaseYear, sample.Overview, sample.PosterPath, sample.RuntimeMinutes, [.. sample.Genres], sample.Popularity, time.GetUtcNow());
+                film.UpdateDetails(sample.Title, sample.ReleaseYear, sample.Overview, sample.PosterPath, sample.RuntimeMinutes, [.. sample.Genres], sample.Popularity, sample.BackdropPath, sample.VoteAverage, sample.VoteCount, sample.OriginalLanguage, time.GetUtcNow());
                 db.Films.Add(film);
             }
 

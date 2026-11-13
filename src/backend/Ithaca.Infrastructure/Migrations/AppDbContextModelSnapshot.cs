@@ -30,6 +30,10 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("BackdropPath")
+                        .HasColumnType("text")
+                        .HasColumnName("backdrop_path");
+
                     b.Property<Vector>("Embedding")
                         .HasColumnType("vector(1024)")
                         .HasColumnName("embedding");
@@ -52,6 +56,11 @@ namespace Ithaca.Infrastructure.Migrations
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("boolean")
                         .HasColumnName("is_available");
+
+                    b.Property<string>("OriginalLanguage")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("original_language");
 
                     b.Property<string>("Overview")
                         .HasColumnType("text")
@@ -86,6 +95,14 @@ namespace Ithaca.Infrastructure.Migrations
                     b.Property<int>("TmdbId")
                         .HasColumnType("integer")
                         .HasColumnName("tmdb_id");
+
+                    b.Property<double?>("VoteAverage")
+                        .HasColumnType("double precision")
+                        .HasColumnName("vote_average");
+
+                    b.Property<int?>("VoteCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("vote_count");
 
                     b.HasKey("Id")
                         .HasName("pk_films");

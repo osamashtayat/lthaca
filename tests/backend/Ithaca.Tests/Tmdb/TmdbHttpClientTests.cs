@@ -12,7 +12,7 @@ public sealed class TmdbHttpClientTests
 {
     private const string MovieJson = """
         {"id":550,"title":"Fight Club","release_date":"1999-10-15","overview":"An insomniac…","poster_path":"/p.jpg",
-         "runtime":139,"popularity":61.4,"genres":[{"id":18,"name":"Drama"}]}
+         "runtime":139,"popularity":61.4,"backdrop_path":"/b.jpg","vote_average":8.4,"vote_count":29000,"original_language":"en","genres":[{"id":18,"name":"Drama"}]}
         """;
 
     private static (TmdbHttpClient Client, StubHandler Handler) Create(string apiKey, HttpStatusCode status = HttpStatusCode.OK, string body = MovieJson)
@@ -53,7 +53,7 @@ public sealed class TmdbHttpClientTests
         var result = await client.GetFilmDetailsAsync(550, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBe(new TmdbFilmDetails(550, "Fight Club", 1999, "An insomniac…", "/p.jpg", 139, result.Value!.Genres, 61.4));
+        result.Value.ShouldBe(new TmdbFilmDetails(550, "Fight Club", 1999, "An insomniac…", "/p.jpg", 139, result.Value!.Genres, 61.4, "/b.jpg", 8.4, 29000, "en"));
         result.Value.Genres.ShouldBe(["Drama"]);
     }
 

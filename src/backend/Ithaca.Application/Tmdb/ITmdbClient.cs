@@ -28,6 +28,10 @@ public sealed record TmdbFilmDetails(
     string? PosterPath,
     int? RuntimeMinutes,
     IReadOnlyList<string> Genres,
-    double? Popularity);
+    double? Popularity,
+    string? BackdropPath = null,
+    double? VoteAverage = null,
+    int? VoteCount = null,
+    string? OriginalLanguage = null);
 
 public sealed record TmdbVideo(string Site, string Key, string Name);

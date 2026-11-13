@@ -1,4 +1,6 @@
+using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
+using Ithaca.Application.Moods;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ithaca.Application.Films;
@@ -7,25 +9,88 @@ namespace Ithaca.Application.Films;
 /// Reference slice (copy this shape): a query service projects straight to the DTO with <c>AsNoTracking</c> + <c>Select</c>
 /// and returns <see cref="Result{T}"/>. No entity leaves the service; no mapping happens in the controller.
 /// </summary>
-public sealed class FilmQueryService(IAppDbContext db)
+public sealed class FilmQueryService(IAppDbContext db, ICurrentActor current)
 {
+    private const int Under90Minutes = 90;
+    private const int UpTo2hMinutes = 120;
+
     public async Task<Result<FilmDto>> GetByTmdbIdAsync(int tmdbId, CancellationToken ct)
     {
         var film = await db.Films
             .AsNoTracking()
             .Where(f => f.TmdbId == tmdbId)
-            .Select(f => new FilmDto(f.TmdbId, f.Title, f.ReleaseYear, f.Overview, f.PosterPath, f.RuntimeMinutes, f.Genres, null, null, null, null))
+            .Select(f => new FilmDto(
+                f.TmdbId, f.Title, f.ReleaseYear, f.Overview, f.PosterPath, f.RuntimeMinutes, f.Genres,
+                f.BackdropPath, f.VoteAverage, f.VoteCount, f.OriginalLanguage))
             .SingleOrDefaultAsync(ct);
 
         return film is null ? FilmErrors.NotFound : film;
     }
 
-    /// <summary>Browse the catalog (api-contract.md §9). Contract stub until BE-06.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822", Justification = ContractStub.Justification)]
-    public Task<Result<PagedResult<FilmSummaryDto>>> BrowseAsync(FilmBrowseRequest request, CancellationToken ct) =>
-        ContractStub.Of<PagedResult<FilmSummaryDto>>();
+    /// <summary>
+    /// Browse the catalog (api-contract.md §9): every filter that is set narrows the result. Films TMDB no longer knows are
+    /// left out. <c>hideSeen</c> only applies to a signed-in user. Every order ends on TMDB id so pages are stable.
+    /// </summary>
+    public async Task<Result<PagedResult<FilmSummaryDto>>> BrowseAsync(FilmBrowseRequest request, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var films = db.Films.AsNoTracking().Where(f => f.IsAvailable);
 
-    /// <summary>Genres present in our catalog, alphabetical. Contract stub until BE-06.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822", Justification = ContractStub.Justification)]
-    public Task<Result<IReadOnlyList<string>>> GetGenresAsync(CancellationToken ct) => ContractStub.Of<IReadOnlyList<string>>();
+        if (request.Search?.Trim() is { Length: > 0 } search)
+        {
+            // EF translates this to lower(title) LIKE '%needle%' (escaping % and _). Only ToLower() has a SQL translation; the
+            // StringComparison overload and ToLowerInvariant() have none.
+#pragma warning disable CA1304, CA1311, CA1862 // SQL lower() is the intended, culture-free translation.
+            var needle = search.ToLower();
+            films = films.Where(f => f.Title.ToLower().Contains(needle));
+#pragma warning restore CA1304, CA1311, CA1862
+        }
+
+        if (request.Genre?.Trim() is { Length: > 0 } genre)
+        {
+            films = films.Where(f => f.Genres.Contains(genre));
+        }
+
+        films = request.MaxRuntime switch
+        {
+            RuntimeLimit.Under90 => films.Where(f => f.RuntimeMinutes < Under90Minutes),
+            RuntimeLimit.UpTo2h => films.Where(f => f.RuntimeMinutes <= UpTo2hMinutes),
+            _ => films,
+        };
+
+        if (request.MinVoteAverage is { } minVote)
+        {
+            films = films.Where(f => f.VoteAverage >= minVote);
+        }
+
+        if (request.HideSeen && current.Actor is { IsUser: true } actor)
+        {
+            var userId = actor.Id;
+            films = films.Where(f => !db.UserFilms.Any(u => u.UserId == userId && u.FilmId == f.Id && u.Seen));
+        }
+
+        var ordered = request.Sort switch
+        {
+            FilmSort.Newest => films.OrderBy(f => f.ReleaseYear == null).ThenByDescending(f => f.ReleaseYear).ThenBy(f => f.TmdbId),
+            FilmSort.Rating => films.OrderBy(f => f.VoteAverage == null).ThenByDescending(f => f.VoteAverage).ThenBy(f => f.TmdbId),
+            _ => films.OrderBy(f => f.Popularity == null).ThenByDescending(f => f.Popularity).ThenBy(f => f.TmdbId),
+        };
+
+        return await ordered
+            .Select(f => new FilmSummaryDto(f.TmdbId, f.Title, f.ReleaseYear, f.PosterPath, f.RuntimeMinutes, f.Genres, f.VoteAverage))
+            .ToPagedResultAsync(request, ct);
+    }
+
+    /// <summary>Genres present in our catalog (available films), alphabetical.</summary>
+    public async Task<Result<IReadOnlyList<string>>> GetGenresAsync(CancellationToken ct)
+    {
+        IReadOnlyList<string> genres = await db.Films
+            .AsNoTracking()
+            .Where(f => f.IsAvailable)
+            .SelectMany(f => f.Genres)
+            .Distinct()
+            .OrderBy(g => g)
+            .ToListAsync(ct);
+        return Result<IReadOnlyList<string>>.Success(genres);
+    }
 }

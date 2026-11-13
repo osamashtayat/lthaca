@@ -402,7 +402,7 @@ lint, test, build.
 
 ## Browse & details
 
-### BE-06 — Catalog display fields and Browse · `Todo`
+### BE-06 — Catalog display fields and Browse · `Done` (PR #22)
 - **Objective:** the TMDB display fields the boards show, and the browse list.
 - **Deps:** BE-01. **Modules:** `Domain/Films`, `Application/Films`, `Application/Catalog`, `FilmsController`, migration.
 - **Contract:** §3 (`FilmDto` additions), §9.

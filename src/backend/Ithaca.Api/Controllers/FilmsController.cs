@@ -18,13 +18,11 @@ public sealed class FilmsController(FilmQueryService films, FilmTrailerService t
     [HttpGet]
     [ProducesResponseType<PagedResult<FilmSummaryDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
-    [ContractStub]
     public async Task<ActionResult<PagedResult<FilmSummaryDto>>> Browse([FromQuery] FilmBrowseRequest request, CancellationToken ct) =>
         this.ToActionResult(await films.BrowseAsync(request, ct));
 
     [HttpGet("genres")]
     [ProducesResponseType<IReadOnlyList<string>>(StatusCodes.Status200OK)]
-    [ContractStub]
     public async Task<ActionResult<IReadOnlyList<string>>> Genres(CancellationToken ct) =>
         this.ToActionResult(await films.GetGenresAsync(ct));
 
