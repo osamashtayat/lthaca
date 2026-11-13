@@ -37,10 +37,7 @@ authorization stays in one place. Group name per room: `RoomEvents.GroupFor(room
   (0, 2, 10, 30 s) and reports `connecting | connected | reconnecting | disconnected`.
 - `useRoomHub({ room: code, onSynced })` also invokes `JoinRoom(code)` after the first connect and after every reconnect (the
   server drops group membership with the connection), then calls `onSynced`. Rooms use it through `useRoomLive(code, enabled)`
-  (features/rooms), which refetches the room on `memberJoined`, `memberLeft`, `roomMatched`, `roomClosed` and on every sync.
-- `memberReady` and `roomStarted` are in the contract (BE-10a) but published only once BE-11 lands (mood and start). Until
-  the frontend handles them in `useRoomLive`, the lobby polls the room every 4 s while `status` is `lobby`; it drops the
-  polling in that frontend change (issue #23).
+  (features/rooms), which refetches the room on `memberJoined`, `memberLeft`, `memberReady`, `roomStarted`, `roomMatched`, `roomClosed` and on every sync.
 - Handlers invalidate TanStack Query keys; on reconnect, invalidate the room's queries (events may have been missed).
 - Votes and swipes are HTTP mutations (retry 0) with a client-generated id, never hub calls (ADR-0015).
 - Scaling out needs a SignalR backplane first (ADR-0016).
