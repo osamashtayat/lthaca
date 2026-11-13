@@ -86,7 +86,8 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
 ## Catalog sync (ADR-0003)
 - `CatalogSyncService`: TMDB discover pages (most popular first) → upsert by `TmdbId` (display data) → **refresh by
   reference** (ADR-0019): every film user data references (`user_films` today) that this run hasn't refreshed is
-  re-fetched by id; a TMDB 404 keeps the row, clears overview and poster and sets `is_available = false` → delete
+  re-fetched by id; a TMDB 404 (or a reply without a valid title) keeps the row, clears overview and poster and sets
+  `is_available = false` (title, year, runtime and genres stay on purpose, so libraries can still name the film) → delete
   **unreferenced** films not refreshed within `CatalogSync:MaxAgeDays` (≤ 180: TMDB's 6-month caching limit) → Wikidata
   enrichment (below) → embeddings (above). "Referenced" is defined once (`ReferencedFilmIds`); deck items and votes join
   it when they land. Every FK to `films` from user data is `ON DELETE RESTRICT`, so a purge bug fails loudly.

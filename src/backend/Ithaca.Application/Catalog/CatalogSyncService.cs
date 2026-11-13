@@ -119,7 +119,8 @@ public sealed class CatalogSyncService(
 
     /// <summary>
     /// Re-fetches by TMDB id every referenced film this run hasn't refreshed (it may have left TMDB's popular pages), in
-    /// TMDB-id order, saving every <see cref="RefreshBatchSize"/>. A 404 keeps the row but clears its TMDB fields.
+    /// TMDB-id order, saving every <see cref="RefreshBatchSize"/>. A 404 (or a reply without a valid title) keeps the row
+    /// but clears its TMDB display fields.
     /// </summary>
     private async Task<Result<(int Refreshed, int Unavailable)>> RefreshReferencedAsync(DateTimeOffset runStartedAt, CancellationToken ct)
     {
@@ -146,16 +147,18 @@ public sealed class CatalogSyncService(
                     return details.Error;
                 }
 
+                // Gone from TMDB, or served without a usable title: either way we can't refresh it, and keeping its old TMDB
+                // data past MaxAgeDays is what ADR-0019 rules out.
                 var now = time.GetUtcNow();
-                if (details.Value is not { } d)
-                {
-                    film.MarkUnavailable(now);
-                    unavailable++;
-                }
-                else if (Film.IsValidTitle(d.Title))
+                if (details.Value is { } d && Film.IsValidTitle(d.Title))
                 {
                     film.UpdateDetails(d.Title, d.ReleaseYear, d.Overview, d.PosterPath, d.RuntimeMinutes, [.. d.Genres], d.Popularity, now);
                     refreshed++;
+                }
+                else
+                {
+                    film.MarkUnavailable(now);
+                    unavailable++;
                 }
             }
 

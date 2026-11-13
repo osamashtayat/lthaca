@@ -219,11 +219,19 @@ public sealed class LibraryEndpointTests(PostgresFixture postgres) : IAsyncLifet
     [InlineData("GET", "/api/library")]
     [InlineData("GET", "/api/library/summary")]
     [InlineData("GET", "/api/library/550")]
+    [InlineData("PUT", "/api/library/550")]
+    [InlineData("PUT", "/api/library/550/watchlist")]
+    [InlineData("DELETE", "/api/library/550/watchlist")]
     public async Task Anonymous_Is401(string method, string url)
     {
         var client = await BrowserClient.StartAsync(_factory, Ct);
+        using var request = new HttpRequestMessage(new HttpMethod(method), url);
+        if (method == "PUT" && !url.EndsWith("/watchlist", StringComparison.Ordinal))
+        {
+            request.Content = JsonContent.Create(new { liked = true, onWatchlist = false, seen = false, rating = (int?)null });
+        }
 
-        using var response = await client.SendAsync(new HttpRequestMessage(new HttpMethod(method), url), Ct);
+        using var response = await client.SendAsync(request, Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         (await JsonAsync(response)).GetProperty("code").GetString().ShouldBe("auth.unauthenticated");

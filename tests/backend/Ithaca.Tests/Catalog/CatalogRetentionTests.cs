@@ -83,6 +83,25 @@ public sealed class CatalogRetentionTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Sync_ReferencedFilmServedWithoutATitle_IsMarkedUnavailable()
+    {
+        await using var factory = await IthacaApiFactory.StartAsync(postgres.ConnectionString);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await AddStaleFilmsAsync(db, 775001);
+        var user = await BrowserClient.RegisteredAsync(factory, Ct);
+        await LikeAsync(user, 775001);
+
+        (await Sync(scope, db, new StubTmdb(known: new() { [775001] = "   " })).RunAsync(Ct)).IsSuccess.ShouldBeTrue();
+
+        db.ChangeTracker.Clear();
+        var film = await db.Films.AsNoTracking().SingleAsync(f => f.TmdbId == 775001, Ct);
+        film.IsAvailable.ShouldBeFalse();
+        film.Overview.ShouldBeNull("its old TMDB data doesn't outlive MaxAgeDays");
+        film.SyncedAt.ShouldBeGreaterThan(DateTimeOffset.UtcNow.AddMinutes(-5));
+    }
+
+    [Fact]
     public async Task Sync_WhenTheRefreshFails_PurgesNothing()
     {
         await using var factory = await IthacaApiFactory.StartAsync(postgres.ConnectionString);

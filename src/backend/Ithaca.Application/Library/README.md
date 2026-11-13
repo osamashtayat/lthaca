@@ -1,6 +1,9 @@
-# Library (not built yet)
+# Library
 
-"My Cinema": `UserFilm` (liked / watchlist / seen / rating).
+"My Cinema" (api-contract.md §7, ADR-0019): `UserFilm` (liked / watchlist / seen / 1–5 rating, Domain/Library).
 
-Put this feature's services, DTOs (`…Request` in, `…Dto` out), errors (`LibraryErrors`) and Application-side interfaces here.
-Copy the shape of `../Films/` (the reference slice). See `docs/backend-conventions.md`.
+- `LibraryService`: list (shelf, sort, genre, paged), summary, get, put (rating ⇒ seen; nothing set deletes the row) and
+  the idempotent watchlist pair, always for the signed-in user from `ICurrentActor`.
+- DTOs in `LibraryDtos.cs`, enums in `LibraryEnums.cs`. No `LibraryErrors`: the only failures are `FilmErrors.NotFound`
+  and `AuthErrors.Unauthenticated`.
+- A `UserFilm` keeps its film from being purged; the sync refreshes it instead (`CatalogSyncService`).
