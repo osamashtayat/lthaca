@@ -10,6 +10,8 @@ public static class RoomEvents
 
     public const string MemberJoined = "memberJoined";
     public const string MemberLeft = "memberLeft";
+    public const string MemberReady = "memberReady";
+    public const string RoomStarted = "roomStarted";
     public const string VoteCast = "voteCast";
     public const string DeckExtended = "deckExtended";
     public const string RoomMatched = "roomMatched";

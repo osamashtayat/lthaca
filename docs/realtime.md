@@ -11,6 +11,8 @@ pushes "something changed" hints and receives member actions that it forwards to
 |---|---|---|
 | `memberJoined` | `{ roomId, memberId }` | refetch room members |
 | `memberLeft` | `{ roomId, memberId }` | refetch room members |
+| `memberReady` | `{ roomId, memberId }` | refetch the room (readiness, "2 OF 3 READY") |
+| `roomStarted` | `{ roomId }` | refetch the room; `swiping` → go to the room deck |
 | `voteCast` | `{ roomId, deckItemId }` | refetch progress (no vote values in the event) |
 | `deckExtended` | `{ roomId, fromPosition }` | refetch the deck from that position |
 | `roomMatched` | `{ roomId, tmdbId }` | go to the result screen |
@@ -22,6 +24,8 @@ authorization stays in one place. Group name per room: `RoomEvents.GroupFor(room
 ## Server rules
 - Auth (ADR-0012): users and guests both carry a cookie principal (a guest's is scoped to one room). A `JoinRoom(code)` hub
   method asks a service to confirm the caller is a `RoomMember` before adding the connection to the room's group.
+- Publishers: `memberJoined`/`memberLeft`/`roomClosed` BE-10; `memberReady` (after `PUT …/mood`, mood rooms only),
+  `roomStarted` (after `POST …/start`), `voteCast`, `deckExtended` BE-11; `roomMatched` BE-12.
 - Hub methods are thin: call one Application service, return. Group membership changes happen only after the service
   confirmed the member.
 - Services publish through `IRoomEventPublisher.PublishAsync(roomId, RoomEvents.X, payload, ct)` **after** `SaveChangesAsync`.
@@ -34,7 +38,9 @@ authorization stays in one place. Group name per room: `RoomEvents.GroupFor(room
 - `useRoomHub({ room: code, onSynced })` also invokes `JoinRoom(code)` after the first connect and after every reconnect (the
   server drops group membership with the connection), then calls `onSynced`. Rooms use it through `useRoomLive(code, enabled)`
   (features/rooms), which refetches the room on `memberJoined`, `memberLeft`, `roomMatched`, `roomClosed` and on every sync.
-- There is no event for "host started" or "member ready" yet, so the lobby also polls the room every 4 s while `status` is `lobby`.
+- `memberReady` and `roomStarted` are in the contract (BE-10a) but published only once BE-11 lands (mood and start). Until
+  the frontend handles them in `useRoomLive`, the lobby polls the room every 4 s while `status` is `lobby`; it drops the
+  polling in that frontend change (issue #23).
 - Handlers invalidate TanStack Query keys; on reconnect, invalidate the room's queries (events may have been missed).
 - Votes and swipes are HTTP mutations (retry 0) with a client-generated id, never hub calls (ADR-0015).
 - Scaling out needs a SignalR backplane first (ADR-0016).
