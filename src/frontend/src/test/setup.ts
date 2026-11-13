@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll } from 'vitest'
+import { resetMockAuth } from '@/mocks/authStore'
 import { server } from '@/mocks/server'
 
 // jsdom (used by component tests, opted in per file) doesn't implement the modal <dialog> API; this minimal stand-in
@@ -21,6 +22,7 @@ beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))
 afterEach(() => {
   // Per-test overrides (server.use) end with the test. Mock stores add their reset calls here.
   server.resetHandlers()
+  resetMockAuth()
 })
 
 afterAll(() => server.close())

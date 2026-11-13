@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { NavLink } from 'react-router'
+import { SessionAction } from '@/features/auth'
 import { CloseIcon, Wordmark } from '@/shared/ui'
 import { NAV_ITEMS } from './navigation'
 
@@ -50,6 +51,9 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
           </NavLink>
         ))}
       </nav>
+      <div className="mx-5 mt-6">
+        <SessionAction onNavigate={onClose} className="w-full" />
+      </div>
     </dialog>
   )
 }

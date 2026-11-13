@@ -11,7 +11,7 @@ src/shared/api/     client.ts (openapi-fetch; the only fetch), apiError.ts, prob
 src/shared/query/   queryClient.ts (the one QueryClient config), queryKeys.ts (every key)
 src/shared/realtime/ events.ts (from contracts/realtime-events.json), roomHub.ts, useRoomHub.ts
 src/shared/ui/      the UI kit (add shared pieces here, not page-local copies): Button, IconButton, Chip/ToggleChip,
-                    SegmentedControl, StubRating, TicketCard, Poster, Sheet, MonoLabel + Wordmark, icons, LoadingState, ErrorState
+                    SegmentedControl, StubRating, TicketCard, Poster, Sheet, MonoLabel, TextField + Wordmark, icons, LoadingState, ErrorState
 src/shared/notify/  notify.ts (toasts), Toaster.tsx — the only files importing sonner
 src/shared/styles/  tokens.css (design tokens), global.css (base styles)
 src/mocks/          MSW mock API for the dev server and Vitest (ADR-0020); src/test/setup.ts starts it in Vitest
@@ -57,6 +57,15 @@ Adding mocks for a frontend task:
 
 Realtime stays off while mocks answer (`REALTIME_ENABLED`); test event reactions by calling the handlers you pass to
 `useRoomHub`.
+
+## Session and guards
+- `useCurrentUser()` (features/auth) is the session: a `CurrentUserDto` (user or guest) or `null` (a 401 is an answer, not an
+  error). A guest counts as signed out for user-only screens (`isUser`).
+- User-only routes go inside the `RequireUser` layout group in `app/routes.tsx`; it redirects to `/sign-in?next=…`
+  (`next` is sanitised by `safeNextPath`). The server still enforces access with 401.
+- `shared/api/client.ts` echoes the `XSRF-TOKEN` cookie as `X-XSRF-TOKEN` on every POST/PUT/PATCH/DELETE; hooks do nothing.
+- Sign-in/register/sign-out hooks update the `auth.me` cache and refetch or drop every other cached answer.
+- Mocks: signed in as the mock user by default; tests call `setMockSession(null | MOCK_GUEST | user)` (reset after each test).
 
 ## Real-time
 - `useRoomHub({ enabled, handlers })` opens the single RoomHub connection for the screen and returns `{ status }`.

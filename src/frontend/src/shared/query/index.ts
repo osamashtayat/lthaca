@@ -1,2 +1,2 @@
 export { createQueryClient, shouldRetryQuery } from './queryClient'
-export { queryKeys } from './queryKeys'
+export { isNotSessionQuery, queryKeys } from './queryKeys'
