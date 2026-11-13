@@ -22,6 +22,10 @@ export const queryKeys = {
     detail: (deckId: string) => ['decks', 'detail', deckId] as const,
     top: (deckId: string) => ['decks', 'top', deckId] as const,
   },
+  browse: {
+    all: ['browse'] as const,
+    list: (query: object) => ['browse', 'list', query] as const,
+  },
   library: {
     all: ['library'] as const,
     detail: (tmdbId: number) => ['library', 'detail', tmdbId] as const,
