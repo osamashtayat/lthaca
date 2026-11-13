@@ -1,5 +1,6 @@
 using Ithaca.Application.Users;
 using Ithaca.Domain.Films;
+using Ithaca.Domain.Library;
 using Ithaca.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +22,9 @@ public interface IAppDbContext
     IQueryable<UserReadModel> Users { get; }
 
     DbSet<Guest> Guests { get; }
+
+    /// <summary>My Cinema: a user's flags and rating per film. Referencing a film keeps it from being purged (ADR-0019).</summary>
+    DbSet<UserFilm> UserFilms { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
