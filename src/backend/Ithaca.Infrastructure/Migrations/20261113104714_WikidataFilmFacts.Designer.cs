@@ -13,7 +13,7 @@ using Pgvector;
 namespace Ithaca.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261113104211_WikidataFilmFacts")]
+    [Migration("20261113104714_WikidataFilmFacts")]
     partial class WikidataFilmFacts
     {
         /// <inheritdoc />
@@ -163,9 +163,6 @@ namespace Ithaca.Infrastructure.Migrations
 
                     b.HasKey("FilmId")
                         .HasName("pk_film_facts");
-
-                    b.HasIndex("FetchedAt")
-                        .HasDatabaseName("ix_film_facts_fetched_at");
 
                     b.ToTable("film_facts", (string)null);
                 });

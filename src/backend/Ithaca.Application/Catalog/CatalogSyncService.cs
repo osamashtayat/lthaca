@@ -11,14 +11,14 @@ namespace Ithaca.Application.Catalog;
 /// TMDB → <c>films</c> sync (ADR-0003). Pages through TMDB's most popular films, upserts each by <c>TmdbId</c>, optionally
 /// embeds it (off by default, ADR-0017), then deletes films not refreshed within <see cref="CatalogSyncOptions.MaxAgeDays"/>
 /// (TMDB's 6-month caching limit), then gives the remaining films their Wikidata facts
-/// (<see cref="WikidataEnrichmentService"/>). Saves once per page (and once per Wikidata batch), so a failure mid-run keeps
+/// (<see cref="WikidataEnricher"/>). Saves once per page (and once per Wikidata batch), so a failure mid-run keeps
 /// the work already done; the next run continues. Called by <c>CatalogSyncJob</c> and the <c>--sync-catalog</c> command.
 /// </summary>
 public sealed class CatalogSyncService(
     IAppDbContext db,
     ITmdbClient tmdb,
     IEmbeddingClient embeddings,
-    WikidataEnrichmentService facts,
+    WikidataEnricher facts,
     IOptions<CatalogSyncOptions> options,
     TimeProvider time)
 {

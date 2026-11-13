@@ -161,9 +161,6 @@ namespace Ithaca.Infrastructure.Migrations
                     b.HasKey("FilmId")
                         .HasName("pk_film_facts");
 
-                    b.HasIndex("FetchedAt")
-                        .HasDatabaseName("ix_film_facts_fetched_at");
-
                     b.ToTable("film_facts", (string)null);
                 });
 

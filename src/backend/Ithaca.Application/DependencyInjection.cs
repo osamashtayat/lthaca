@@ -21,7 +21,7 @@ public static class DependencyInjection
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<FilmQueryService>();
         services.AddScoped<CatalogSyncService>();
-        services.AddScoped<WikidataEnrichmentService>();
+        services.AddScoped<WikidataEnricher>(); // collaborator of CatalogSyncService only, not a use-case service
         services.AddScoped<FilmTrailerService>();
         services.AddScoped<AuthService>();
         services.AddScoped<DeckService>();

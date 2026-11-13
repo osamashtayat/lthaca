@@ -12,14 +12,15 @@ namespace Ithaca.Application.Catalog;
 /// older than <see cref="WikidataOptions.RefreshDays"/>, in TMDB-id order, <see cref="WikidataOptions.BatchSize"/> at a
 /// time: one SPARQL query and one save per batch, so a failure keeps the batches already done and the next run picks up
 /// the rest. Films Wikidata doesn't link are logged and skipped (and retried next run, as Wikidata grows).
-/// Called by <see cref="CatalogSyncService"/>.
+/// A collaborator of <see cref="CatalogSyncService"/>, its only caller, not a use-case service of its own
+/// (docs/backend-conventions.md: a service never calls another use-case service).
 /// </summary>
-public sealed partial class WikidataEnrichmentService(
+public sealed partial class WikidataEnricher(
     IAppDbContext db,
     IWikidataClient wikidata,
     IOptions<WikidataOptions> options,
     TimeProvider time,
-    ILogger<WikidataEnrichmentService> logger)
+    ILogger<WikidataEnricher> logger)
 {
     public async Task<Result<WikidataEnrichmentReport>> RunAsync(CancellationToken ct)
     {

@@ -79,7 +79,7 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
 - Attribution: the footer notice is required wherever TMDB data is shown (logo still TODO, ADR-0017).
 
 ## Wikidata enricher (ADR-0017)
-- `WikidataEnrichmentService`, the last step of the sync: films without `FilmFacts`, or with facts older than
+- `WikidataEnricher` (a collaborator of `CatalogSyncService`, not a use-case service), the last step of the sync: films without `FilmFacts`, or with facts older than
   `Wikidata:RefreshDays` (30), in TMDB-id order, `Wikidata:BatchSize` (100) per SPARQL query, one save per batch, so a
   failed run keeps its finished batches and the next run continues. Films Wikidata doesn't link are logged (TMDB ids
   only) and skipped, and retried next run.

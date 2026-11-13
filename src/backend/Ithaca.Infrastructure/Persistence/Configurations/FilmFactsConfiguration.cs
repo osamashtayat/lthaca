@@ -25,6 +25,5 @@ internal sealed class FilmFactsConfiguration : IEntityTypeConfiguration<FilmFact
         builder.Property(x => x.Languages).IsRequired();
         builder.Property(x => x.Awards).IsRequired();
         builder.Property(x => x.EmbeddingText).IsRequired();
-        builder.HasIndex(x => x.FetchedAt).HasDatabaseName("ix_film_facts_fetched_at");
     }
 }

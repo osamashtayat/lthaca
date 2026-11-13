@@ -109,7 +109,7 @@ internal sealed partial class WikidataHttpClient(HttpClient http, ILogger<Wikida
                 Value(r, "label"),
                 IntOf(Value(r, "ord")),
                 DecimalOf(Value(r, "num"))))
-            .Where(r => r.TmdbId is > 0 && r.Item is not null)
+            .Where(r => r.TmdbId is > 0 && IsQid(r.Item))
             .GroupBy(r => r.TmdbId!.Value);
 
         foreach (var group in byTmdb.OrderBy(g => g.Key))
@@ -143,6 +143,10 @@ internal sealed partial class WikidataHttpClient(HttpClient http, ILogger<Wikida
 
     private static List<string> Labels(List<Row> rows, string kind) =>
         [.. rows.Where(r => r.Kind == kind && r.Label is not null).Select(r => r.Label!).Distinct(StringComparer.Ordinal)];
+
+    /// <summary>Only items (<c>Q123</c>) can be films; anything else in the reply is skipped, never thrown on.</summary>
+    private static bool IsQid(string? item) =>
+        item is { Length: > 1 and <= FilmFacts.WikidataIdMaxLength } && item[0] == 'Q' && item.AsSpan(1).IndexOfAnyExceptInRange('0', '9') < 0;
 
     private static string? Value(Dictionary<string, SparqlValue> row, string name) => row.TryGetValue(name, out var v) ? v.Value : null;
 

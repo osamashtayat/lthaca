@@ -85,6 +85,22 @@ public sealed class WikidataHttpClientTests
     }
 
     [Fact]
+    public async Task GetFilms_RowWithoutAnItemId_IsSkipped()
+    {
+        const string body = """
+            {"results":{"bindings":[
+              {"tmdb":{"value":"7"},"item":{"value":"http://www.wikidata.org/entity/L42"},"kind":{"value":"item"}},
+              {"tmdb":{"value":"8"},"item":{"value":"http://www.wikidata.org/entity/Q8"},"kind":{"value":"item"}}
+            ]}}
+            """;
+        var (client, _) = Create(body: body);
+
+        var result = await client.GetFilmsAsync([7, 8], TestContext.Current.CancellationToken);
+
+        result.Value.ShouldHaveSingleItem().TmdbId.ShouldBe(8);
+    }
+
+    [Fact]
     public async Task GetFilms_NoIds_SendsNothing()
     {
         var (client, handler) = Create();

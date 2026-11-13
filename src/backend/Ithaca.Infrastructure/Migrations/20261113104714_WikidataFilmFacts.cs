@@ -39,11 +39,6 @@ namespace Ithaca.Infrastructure.Migrations
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
-
-            migrationBuilder.CreateIndex(
-                name: "ix_film_facts_fetched_at",
-                table: "film_facts",
-                column: "fetched_at");
         }
 
         /// <inheritdoc />

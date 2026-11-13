@@ -53,6 +53,7 @@ services:
       Ai__EmbeddingApiKey: ${Ai__EmbeddingApiKey:-}
       Tmdb__Client: ${Tmdb__Client:-Fake}
       Tmdb__ApiKey: ${Tmdb__ApiKey:-}
+      Wikidata__Client: ${Wikidata__Client:-Fake}
       CatalogSync__Enabled: ${CatalogSync__Enabled:-false}
       CatalogSync__Pages: ${CatalogSync__Pages:-50}
       CatalogSync__EmbedOverviews: ${CatalogSync__EmbedOverviews:-false}

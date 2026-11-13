@@ -19,7 +19,7 @@ namespace Ithaca.Tests.Catalog;
 /// 27205 but not 496243. The database is shared by the collection, so each test starts by clearing <c>film_facts</c>.
 /// </summary>
 [Collection(DatabaseCollectionDefinition.Name)]
-public sealed class WikidataEnrichmentServiceTests(PostgresFixture postgres)
+public sealed class WikidataEnricherTests(PostgresFixture postgres)
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -53,7 +53,7 @@ public sealed class WikidataEnrichmentServiceTests(PostgresFixture postgres)
         var tmdb = new SentinelTmdb();
         var sync = new CatalogSyncService(
             db, tmdb, scope.ServiceProvider.GetRequiredService<IEmbeddingClient>(),
-            scope.ServiceProvider.GetRequiredService<WikidataEnrichmentService>(),
+            scope.ServiceProvider.GetRequiredService<WikidataEnricher>(),
             Options.Create(new CatalogSyncOptions { Pages = 1 }), TimeProvider.System);
 
         var result = await sync.RunAsync(Ct);
@@ -110,9 +110,9 @@ public sealed class WikidataEnrichmentServiceTests(PostgresFixture postgres)
         counting.RequestedIds.ShouldContain(550, "older than RefreshDays (30)");
     }
 
-    private static WikidataEnrichmentService Enricher(AppDbContext db, IWikidataClient client, int batchSize, TimeProvider? time = null) =>
+    private static WikidataEnricher Enricher(AppDbContext db, IWikidataClient client, int batchSize, TimeProvider? time = null) =>
         new(db, client, Options.Create(new WikidataOptions { BatchSize = batchSize, RefreshDays = 30 }), time ?? TimeProvider.System,
-            NullLogger<WikidataEnrichmentService>.Instance);
+            NullLogger<WikidataEnricher>.Instance);
 
     private static async Task<AppDbContext> ClearedDbAsync(AsyncServiceScope scope)
     {

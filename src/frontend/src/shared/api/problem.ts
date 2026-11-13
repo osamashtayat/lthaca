@@ -33,7 +33,7 @@ export const PROBLEM_MESSAGES = {
   'ai.invalid_output': "We couldn't come up with picks this time. Try again.",
   'ai.unavailable': 'Our movie brain is taking a break. Try again in a minute.',
   'tmdb.unavailable': "We can't load film details right now. Try again in a moment.",
-  'wikidata.unavailable': "We can't load film details right now. Try again in a moment.",
+  'wikidata.unavailable': "Film facts aren't available right now. Try again later.",
   'ai.refused': "We can't help with that request. Try describing your mood differently.",
 } as const satisfies Record<string, string>
 

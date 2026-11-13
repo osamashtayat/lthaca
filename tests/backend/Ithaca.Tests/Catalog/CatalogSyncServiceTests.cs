@@ -61,7 +61,7 @@ public sealed class CatalogSyncServiceTests(PostgresFixture postgres)
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         var service = new CatalogSyncService(
             db, new FailingTmdb(), scope.ServiceProvider.GetRequiredService<IEmbeddingClient>(),
-            scope.ServiceProvider.GetRequiredService<WikidataEnrichmentService>(), Options.Create(new CatalogSyncOptions()), TimeProvider.System);
+            scope.ServiceProvider.GetRequiredService<WikidataEnricher>(), Options.Create(new CatalogSyncOptions()), TimeProvider.System);
 
         var result = await service.RunAsync(TestContext.Current.CancellationToken);
 
