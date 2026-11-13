@@ -5,6 +5,7 @@ using Ithaca.Application.Common;
 using Ithaca.Application.Tmdb;
 using Ithaca.Infrastructure.Ai;
 using Ithaca.Infrastructure.Configuration;
+using Ithaca.Infrastructure.Identity;
 using Ithaca.Infrastructure.Jobs;
 using Ithaca.Infrastructure.Persistence;
 using Ithaca.Infrastructure.Tmdb;
@@ -35,6 +36,7 @@ public static class DependencyInjection
             PersistenceOptions.Configure(options, connectionString);
         });
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddIthacaIdentity();
 
         services.AddExternalClients(configuration);
 

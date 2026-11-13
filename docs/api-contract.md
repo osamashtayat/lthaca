@@ -132,6 +132,17 @@ type CurrentUserDto  = {
 - ⚠ Open (A1): a guest who opens a second room's link gets a new guest identity for that room and loses the first
   (one room per guest principal). Assumed acceptable.
 
+**As built (BE-02, ADR-0023):**
+- Cookies: `ithaca_session` (HttpOnly, Lax, persistent 30 days sliding, Secure in Production), `ithaca_af` (antiforgery,
+  HttpOnly) and `XSRF-TOKEN` (readable; send its value, URL-decoded, as `X-XSRF-TOKEN`).
+- Every POST/PUT/PATCH/DELETE without a valid header answers **400 `auth.antiforgery_failed`**, sign-in included; every
+  unsafe endpoint declares that 400 in `contracts/openapi.json`. A token is bound to the caller: after register,
+  sign-in or sign-out, use the new `XSRF-TOKEN` from that response.
+- `POST /api/auth/sign-out` without a session is still 204 (idempotent).
+- User-only endpoints (Access **user** in §5–§7: decks, library, `POST /api/rooms`) answer 401 `auth.unauthenticated`
+  to anonymous callers **and to guests**. Member and host rules arrive with the room tasks.
+- Emails are matched case-insensitively and trimmed; display names are trimmed.
+
 ## 5. Solo deck and swipes (incl. by mood)
 
 A solo deck belongs to one user. "Just swipe" starts with a varied **sampler** and adapts; "By mood" starts from a

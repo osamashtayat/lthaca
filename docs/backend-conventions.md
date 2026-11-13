@@ -16,6 +16,17 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
 - Route constraints (`{tmdbId:int:min(1)}`) and DataAnnotations on `…Request` records do input-shape validation
   (automatic 400). Business validation is the service's job and returns `Error.Validation(field, message)`.
 
+## Getting the actor (BE-02, ADR-0023)
+- Who is calling comes from `ICurrentActor.Actor` (Application/Auth): `null` when signed out, else `Kind` (user or
+  guest), `Id`, and for guests `RoomId`/`RoomCode`. Services never read `HttpContext` or claims; never take a user id
+  from a request body.
+- User-only endpoints: `[Authorize(Policy = AuthPolicies.User)]` on the controller or action (anonymous and guests →
+  401). Member/host checks are service rules returning `RoomErrors.NotMember` / `NotHost`.
+- Changing the caller (sign-in, sign-out, issuing a guest cookie) goes through `ISessionManager` and its action carries
+  `[IssueXsrfToken]`. Every unsafe action is antiforgery-checked globally; there is no exemption attribute.
+- Users are Identity accounts (`ApplicationUser`, Infrastructure); services read them as `UserReadModel` through
+  `IAppDbContext.Users`. Tests: `BrowserClient` (Harness) behaves like the SPA (cookies + XSRF header).
+
 ## Services
 - Live in `Ithaca.Application/<Feature>/`, `sealed`, named `<Feature><Query|Command|…>Service` or by use case; registered one
   per line in `Ithaca.Application/DependencyInjection.cs` (scoped).
