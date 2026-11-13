@@ -36,6 +36,10 @@ export function useSwipe(deckId: string) {
       }
       queryClient.setQueryData<Deck>(key, (deck) => (deck ? revertSwipe(deck, vars.deckItemId) : deck))
       notify.apiError(error)
+      // The card isn't (or is no longer) in this deck: bringing it back would strand the user on it, so reload the deck.
+      if (error instanceof ApiError && (error.code === 'deck.item_not_found' || error.code === 'deck.not_found')) {
+        void queryClient.invalidateQueries({ queryKey: key })
+      }
     },
   })
 

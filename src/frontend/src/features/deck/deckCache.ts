@@ -33,7 +33,3 @@ export function appendItems(deck: Deck, items: DeckItem[]): Deck {
 export function pendingItems(deck: Deck): DeckItem[] {
   return deck.items.filter((i) => i.swipe === null).sort((a, b) => a.position - b.position)
 }
-
-export function setOnWatchlist(deck: Deck, tmdbId: number, onWatchlist: boolean): Deck {
-  return { ...deck, items: deck.items.map((i) => (i.film.tmdbId === tmdbId ? { ...i, onWatchlist } : i)) }
-}

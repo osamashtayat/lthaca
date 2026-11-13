@@ -230,7 +230,7 @@ lint, test, build.
 - **Tests:** slice tests per endpoint/error; sampler variety; adaptation units; idempotency.
 - **Docs:** api-contract.md §5 as built; glossary.
 
-### FE-05 — Solo deck, swipe and top 3 · `In progress`
+### FE-05 — Solo deck, swipe and top 3 · `Done` (PR #13)
 - **Objective:** the "Solo — the deck" and "Solo — your top 3" boards.
 - **Deps:** BE-01, FE-02, FE-03. **Modules:** `src/features/deck/`, `src/app/routes.tsx`, `queryKeys.ts`, `src/mocks/`.
 - **Contract:** §5.
