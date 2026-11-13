@@ -134,7 +134,7 @@ public sealed class WikidataEnricherTests(PostgresFixture postgres)
         public const string Overview = "TMDBSENTINEL overview about soap.";
 
         private static readonly TmdbFilmDetails Film =
-            new(550, "TMDBSENTINEL Title", 1999, Overview, "/tmdbsentinel.jpg", 139, ["TMDBSENTINEL-Genre", "Drama"], 50);
+            new(550, "TMDBSENTINEL Title", 1999, Overview, "/tmdbsentinel.jpg", 139, ["TMDBSENTINEL-Genre", "Drama"], 50, null, null, null, null);
 
         public Task<Result<IReadOnlyList<TmdbFilmSummary>>> GetCatalogPageAsync(int page, CancellationToken ct) =>
             Task.FromResult<Result<IReadOnlyList<TmdbFilmSummary>>>(
