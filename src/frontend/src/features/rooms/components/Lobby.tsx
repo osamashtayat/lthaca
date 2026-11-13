@@ -25,7 +25,7 @@ async function shareInvite(room: Room) {
 }
 
 /** "Group — lobby": the ticket with the code, who is here and ready, and the host's start button. The server enforces host-only actions. */
-export function Lobby({ room }: { room: Room }) {
+export function Lobby({ room, textIgnored = false }: { room: Room; textIgnored?: boolean }) {
   const navigate = useNavigate()
   const start = useStartRoom(room.code)
   const leave = useLeaveRoom(room.code)
@@ -40,6 +40,13 @@ export function Lobby({ room }: { room: Room }) {
           {room.deckSize > 0 && <p className="text-ink-muted">{room.deckSize} films to swipe</p>}
         </div>
       </TicketCard>
+
+      {textIgnored && (
+        // ADR-0022: a quiet note, never a toast, and it never repeats what the member typed.
+        <p className="font-mono text-xs tracking-[0.12em] text-ink-muted">
+          We went with your moods; we couldn&apos;t make sense of the text.
+        </p>
+      )}
 
       <Button variant="yellow" onClick={() => void shareInvite(room)} className="w-full">
         <ShareIcon /> Invite friends

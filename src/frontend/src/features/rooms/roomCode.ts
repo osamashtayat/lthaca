@@ -11,3 +11,12 @@ export const MODE_OPTIONS = [
 /** "2 OF 3 READY": what the host sees on the start button. */
 export const readyCount = (members: readonly { isReady: boolean }[]) =>
   `${members.filter((m) => m.isReady).length} OF ${members.length} READY`
+
+/** "Anything you'd rather skip?" Private to the member: the group never sees these (api-contract §6). */
+export const HARD_NO_OPTIONS = [
+  { value: 'horror', label: 'Horror' },
+  { value: 'gore', label: 'Gore' },
+  { value: 'subtitles', label: 'Subtitles' },
+  { value: 'musicals', label: 'Musicals' },
+  { value: 'sadEndings', label: 'Sad endings' },
+] as const

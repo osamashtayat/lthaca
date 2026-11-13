@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { addMockAccount, findMockAccount, getMockSession, isMockEmailTaken, setMockSession } from './authStore'
 import { findMockFilm, mockFilms, mockTrailers } from './fixtures'
 import { createMockDeck, mockDeckDto, parseMockMood, mockDeckTop, nextMockBatch, recordMockSwipe } from './deckStore'
-import { addMockRoomMember, createMockRoom, findMockRoom, mockRoomFor, removeMockRoomMember, setMockRoomStatus, MOCK_MAX_MEMBERS } from './roomStore'
+import { setMockMemberReady, addMockRoomMember, createMockRoom, findMockRoom, mockRoomFor, removeMockRoomMember, setMockRoomStatus, MOCK_MAX_MEMBERS } from './roomStore'
 import { getMockUserFilm, listMockUserFilms, putMockUserFilm, setMockWatchlist } from './libraryStore'
 import { apiPath, problem, type RequestOf, type ResponseOf } from './http'
 
@@ -275,6 +275,23 @@ const roomHandlers = [
     if (!getMockSession()) return problem(401, 'auth.unauthenticated')
     const room = mockRoomFor(String(params.code))
     return room ? HttpResponse.json<ResponseOf<'/api/rooms/{code}', 'get', 200>>(room) : problem(403, 'room.not_member')
+  }),
+  http.put(apiPath('/api/rooms/{code}/mood'), async ({ request, params }) => {
+    if (!findMockRoom(String(params.code))) return problem(404, 'room.not_found')
+    const room = mockRoomFor(String(params.code))
+    if (!room) return problem(403, 'room.not_member')
+    if (room.mode !== 'mood' || room.status !== 'lobby') return problem(409, 'room.invalid_state')
+    const body = (await request.json()) as RequestOf<'/api/rooms/{code}/mood', 'put'>
+    // Hard nos stay private (never stored on the room DTO); the mood rules are the same as for a solo deck (ADR-0022).
+    const outcome = parseMockMood({ moods: body.moods, maxRuntime: body.maxRuntime, language: null, text: body.text })
+    if (outcome.kind === 'error') {
+      return problem(outcome.status, outcome.code, outcome.code === 'validation' ? { text: ['Check the moods and text.'] } : undefined)
+    }
+    setMockMemberReady(room.code, room.me.id, true)
+    const ready = mockRoomFor(room.code)
+    return ready
+      ? HttpResponse.json<ResponseOf<'/api/rooms/{code}/mood', 'put', 200>>({ member: ready.me, textIgnored: outcome.mood.textIgnored })
+      : problem(500, 'server.error')
   }),
   http.post(apiPath('/api/rooms/{code}/start'), ({ params }) => {
     if (!findMockRoom(String(params.code))) return problem(404, 'room.not_found')
