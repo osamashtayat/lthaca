@@ -1,5 +1,6 @@
 using Ithaca.Application.Common;
 using Ithaca.Application.Users;
+using Ithaca.Domain.Decks;
 using Ithaca.Domain.Films;
 using Ithaca.Domain.Library;
 using Ithaca.Domain.Users;
@@ -28,6 +29,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Guest> Guests => Set<Guest>();
 
     public DbSet<UserFilm> UserFilms => Set<UserFilm>();
+
+    public DbSet<Deck> Decks => Set<Deck>();
+
+    public DbSet<DeckItem> DeckItems => Set<DeckItem>();
+
+    public DbSet<Swipe> Swipes => Set<Swipe>();
 
     IQueryable<UserReadModel> IAppDbContext.Users =>
         Users.AsNoTracking().Select(u => new UserReadModel { Id = u.Id, Email = u.Email!, DisplayName = u.DisplayName });

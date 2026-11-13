@@ -1,3 +1,6 @@
+using System.Linq.Expressions;
+using Ithaca.Domain.Films;
+
 namespace Ithaca.Application.Films;
 
 /// <summary>
@@ -26,3 +29,11 @@ public sealed record FilmSummaryDto(
     int? RuntimeMinutes,
     IReadOnlyList<string> Genres,
     double? VoteAverage);
+
+/// <summary>The one <c>Film</c> → <see cref="FilmDto"/> projection, for EF <c>Select</c> (details, decks, rooms).</summary>
+public static class FilmProjections
+{
+    public static readonly Expression<Func<Film, FilmDto>> Dto = f => new FilmDto(
+        f.TmdbId, f.Title, f.ReleaseYear, f.Overview, f.PosterPath, f.RuntimeMinutes, f.Genres,
+        f.BackdropPath, f.VoteAverage, f.VoteCount, f.OriginalLanguage);
+}

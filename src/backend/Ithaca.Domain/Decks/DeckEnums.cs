@@ -1,4 +1,4 @@
-namespace Ithaca.Application.Decks;
+namespace Ithaca.Domain.Decks;
 
 /// <summary>Right = I'd watch it, left = not for me, up = seen it (glossary: Vote). Used by solo swipes and room votes.</summary>
 public enum SwipeDirection

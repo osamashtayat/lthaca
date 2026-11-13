@@ -81,4 +81,20 @@ public sealed class UserFilm
         UpdatedAt = now;
         return true;
     }
+
+    /// <summary>
+    /// An "up" swipe (seen it): sets <see cref="Seen"/>, and <see cref="Liked"/> too when they loved it. Only ever turns flags
+    /// on; the rating and watchlist are left alone. <see cref="UpdatedAt"/> moves only when something changed.
+    /// </summary>
+    public void MarkSeen(bool loved, DateTimeOffset now)
+    {
+        if (Seen && (Liked || !loved))
+        {
+            return;
+        }
+
+        Seen = true;
+        Liked = Liked || loved;
+        UpdatedAt = now;
+    }
 }

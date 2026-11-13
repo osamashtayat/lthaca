@@ -206,6 +206,20 @@ Rules (server-side; the UI never decides them):
 - Solo decks require a signed-in user; no anonymous "Just swipe" (A3, decided).
 - Routes (A4, decided): `/mood` (picker), `/deck/:deckId` (swipe), `/deck/:deckId/top` (top 3; it belongs to a deck,
   "from 14 swipes").
+- As built (BE-08, `justSwipe`; `source: "mood"` still answers 501 until BE-09):
+  - Batches of 10 cards (`Deck.BatchSize`), positions from 1; a deck stops at 300 cards (`Deck.MaxItems`), then
+    `POST …/items` returns `[]`. Also `[]` once no eligible film is left.
+  - Eligible: available films (not A14) not yet in this deck and not `seen` in the caller's library at dealing time. A
+    film is never twice in one deck (unique in the database). Candidates are the 500 most popular eligible films.
+  - The first batch is the **sampler**: one film per main genre in turn, decades in turn within a genre, most popular
+    first (±10% noise, so two decks differ). Later batches: 70% by fit with this deck's swipes and the caller's 200 most
+    recent library rows (genres, runtime, embeddings of the same model when present, a little popularity), 30% still from
+    the sampler. Weights: right +1, left −1, seen + loved +1.5, seen + not for me −1, seen alone +0.3; library liked +1,
+    watchlist +0.5, high rating +1, low rating −1, all × 0.6.
+  - `justSwipe` with a `mood` → 400 `errors.mood`. `seenVerdict` without `up` → 400 `errors.seenVerdict`.
+  - Swipe retries: the same `swipeId` on the same card → 204, nothing changes; a `swipeId` already used for another card,
+    or a new one for a swiped card → 409 `deck.already_swiped`.
+  - Top 3: right swipes ordered by genre fit with the deck's swipes and the library, then TMDB popularity, then deck order.
 
 ## 6. Rooms and votes (ADR-0012, ADR-0015, docs/realtime.md)
 
@@ -391,7 +405,7 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
 | A9 | "Watching" shelf and "Keep watching · 42 min left" | **Decided: dropped.** No Watching state, shelf or Tonight row |
 | A10 | Room codes `POP-428` vs the board's share link `ithaca.app/r/pop-428` | Links use the existing route `/rooms/POP-428`; a `/r/:code` short link is optional later |
 | A11 | Group taste ("Blend your histories") with guests who have no history | Second wave, with the taste task |
-| A12 | The glossary has no names for a solo deck's parent record or a solo swipe (`Vote` is a room member's) | `swipe`/`SwipeDto`/`swipeId` in the contract; BE-08 proposes glossary entries |
+| A12 | The glossary has no names for a solo deck's parent record or a solo swipe (`Vote` is a room member's) | **Proposed by BE-08:** `Deck` (table `decks`) and `Swipe` (table `swipes`), in the glossary; owner to confirm |
 | A13 | Room mood has no `language` (solo mood does); is it stored as a `MoodQuery`? | No language in rooms; stored per member as a `MoodQuery` |
 | A14 | ADR-0019's "unavailable" films (TMDB 404) have no flag in `FilmDto` | Add `isAvailable` additively in BE-05 if screens need it |
 | A15 | Can guests import (ADR-0024 Q1)? Guests have no library (ADR-0012) | No: `/api/imports` is user-only; `/import` sends guests to sign in or create an account (recommended option (a)) |
