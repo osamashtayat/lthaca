@@ -90,7 +90,8 @@ need). Tokens are already in `src/shared/styles/tokens.css` (table below).
   stub numerals).
 - Pill buttons (`rounded-full`) for primary actions and toggles; big dark (`bg-ink text-cream`) bottom CTAs, 58–60px tall;
   segmented controls on `bg-beige`; selected chips turn ink with a yellow hard shadow.
-- Ratings are 1–5 ticket stubs (pink when on), not stars, for the user's own rating; TMDB scores show as "★ 8.0".
+- Ratings are five ticket stubs (pink when on), not stars, for the user's own rating, in half steps 0.5–5 (half a stub
+  pink; ADR-0024, FE-20); TMDB scores show as "★ 8.0".
 - Phone boards are 390×844; desktop boards (≥ lg) widen the same pages, they are not separate routes.
 
 **Directions:** two screens have two directions; the owner chose **A** for both. Tonight = the "Tonight — Just me" and
@@ -153,6 +154,17 @@ Use the kit (`@/shared/ui`: `Button`, `IconButton`, `ToggleChip`, `Sheet`…) in
 - Navigation: top header (wordmark · ☰; no bell until notifications exist, ADR-0014). Every page shows the TMDB attribution footer (`AppFooter`). The ☰ opens `MenuSheet` (native modal `<dialog>`); from `lg` the main items
   show as pills in the header. Items are defined once in `app/layout/navigation.ts`. No bottom tab bar.
 - Deck gestures own the lower screen; toasts sit top-center.
+
+## Help sheets ("?")
+When a screen asks the user to do something outside Ithaca (first case: getting the Letterboxd export, ADR-0024), it
+gets a 44px `IconButton` "?" (`aria-label` names the topic, e.g. "How to get your Letterboxd file") next to the action,
+opening a `Sheet` with short numbered steps: one action per step, the exact menu names of the other service (verified on
+its help pages, never guessed), phone first, and one line on what we do with the data. The steps live once in the
+feature that owns the topic (`LetterboxdHelpSheet` in `features/import`, exported from its `index.ts`) and every screen
+that needs them reuses it (FE-13's empty state, FE-14's `/import`).
+
+**Import entry points** (where they are: ADR-0024 → Where users meet it): each is a link to `/import`; none uploads by
+itself or reimplements the help steps.
 
 ## Accessibility
 - Real `<button>`/`<a>`; radio-style widgets (SegmentedControl, StubRating) are native `<input type="radio">` (visually
