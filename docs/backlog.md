@@ -32,7 +32,9 @@ flowchart LR
   BE09 --> BE11
   BE03 & BE08 --> BE13[BE-13 AI picks]
   BE04 --> BE14a[BE-14a taste contract] --> BE14[BE-14 taste]
-  BE05 --> BE15a[BE-15a import contract] --> BE15[BE-15 import]
+  OPS12[OPS-12 import + half-star decision] --> BE15a[BE-15a import contract] --> BE15[BE-15 import]
+  BE05 --> OPS12
+  BE05 --> BE20[BE-20 half-star ratings] --> BE15
   BE02 --> BE16a[BE-16a profile contract] --> BE16[BE-16 profile]
   BE12 --> BE17[BE-17 remove stub plumbing]
 
@@ -46,6 +48,9 @@ flowchart LR
   FE05 & FE07 & FE09 --> FE12[FE-12 Tonight]
   BE14a --> FE13[FE-13 taste]
   BE15a --> FE14[FE-14 import]
+  FE03 --> FE14
+  BE20 --> FE20[FE-20 half-stub rating]
+  FE02 & FE04 & FE07 --> FE20
   BE16a --> FE15[FE-15 profile]
 ```
 
@@ -57,8 +62,8 @@ backend and can start at once (FE-01 after the owner approves the asset). Ops: O
 
 | Lane | Order | Notes |
 |---|---|---|
-| Backend | BE-01 → BE-09a → BE-02 → BE-03 → BE-04 → BE-05 → BE-06 → BE-07 → BE-08 → BE-09 → BE-10 → BE-11 → BE-12 → BE-13 → BE-14a → BE-14 → BE-15a → BE-15 → BE-16a → BE-16 → BE-17 | BE-09a is a tiny contract task done early so FE-06 isn't blocked; BE-06/BE-07 need only BE-01; the `a` contract tasks are small and may be pulled earlier so FE-13–15 can start |
-| Frontend | FE-01 (when approved) · FE-02 → FE-03 → FE-04 → FE-05 → FE-06 → FE-07 → FE-08 → FE-09 → FE-10 → FE-11 → FE-12 → FE-13 → FE-14 → FE-15 | all on mocks |
+| Backend | BE-01 → BE-09a → BE-02 → BE-03 → BE-04 → BE-05 → BE-06 → **BE-20** → BE-07 → BE-08 → BE-09 → BE-10 → BE-11 → BE-12 → BE-13 → BE-14a → BE-14 → BE-15a → BE-15 → BE-16a → BE-16 → BE-17 | BE-09a is a tiny contract task done early so FE-06 isn't blocked; BE-20 (half stars) goes next because it changes merged work and FE-20 waits on it; BE-15a needs only OPS-12 and may be pulled earlier; BE-06/BE-07 need only BE-01; the `a` contract tasks are small and may be pulled earlier so FE-13–15 can start |
+| Frontend | FE-01 (when approved) · FE-02 → FE-03 → FE-04 → FE-05 → FE-06 → FE-07 → FE-08 → FE-09 → **FE-20** (after BE-20) → FE-10 → FE-11 → FE-12 → FE-13 → FE-14 → FE-15 | all on mocks |
 
 With a second agent per side, tasks with no path between them can also run in parallel (BE-05 ‖ BE-06, FE-07 ‖ FE-08).
 Two backend tasks that add EF migrations merge one at a time: the later one deletes its migration, updates from `main`,
@@ -289,6 +294,9 @@ lint, test, build.
 - **Objective:** unblock FE-13 before the taste logic exists.
 - **Deps:** BE-04. **Modules:** `docs/api-contract.md` (new §12), DTOs, stubs, `openapi.json`, `schema.d.ts`.
 - **Contract:** writes §12: `GET /api/taste`, `source: "taste"` for decks, `mode: "taste"` for rooms (additive enum values).
+  `GET /api/taste` must say whether the caller has **enough history** for By taste (e.g. `ready`, `signalCount`,
+  `signalsNeeded`; threshold assumed in api-contract A16 / ADR-0024 Q2), so FE-13 can show the import screen without
+  deciding anything itself. Creating a taste deck without enough history → a 422 code of its own (§12).
 - **Scope:** in: as BE-01, for §12. Out: logic.
 - **Acceptance:** §12 endpoints in `openapi.json`, answering 501. **Tests:** stub slice test.
 
@@ -297,12 +305,23 @@ lint, test, build.
 - **Deps:** BE-14a, BE-05, BE-08. **Modules:** `Domain/Taste`, `Application/Taste`, `Application/Decks`, `Application/Rooms`.
 - **Contract:** §12.
 - **Scope:** in: profile vector from embeddings of liked/rated films (`input_type` `query` for text), readiness threshold,
-  taste decks, group taste skipping films any member has seen (A11 for guests). Out: import (BE-15).
+  taste decks, group taste skipping films any member has seen (A11 for guests). Ratings are 0.5–5 (ADR-0024): weight
+  them on that scale; imported `UserFilm`s count like any other (ADR-0024 decision 9). Out: import (BE-15).
 - **Acceptance:** per §12. **Tests:** slice tests; deterministic vector test with the Fake embedding client.
 
 ### FE-13 — By taste screen · `Todo`
-- **Objective:** the "Solo — by taste" board. **Deps:** BE-14a, FE-05. **Modules:** `src/features/taste/`, `src/mocks/`.
-- **Contract:** §12. **Scope:** in: `/taste` per the board. **Acceptance / Tests:** per §12, with mocks.
+- **Objective:** the "Solo — by taste" board, and no dead end for people without history.
+- **Deps:** BE-14a, FE-05. **Modules:** `src/features/taste/`, `src/mocks/`, `src/shared/ui/` (help sheet, if shared with
+  FE-14).
+- **Contract:** §12 (readiness), §13 (link only).
+- **Scope:** in: `/taste` per the board. **Empty state** (ADR-0024): when §12 says the user hasn't enough history, show an
+  "Import your Letterboxd" screen instead of the deck: one line on why ("We need a few films you love first"), a primary
+  button to `/import`, a secondary "Just swipe instead" to `/deck`, and the **"?" help** that opens the Letterboxd export
+  steps (the same `LetterboxdHelpSheet` FE-14 uses; whichever task lands first builds it, see frontend-conventions.md →
+  Help sheets). Guests never reach `/taste` (user-only route). Out: the import itself (FE-14).
+- **Acceptance:** with mocks: not ready → the import screen, its "?" opens the steps, both buttons navigate; ready → the
+  board as designed; the decision comes only from the API.
+- **Tests:** ready vs not-ready rendering; "?" opens and closes the sheet (focus returns to the button).
 
 ## Rooms
 
@@ -400,6 +419,48 @@ lint, test, build.
 - **Acceptance:** with mocks, each shelf lists, filters and pages; user-only.
 - **Tests:** shelf switch and empty state.
 
+### BE-20 — Half-star ratings: contract and code (ADR-0024) · `Todo`
+- **Objective:** Ithaca ratings become 0.5–5 in steps of 0.5 everywhere (the BE-05 follow-up), before FE-20 and BE-15.
+- **Deps:** BE-05, OPS-12. **Modules:** `Domain/Library/UserFilm.cs` (`MinRating`/`MaxRating`, `Rating`, `Set`,
+  half-star conversion), `Application/Library/LibraryDtos.cs` (`UpdateUserFilmRequest.Rating`, `UserFilmDto.Rating`),
+  `Application/Library/LibraryService.cs` (projection, `rating` sort), `Application/Library/README.md`,
+  `Infrastructure/Persistence/Configurations/UserFilmConfiguration.cs` (column + `ck_user_films_rating`), migration,
+  `tests/backend/…/Library/LibraryEndpointTests.cs`, `contracts/openapi.json`, `schema.d.ts`.
+- **Contract:** §7 "Half stars" (contract change in this task; FE-20 waits on it). `rating` becomes a JSON number
+  (`decimal?` in C#, not `double`), 0.5–5 in steps of 0.5; anything else → 400 `validation` `errors.rating`. Whole numbers
+  stay valid, so existing clients keep working.
+- **Scope:** in: store an integer count of half stars (`rating_half_stars smallint`, check `BETWEEN 1 AND 10`); the
+  migration converts existing rows (`× 2`) and replaces the old column and constraint; conversion in one place in
+  `UserFilm` (no `× 2` scattered in services); validation on the request (a custom attribute or the domain rule, one
+  home) and in the domain; `rating` sort on the stored value; `export-openapi.sh`; `npm run api:types` (only
+  `schema.d.ts`, no other frontend file). If the owner answers ADR-0024 Q5 "yes" before this starts, also add the
+  rating's source (Ithaca / import) in the same migration. Out: frontend (FE-20), import (BE-15).
+- **Acceptance:** `PUT` accepts 0.5, 3.5, 5 and returns them unchanged; 0, 5.5, 3.25, 7 → 400 `errors.rating`; existing
+  ratings read back as before after the migration; `sort=rating` orders 4.5 above 4 and unrated last; migration drift
+  check green.
+- **Tests:** parameterised valid/invalid ratings; migration up on rows with ratings; sort with half steps; rating ⇒ seen
+  still holds; `UserFilm` unit tests for the conversion.
+- **Docs:** api-contract.md §7 as built; glossary (already says 0.5–5).
+
+### FE-20 — Half-stub rating (ADR-0024) · `Todo`
+- **Objective:** users rate in half stubs, by touch, keyboard and screen reader, wherever a rating shows.
+- **Deps:** BE-20, FE-02, FE-04, FE-07. **Modules:** `src/shared/ui/StubRating.tsx` (+ test),
+  `src/app/dev/UiGalleryPage.tsx`, `src/features/films/components/FilmActions.tsx`, `src/features/library/pages/CinemaPage.tsx`,
+  `src/mocks/handlers.ts`, `src/mocks/libraryStore.ts`, tests that use ratings, `docs/frontend-conventions.md`.
+- **Contract:** §7 "Half stars".
+- **Scope:** in: `StubRating` keeps five ticket stubs, each can be half or fully on (left half pink); value 0.5–5;
+  **touch/mouse**: tapping the left half of a stub sets n − 0.5, the right half sets n, each half still a ≥ 44px-tall
+  target and the whole stub ≥ 44px wide; **keyboard**: one tab stop, arrow keys move by 0.5 (Home/End = 0.5/5);
+  **screen reader**: a slider-like or 10-radio group announcing "3.5 of 5 stubs" (pick the pattern, say why in the PR);
+  clearing a rating stays possible where FE-04 allows it; FE-04's "Your rating" and its optimistic update; My Cinema's
+  "YOU · 3.5/5"; mocks accept only half steps (400 `errors.rating` otherwise, as §7) and seed a half rating;
+  `/dev/ui` shows 0, 2.5 and 5. Out: any other rating UI.
+- **Acceptance:** at 375px a thumb can set 3.5 in one tap; keyboard and VoiceOver set and read half values; FE-04 and
+  FE-07 show half ratings from the API; token lint passes.
+- **Tests:** `StubRating`: tap halves (pointer position), arrows by 0.5, Home/End, accessible value text; FE-04 rating
+  keyboard test updated; mock 400 for 3.25.
+- **Docs:** frontend-conventions.md (the rating line under Design reference).
+
 ## Browse & details
 
 ### BE-06 — Catalog display fields and Browse · `Done` (PR #22)
@@ -444,27 +505,81 @@ lint, test, build.
 ## Import
 
 ### BE-15a — Import contract and stubs · `Todo`
-- **Objective:** unblock FE-14. **Deps:** BE-05. **Modules:** `docs/api-contract.md` (new §13), DTOs, stubs, contracts.
-- **Contract:** writes §13: upload, `ImportJob` status and results.
-- **Scope:** in: as BE-01, for §13. **Acceptance:** §13 in `openapi.json`, answering 501. **Tests:** stub slice test.
+- **Objective:** make §13 (designed in OPS-12, ADR-0024) executable so FE-14 can mock it.
+- **Deps:** OPS-12. **Modules:** `Application/Imports` (DTOs, `ImportErrors`, stub `ImportService`),
+  `Api/Controllers/ImportsController.cs`, `ErrorCodes.cs`, `ErrorStatusCodes.cs`, `src/frontend/src/shared/api/problem.ts`,
+  `contracts/openapi.json`, `schema.d.ts`, `docs/api-contract.md` (as built).
+- **Contract:** §13 and its §2 codes: `import.not_found` (404), `import.invalid_file` (400), `import.already_running`
+  (409), `import.file_too_large` (413), `import.nothing_to_import` and `import.too_many_films` (422).
+- **Scope:** in: as BE-01, for §13: `CreateImportRequest` bound from `multipart/form-data` (form field `file`), the four
+  actions with every documented status, user-only policy, the six codes in all three lists with user text in
+  `problem.ts`; `export-openapi.sh`; `npm run api:types`. Out: parsing, the job, limits (BE-15).
+- **Acceptance:** §13 in `openapi.json` with the multipart body and every status; each action answers 501; a guest gets
+  401; `ErrorStatusCodesTests` green.
+- **Tests:** stub slice test (incl. a multipart POST with the XSRF header); mapping tests.
 
 ### BE-15 — Letterboxd import (ImportJob) · `Todo`
-- **Objective:** a user's Letterboxd history becomes `UserFilm`s.
-- **Deps:** BE-15a. **Modules:** `Domain/Imports`, `Application/Imports`, a background step, migration.
-- **Contract:** §13.
-- **Scope:** in: CSV/ZIP upload, `ImportJob` with progress, match by title + year to our catalog (no live TMDB on the
-  request path; unmatched rows reported), Letterboxd half stars → our 1–5 (rule written in §13). Out: other services.
-- **Acceptance:** per §13. **Tests:** fixture files, no network.
+- **Objective:** a user's Letterboxd export becomes `UserFilm`s, safely, with films we lack added from TMDB (ADR-0024).
+- **Deps:** BE-15a, BE-20 (half-star ratings), BE-05. **Modules:** `Domain/Imports` (`ImportJob`, `ImportItem`, the
+  Letterboxd-URI → TMDB-id match), `Application/Imports` (`ImportService`, parser, `ImportOptions`),
+  `Application/Catalog` (reuse the sync's add-a-film path), `ITmdbClient` + `Infrastructure/Tmdb` (movie search),
+  `Api` (a `BackgroundService` that only schedules and calls `ImportService`), configurations, migration.
+- **Contract:** §13 (every rule there), §7 merge semantics, A15–A18.
+- **Scope:** in: upload checks in §13 order (content type, the four files only, ZIP limits counted while reading,
+  413 as ProblemDetails even when the request-size limit trips, row cap, skipped rows); parsed rows stored as
+  `ImportItem`s, file dropped before the response; one active job per user (partial unique index → 409); the job:
+  matching (remembered URI matches, catalog, then TMDB search with the year rule, rate-limited with back-off), adding
+  films like the sync, the merge rules (never remove, Ithaca wins, rating ⇒ seen), progress saved in batches,
+  resume after restart, `lookupFailed` after the retry budget; not-found list kept for the latest job only; items
+  deleted when done; no titles in logs; delete-with-account hook for BE-16. Out: other services (IMDb, Trakt), guest
+  imports (A15), Wikidata/embeddings for new films (the next sync does them).
+- **Acceptance:** §13 as written; a real Letterboxd export (fixture, anonymised, no `profile.csv` content) imports with
+  the expected counts; importing it twice changes nothing the second time; an Ithaca rating survives an import;
+  `profile.csv`/`reviews.csv` are never opened (test); a ZIP bomb, a renamed binary and an oversized upload are refused
+  with the right codes; no network in tests.
+- **Tests:** parser units per file and edge row; limit tests with generated archives; matching rules with a Fake TMDB
+  (exact, ±1 year, several results, none, failures → `lookupFailed`); merge rules table; re-import idempotency;
+  concurrent upload → 409; job resume; slice tests per endpoint and code.
+- **Docs:** api-contract.md §13 as built; docs/backend-conventions.md (file uploads: limits and never storing them),
+  glossary if names change.
 
 ### FE-14 — Import screen · `Todo`
-- **Objective:** the "Import from Letterboxd" board. **Deps:** BE-15a, FE-02. **Modules:** `src/features/import/`,
-  `src/mocks/`. **Contract:** §13. **Scope:** in: `/import` per the board. **Acceptance / Tests:** per §13, with mocks.
+- **Objective:** the "Import from Letterboxd" board: upload, progress, result and the "not found" list, on a phone.
+- **Deps:** BE-15a, FE-02, FE-03. **Modules:** `src/features/import/` (`useCreateImport`, `useImport` (polling),
+  `useImports`, `useImportNotFound`), `src/shared/ui/` (help sheet), `src/shared/query/queryKeys.ts`,
+  `src/shared/api/client.ts` (multipart body, if openapi-fetch needs a serializer), `src/app/routes.tsx`, `src/mocks/`
+  (`importStore.ts`, scriptable progress).
+- **Contract:** §13; §7 (invalidate library queries when an import completes).
+- **Scope:** in: `/import` (user-only; replaces the `PlaceholderPage`): intro, "Choose your Letterboxd ZIP" (native
+  file picker, `accept=".zip,.csv"`, never reads the file in JS beyond handing it to the upload), upload with the XSRF
+  header; on load, resume the latest import (`GET /api/imports?pageSize=1`) if it is `queued`/`running`, or show its
+  result; progress ("312 of 1,204 films") polled every ~2 s only while queued/running; result: counts from
+  `changes` ("418 new in My Cinema · 27 ratings kept from Ithaca") and `notFoundCount`; the **not-found list** (title ·
+  year, a link to the Letterboxd page, a short line per reason), paged with "Load more"; every §13 error code mapped to
+  text (`problem.ts`), shown near the picker; "Go to My Cinema" when done. The **"?" help** (`LetterboxdHelpSheet`,
+  see frontend-conventions.md → Help sheets) with these steps, worded for phones, checked against Letterboxd's help
+  pages and on a real iPhone and Android phone before merging:
+  1. Letterboxd's export works only on its website in a **desktop** browser view, not in the Letterboxd app.
+  2. On your phone: open letterboxd.com in Safari or Chrome, switch to the desktop site (Safari: the page-settings
+     menu → "Request Desktop Website"; Chrome: ⋮ → "Desktop site"; verify the names), and sign in. Or use a computer.
+  3. Go to Settings → **Data** → "Export your data" (direct link: `letterboxd.com/user/exportdata/`) and tap
+     **Export Data**. A ZIP file downloads.
+  4. Come back to Ithaca, tap "Choose your Letterboxd ZIP" and pick the file (Files / Downloads).
+  5. A line: "We only read your watched films, ratings, likes and watchlist. We never keep the file."
+  A guest who opens `/import` sees "Create a free account to import" (A15) via the existing `RequireUser` redirect.
+  Out: other services, editing a not-found row by hand (later).
+- **Acceptance:** with mocks: upload → progress → result; reload mid-import resumes the progress; each error code shows
+  its text; the not-found list pages; library queries refresh after completion; the "?" sheet is usable with
+  VoiceOver-style navigation and at 375px; ≥ 44px targets.
+- **Tests:** upload sends multipart + XSRF; polling starts and stops with the status; error mapping; not-found paging;
+  help sheet open/close.
 
 ## Profile
 
 ### BE-16a — Profile contract and stubs · `Todo`
 - **Objective:** unblock FE-15. **Deps:** BE-02. **Modules:** `docs/api-contract.md` (new §14), DTOs, stubs, contracts.
-- **Contract:** writes §14: display name, password change, delete account (what deletion removes: decided with the owner).
+- **Contract:** writes §14: display name, password change, delete account (what deletion removes: decided with the owner;
+  it includes the user's imports and not-found lists, ADR-0024).
 - **Scope:** in: as BE-01, for §14. **Acceptance:** §14 in `openapi.json`, answering 501. **Tests:** stub slice test.
 
 ### BE-16 — Profile · `Todo`
@@ -473,7 +588,9 @@ lint, test, build.
 
 ### FE-15 — Profile & settings screen · `Todo`
 - **Objective:** the "Profile & settings" board. **Deps:** BE-16a, FE-03. **Modules:** `src/features/profile/`,
-  `src/mocks/`. **Contract:** §14. **Scope:** in: `/profile` per the board.
+  `src/mocks/`. **Contract:** §14, §13 (latest import, read-only). **Scope:** in: `/profile` per the board, plus a
+  "Letterboxd" row: "Import your history" → `/import`, or the latest import's date and counts when there is one
+  (ADR-0024; the second entry point next to My Cinema's link, assumed until Q3 is answered).
 
 ## Tonight
 
@@ -513,12 +630,15 @@ lint, test, build.
 - **Acceptance:** the four rows of ADR-0022's table are in the contract; FE-06 / FE-10 depend on BE-09a.
 - **Tests:** none (docs).
 
-### OPS-12 — Letterboxd import and half-star ratings: decision and contract · `In progress`
-- **Objective:** record the owner's Letterboxd-import and half-star decisions, and turn them into contract and tasks.
-- **Deps:** OPS-01, BE-05. **Modules:** `docs/decisions/`, `docs/api-contract.md`, `docs/backlog.md`,
+### OPS-12 — Letterboxd import and half-star ratings: decision and contract (ADR-0024) · `In progress`
+- **Objective:** record the owner's Letterboxd-import and half-star decisions and turn them into contract and tasks.
+- **Deps:** OPS-01, BE-05. **Modules:** `docs/decisions/0024-…`, `docs/api-contract.md`, `docs/backlog.md`,
   `docs/glossary.md`, `docs/frontend-conventions.md`.
-- **Contract:** writes the design of §13 Import and the §7 rating change (code lands in later tasks).
-- **Scope:** in: docs only. Out: code.
+- **Contract:** writes the design of §13 Import (+ its §2 codes), the §7 half-star change, A15–A18.
+- **Scope:** in: ADR-0024; BE-15a, BE-15, FE-13, FE-14, FE-15, BE-14, BE-14a, BE-16a, BE-19 scope; new BE-20, FE-20.
+  Out: code (BE-15a, BE-15, BE-20, FE-20…).
+- **Acceptance:** every owner decision is in the ADR and the contract; each change to merged work has a task with deps;
+  open questions Q1–Q5 are listed for the owner. **Tests:** none (docs).
 
 ### BE-17 — Remove the contract-stub plumbing · `Todo`
 - **Objective:** no stubs left. **Deps:** BE-12, BE-14, BE-15, BE-16. **Modules:** `ErrorCodes.cs`,
@@ -608,7 +728,8 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Deps:** BE-09, L3. **Modules:** `Program.cs` (ASP.NET Core rate limiter), `Application/Ai`, `ErrorCodes`,
   `ErrorStatusCodes`, `problem.ts`, options class.
 - **Contract:** §2 adds 429 `rate.limited` with `Retry-After` (contract change in this task; no FE task waits on it).
-- **Scope:** in: per-user and per-IP limits on sign-in/register, room join, deck creation and every AI-backed call;
+- **Scope:** in: per-user and per-IP limits on sign-in/register, room join, deck creation, **import creation**
+  (`POST /api/imports`, e.g. 5 per user per day; ADR-0024) and every AI-backed call;
   a daily global AI budget counter that switches mood parsing off (chips still work, ADR-0022) when reached; limits in
   config. Out: billing.
 - **Acceptance:** exceeding a limit → 429 `rate.limited` with `Retry-After`; when the budget is reached, mood text gets
@@ -693,3 +814,6 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 Contract assumptions A1–A14 are in [api-contract.md §11](api-contract.md#11-open-questions). Also:
 - **Glossary:** the solo deck's parent record and the solo swipe need names (BE-08 proposes them, A12).
 - **Task order:** Wikidata and Voyage (BE-03, BE-04) come right after auth as requested, although only BE-13 and BE-14 need them.
+- **Letterboxd import (ADR-0024 Q1–Q5):** guests and import, how much history is "enough", the second entry point
+  (My Cinema and/or Profile), whether the catalog grows first (L6), and whether a re-import updates earlier imported
+  ratings. Recommendations and the assumptions tasks use until then are in the ADR.
