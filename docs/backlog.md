@@ -333,7 +333,7 @@ lint, test, build.
   mood and start, which are still stubs), the frontend handlers and removing the polling (a frontend task).
 - **Acceptance:** `RealtimeContractTests` green. **Tests:** the existing contract drift test.
 
-### BE-10 — Rooms core: create, preview, join, leave, close, hub membership · `Todo`
+### BE-10 — Rooms core: create, preview, join, leave, close, hub membership · `In progress`
 - **Objective:** rooms with a share code, guests joining without an account, and hub groups only for members.
 - **Deps:** BE-02. **Modules:** `Domain/Rooms`, `Application/Rooms`, `Api/Controllers/RoomsController.cs`,
   `Api/Hubs/RoomHub.cs`, migration.
