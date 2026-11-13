@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { BookmarkIcon, CheckIcon, CloseIcon, ErrorState, HeartIcon, LoadingState, MonoLabel } from '@/shared/ui'
+import { BookmarkIcon, ErrorState, LoadingState, MonoLabel } from '@/shared/ui'
 import type { Film } from '@/features/films'
 import { useDeck } from '../api/useDeck'
 import { useMoreItems } from '../api/useMoreItems'
 import { useSwipe } from '../api/useSwipe'
+import { SwipeButtons } from '../components/SwipeButtons'
 import { SwipeCard } from '../components/SwipeCard'
 import { VerdictSheet } from '../components/VerdictSheet'
 import { WatchlistButton } from '../components/WatchlistButton'
@@ -83,17 +84,7 @@ export function DeckPage() {
             />
           </div>
 
-          <div className="flex items-center justify-center gap-5">
-            <RoundButton label="Not for me" onClick={() => onSwipe(current, 'left')}>
-              <CloseIcon />
-            </RoundButton>
-            <RoundButton label="Seen it" onClick={() => onSwipe(current, 'up')}>
-              <CheckIcon />
-            </RoundButton>
-            <RoundButton label="I'd watch it" primary onClick={() => onSwipe(current, 'right')}>
-              <HeartIcon />
-            </RoundButton>
-          </div>
+          <SwipeButtons onSwipe={(direction) => onSwipe(current, direction)} />
           <p className="text-center font-mono text-xs tracking-[0.12em] text-ink-muted uppercase">
             <BookmarkIcon size={12} /> saves it for later · swipe or use the buttons
           </p>
@@ -121,29 +112,5 @@ export function DeckPage() {
 
       <VerdictSheet film={seenFilm?.film ?? null} onChoose={chooseVerdict} onClose={() => setSeenFilm(null)} />
     </section>
-  )
-}
-
-function RoundButton({
-  label,
-  primary = false,
-  onClick,
-  children,
-}: {
-  label: string
-  primary?: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className={`flex size-16 items-center justify-center rounded-full border-2 border-ink text-ink shadow-hard ${primary ? 'bg-pink' : 'bg-cream'}`}
-    >
-      {children}
-    </button>
   )
 }

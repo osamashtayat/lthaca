@@ -408,9 +408,9 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
 | A12 | The glossary has no names for a solo deck's parent record or a solo swipe (`Vote` is a room member's) | **Proposed by BE-08:** `Deck` (table `decks`) and `Swipe` (table `swipes`), in the glossary; owner to confirm |
 | A13 | Room mood has no `language` (solo mood does); is it stored as a `MoodQuery`? | No language in rooms; stored per member as a `MoodQuery` |
 | A14 | ADR-0019's "unavailable" films (TMDB 404) have no flag in `FilmDto` | Add `isAvailable` additively in BE-05 if screens need it |
-| A15 | Can guests import (ADR-0024 Q1)? Guests have no library (ADR-0012) | No: `/api/imports` is user-only; `/import` sends guests to sign in or create an account (recommended option (a)) |
-| A16 | How much history makes By taste "ready" without an import (ADR-0024 Q2)? | ≥ 10 films liked, rated ≥ 3.5 or "loved it"; the server decides and §12 (BE-14a) exposes it |
-| A17 | Does a re-import update a rating that came from an earlier import (ADR-0024 Q5)? | No: any existing rating wins. Recommended instead: track the rating's source so imports may update imported ratings only |
+| A15 | Can guests import (ADR-0024 Q1)? Guests have no library (ADR-0012) | **Decided: no.** `/api/imports` is user-only; `/import` sends guests to sign in or create an account |
+| A16 | How much history makes By taste "ready" without an import (ADR-0024 Q2)? | **Decided:** ≥ 10 films liked, rated ≥ 3.5 or "loved it"; the server decides and §12 (BE-14a) exposes it |
+| A17 | Does a re-import update a rating that came from an earlier import (ADR-0024 Q5)? | **Decided: no.** Any existing rating wins, imported or not; ratings carry no source |
 | A18 | A single uploaded CSV has the same columns whether it is watched, watchlist or likes | Identified by its export file name; anything else is `import.invalid_file` |
 
 ## 13. Import (Letterboxd)

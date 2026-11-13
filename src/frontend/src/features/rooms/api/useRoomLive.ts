@@ -10,14 +10,21 @@ import { normalizeRoomCode } from '../roomCode'
 export function useRoomLive(code: string, enabled: boolean) {
   const queryClient = useQueryClient()
   const key = normalizeRoomCode(code)
-  const refetchRoom = () => void queryClient.invalidateQueries({ queryKey: queryKeys.rooms.detail(key) })
+  // `exact`: the room itself only. The deck holds the member's own optimistic votes and is refetched by its own events.
+  const refetchRoom = () => void queryClient.invalidateQueries({ queryKey: queryKeys.rooms.detail(key), exact: true })
+  const refetchProgress = () => void queryClient.invalidateQueries({ queryKey: queryKeys.rooms.progress(key) })
+  const refetchDeck = () => void queryClient.invalidateQueries({ queryKey: queryKeys.rooms.deck(key) })
+  // After a (re)connect events may have been missed: everything for this room (no `exact`).
+  const refetchAll = () => void queryClient.invalidateQueries({ queryKey: queryKeys.rooms.detail(key) })
   const handlers: RoomEventHandlers = {
     memberJoined: refetchRoom,
     memberLeft: refetchRoom,
     memberReady: refetchRoom,
     roomStarted: refetchRoom,
+    voteCast: refetchProgress,
+    deckExtended: refetchDeck,
     roomMatched: refetchRoom,
     roomClosed: refetchRoom,
   }
-  return useRoomHub({ enabled, room: key, handlers, onSynced: refetchRoom })
+  return useRoomHub({ enabled, room: key, handlers, onSynced: refetchAll })
 }
