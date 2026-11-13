@@ -1,4 +1,3 @@
-using Ithaca.Application.Ai;
 using Ithaca.Application.Catalog;
 using Ithaca.Application.Common;
 using Ithaca.Application.Tmdb;
@@ -52,8 +51,8 @@ public sealed class WikidataEnricherTests(PostgresFixture postgres)
         var db = await ClearedDbAsync(scope);
         var tmdb = new SentinelTmdb();
         var sync = new CatalogSyncService(
-            db, tmdb, scope.ServiceProvider.GetRequiredService<IEmbeddingClient>(),
-            scope.ServiceProvider.GetRequiredService<WikidataEnricher>(),
+            db, tmdb, scope.ServiceProvider.GetRequiredService<WikidataEnricher>(),
+            scope.ServiceProvider.GetRequiredService<FilmEmbedder>(),
             Options.Create(new CatalogSyncOptions { Pages = 1 }), TimeProvider.System);
 
         var result = await sync.RunAsync(Ct);
@@ -64,6 +63,8 @@ public sealed class WikidataEnricherTests(PostgresFixture postgres)
         var text = (await FactsByTmdbIdAsync(db))[550].EmbeddingText;
         text.ShouldNotBeNullOrWhiteSpace();
         text.ShouldNotContain("TMDBSENTINEL", Case.Insensitive);
+        var embedded = await db.Films.AsNoTracking().SingleAsync(f => f.TmdbId == 550, Ct);
+        embedded.EmbeddingSourceHash.ShouldBe(FilmFacts.HashOf(text), "the vector was made from the Wikidata text");
     }
 
     [Fact]

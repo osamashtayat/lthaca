@@ -58,10 +58,11 @@ public sealed class AiPlumbingTests
     public async Task FakeEmbedding_IsDeterministicAndRightSized()
     {
         var client = new FakeEmbeddingClient();
-        var a = await client.EmbedAsync("cosy rainy-day film", TestContext.Current.CancellationToken);
-        var b = await client.EmbedAsync("cosy rainy-day film", TestContext.Current.CancellationToken);
+        var vectors = await client.EmbedAsync(["cosy rainy-day film", "cosy rainy-day film", "heist"], EmbeddingInputType.Query, TestContext.Current.CancellationToken);
 
-        a.Length.ShouldBe(Film.EmbeddingDimensions);
-        a.ShouldBe(b);
+        vectors.Value.Count.ShouldBe(3);
+        vectors.Value[0].Length.ShouldBe(Film.EmbeddingDimensions);
+        vectors.Value[0].ShouldBe(vectors.Value[1]);
+        vectors.Value[0].ShouldNotBe(vectors.Value[2]);
     }
 }

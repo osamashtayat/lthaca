@@ -25,5 +25,6 @@ internal sealed class FilmFactsConfiguration : IEntityTypeConfiguration<FilmFact
         builder.Property(x => x.Languages).IsRequired();
         builder.Property(x => x.Awards).IsRequired();
         builder.Property(x => x.EmbeddingText).IsRequired();
+        builder.Property(x => x.EmbeddingTextHash).HasMaxLength(Film.EmbeddingSourceHashLength).IsRequired();
     }
 }

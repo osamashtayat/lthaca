@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using Ithaca.Domain.Errors;
 
@@ -55,8 +56,11 @@ public sealed class FilmFacts
 
     public string[] Awards { get; private set; } = [];
 
-    /// <summary>What the film's vector represents (BE-04 embeds it). Built from the fields above only, never from TMDB.</summary>
+    /// <summary>What the film's vector represents (the sync embeds it). Built from the fields above only, never from TMDB.</summary>
     public string EmbeddingText { get; private set; } = "";
+
+    /// <summary><see cref="HashOf"/> of <see cref="EmbeddingText"/>; compared with <see cref="Film.EmbeddingSourceHash"/>.</summary>
+    public string EmbeddingTextHash { get; private set; } = "";
 
     public DateTimeOffset FetchedAt { get; private set; }
 
@@ -72,12 +76,14 @@ public sealed class FilmFacts
         return created;
     }
 
-    /// <summary>Replaces every fact with Wikidata's current answer. Returns true when <see cref="EmbeddingText"/> changed.</summary>
-    public bool Update(WikidataFacts facts, DateTimeOffset now)
+    /// <summary>
+    /// Replaces every fact with Wikidata's current answer. When the text changes, so does <see cref="EmbeddingTextHash"/>,
+    /// which tells the sync to re-embed the film.
+    /// </summary>
+    public void Update(WikidataFacts facts, DateTimeOffset now)
     {
         var clean = Normalize(facts);
         var text = BuildEmbeddingText(clean);
-        var textChanged = text != EmbeddingText;
         WikidataId = clean.WikidataId;
         Genres = [.. clean.Genres];
         MainSubjects = [.. clean.MainSubjects];
@@ -89,8 +95,8 @@ public sealed class FilmFacts
         RuntimeMinutes = clean.RuntimeMinutes;
         Awards = [.. clean.Awards];
         EmbeddingText = text;
+        EmbeddingTextHash = HashOf(text);
         FetchedAt = now;
-        return textChanged;
     }
 
     /// <summary>
@@ -121,6 +127,13 @@ public sealed class FilmFacts
 
         AppendLine(text, "Awards", clean.Awards);
         return text.ToString().TrimEnd('\n');
+    }
+
+    /// <summary>Lowercase hex SHA-256 of the UTF-8 text: a stable fingerprint of what was embedded.</summary>
+    public static string HashOf(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
     }
 
     private static void AppendLine(StringBuilder text, string label, IReadOnlyList<string> values)

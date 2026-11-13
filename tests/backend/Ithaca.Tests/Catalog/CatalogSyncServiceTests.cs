@@ -1,4 +1,3 @@
-using Ithaca.Application.Ai;
 using Ithaca.Application.Catalog;
 using Ithaca.Application.Common;
 using Ithaca.Application.Tmdb;
@@ -16,7 +15,7 @@ namespace Ithaca.Tests.Catalog;
 public sealed class CatalogSyncServiceTests(PostgresFixture postgres)
 {
     [Fact]
-    public async Task Run_UpsertsPurgesStaleAndLeavesEmbeddingsOffByDefault()
+    public async Task Run_UpsertsAndPurgesStale()
     {
         await using var factory = await IthacaApiFactory.StartAsync(postgres.ConnectionString);
         await using var scope = factory.Services.CreateAsyncScope();
@@ -30,25 +29,8 @@ public sealed class CatalogSyncServiceTests(PostgresFixture postgres)
         result.IsSuccess.ShouldBeTrue();
         result.Value.Pages.ShouldBe(1);
         (result.Value.Added + result.Value.Updated).ShouldBe(3);
-        result.Value.Embedded.ShouldBe(0, "EmbedOverviews stays off: TMDB text must not reach AI (ADR-0017)");
         result.Value.Purged.ShouldBeGreaterThanOrEqualTo(1);
         (await db.Films.AnyAsync(f => f.TmdbId == 424242, TestContext.Current.CancellationToken)).ShouldBeFalse("older than the 6-month TMDB cache limit");
-    }
-
-    [Fact]
-    public async Task Run_WithEmbeddingsOn_StoresVectorAndModel()
-    {
-        await using var factory = await IthacaApiFactory.StartAsync(
-            postgres.ConnectionString, new Dictionary<string, string> { ["CatalogSync:EmbedOverviews"] = "true" });
-        await using var scope = factory.Services.CreateAsyncScope();
-
-        var result = await scope.ServiceProvider.GetRequiredService<CatalogSyncService>().RunAsync(TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        var film = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Films.AsNoTracking()
-            .SingleAsync(f => f.TmdbId == 550, TestContext.Current.CancellationToken);
-        film.EmbeddingModel.ShouldBe("fake");
-        film.Embedding!.Length.ShouldBe(Film.EmbeddingDimensions);
     }
 
     [Fact]
@@ -60,8 +42,8 @@ public sealed class CatalogSyncServiceTests(PostgresFixture postgres)
         db.Films.Add(Film.Create(434343, "Stale But Kept", DateTimeOffset.UtcNow.AddDays(-200)));
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         var service = new CatalogSyncService(
-            db, new FailingTmdb(), scope.ServiceProvider.GetRequiredService<IEmbeddingClient>(),
-            scope.ServiceProvider.GetRequiredService<WikidataEnricher>(), Options.Create(new CatalogSyncOptions()), TimeProvider.System);
+            db, new FailingTmdb(), scope.ServiceProvider.GetRequiredService<WikidataEnricher>(),
+            scope.ServiceProvider.GetRequiredService<FilmEmbedder>(), Options.Create(new CatalogSyncOptions()), TimeProvider.System);
 
         var result = await service.RunAsync(TestContext.Current.CancellationToken);
 

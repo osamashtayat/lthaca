@@ -12,4 +12,7 @@ public static class AiErrors
 
     public static Error InvalidOutput(PromptId prompt, string reason) =>
         new(ErrorCodes.AiInvalidOutput, $"Prompt {prompt} returned {reason}.");
+
+    public static Error InvalidEmbedding(string reason) =>
+        new(ErrorCodes.AiInvalidOutput, $"The embedding provider returned {reason}.");
 }

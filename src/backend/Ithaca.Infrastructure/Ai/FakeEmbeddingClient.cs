@@ -1,19 +1,26 @@
 using System.Security.Cryptography;
 using System.Text;
 using Ithaca.Application.Ai;
+using Ithaca.Application.Common;
 using Ithaca.Domain.Films;
 
 namespace Ithaca.Infrastructure.Ai;
 
 /// <summary>
 /// Offline embedding stand-in (<c>Ai:EmbeddingProvider = Fake</c>): a deterministic unit vector seeded from the text's
-/// hash. Same text → same vector, so similarity code can be tested; the numbers mean nothing.
+/// hash. Same text → same vector, so similarity code can be tested; the numbers mean nothing. The input type is ignored.
 /// </summary>
 internal sealed class FakeEmbeddingClient : IEmbeddingClient
 {
     public string ModelName => "fake";
 
-    public Task<float[]> EmbedAsync(string text, CancellationToken ct)
+    public Task<Result<IReadOnlyList<float[]>>> EmbedAsync(IReadOnlyList<string> texts, EmbeddingInputType inputType, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(texts);
+        return Task.FromResult(Result<IReadOnlyList<float[]>>.Success(texts.Select(Vector).ToList()));
+    }
+
+    private static float[] Vector(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
         var seed = BitConverter.ToInt32(SHA256.HashData(Encoding.UTF8.GetBytes(text)), 0);
@@ -32,6 +39,6 @@ internal sealed class FakeEmbeddingClient : IEmbeddingClient
             vector[i] /= norm;
         }
 
-        return Task.FromResult(vector);
+        return vector;
     }
 }

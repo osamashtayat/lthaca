@@ -39,6 +39,11 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("embedding_model");
 
+                    b.Property<string>("EmbeddingSourceHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("embedding_source_hash");
+
                     b.PrimitiveCollection<string[]>("Genres")
                         .IsRequired()
                         .HasColumnType("text[]")
@@ -124,6 +129,12 @@ namespace Ithaca.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("embedding_text");
+
+                    b.Property<string>("EmbeddingTextHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("embedding_text_hash");
 
                     b.Property<DateTimeOffset>("FetchedAt")
                         .HasColumnType("timestamp with time zone")

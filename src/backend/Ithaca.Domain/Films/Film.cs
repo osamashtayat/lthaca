@@ -16,6 +16,9 @@ public sealed class Film
 
     public const int EmbeddingModelMaxLength = 100;
 
+    /// <summary>Length of a lowercase hex SHA-256 (<see cref="FilmFacts.HashOf"/>).</summary>
+    public const int EmbeddingSourceHashLength = 64;
+
     private Film(int tmdbId, string title, DateTimeOffset now)
     {
         Id = SequentialGuid.NewV7(now);
@@ -56,6 +59,12 @@ public sealed class Film
     /// <summary>The model that produced <see cref="Embedding"/>; vectors from different models are never compared.</summary>
     public string? EmbeddingModel { get; private set; }
 
+    /// <summary>
+    /// Hash of the text <see cref="Embedding"/> was made from (<see cref="FilmFacts.EmbeddingTextHash"/> at the time). When it
+    /// no longer matches the film's facts, or <see cref="EmbeddingModel"/> isn't the configured model, the sync re-embeds.
+    /// </summary>
+    public string? EmbeddingSourceHash { get; private set; }
+
     public DateTimeOffset SyncedAt { get; private set; }
 
     public static Film Create(int tmdbId, string title, DateTimeOffset now)
@@ -69,16 +78,14 @@ public sealed class Film
     }
 
     /// <summary>
-    /// Catalog metadata from a TMDB sync; also refreshes <see cref="SyncedAt"/> (TMDB's 6-month caching limit is counted from it).
-    /// Returns true when the text an embedding is built from (title, genres, overview) changed.
+    /// Catalog metadata from a TMDB sync, for display only (ADR-0017: none of it is embedded); also refreshes
+    /// <see cref="SyncedAt"/> (TMDB's 6-month caching limit is counted from it).
     /// </summary>
-    public bool UpdateDetails(
+    public void UpdateDetails(
         string title, int? releaseYear, string? overview, string? posterPath, int? runtimeMinutes, string[] genres, double? popularity, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(genres);
-        var validTitle = ValidTitle(title);
-        var textChanged = Title != validTitle || Overview != overview || !Genres.SequenceEqual(genres);
-        Title = validTitle;
+        Title = ValidTitle(title);
         ReleaseYear = releaseYear;
         Overview = overview;
         PosterPath = posterPath;
@@ -86,22 +93,28 @@ public sealed class Film
         Genres = genres;
         Popularity = popularity;
         SyncedAt = now;
-        return textChanged;
     }
 
-    public void SetEmbedding(float[] embedding, string model)
+    /// <summary>Stores a vector with the model that made it and the hash of the text it was made from.</summary>
+    public void SetEmbedding(float[] embedding, string model, string sourceHash)
     {
         ArgumentNullException.ThrowIfNull(embedding);
         ArgumentException.ThrowIfNullOrWhiteSpace(model);
+        if (sourceHash is not { Length: EmbeddingSourceHashLength })
+        {
+            throw new DomainException(ErrorCodes.Validation, "sourceHash must be a SHA-256 hex string.", "sourceHash");
+        }
+
         if (embedding.Length != EmbeddingDimensions)
         {
             throw new DomainException(ErrorCodes.Validation, $"embedding must have {EmbeddingDimensions} dimensions.", "embedding");
         }
 
-        Embedding = embedding;
         EmbeddingModel = model.Length <= EmbeddingModelMaxLength
             ? model
             : throw new DomainException(ErrorCodes.Validation, "embedding model name is too long.", "embeddingModel");
+        Embedding = embedding;
+        EmbeddingSourceHash = sourceHash;
     }
 
     /// <summary>The one title rule: 1–<see cref="TitleMaxLength"/> characters after trimming.</summary>
