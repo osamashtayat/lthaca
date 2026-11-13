@@ -8,6 +8,7 @@ import { MoodPage } from '@/features/mood'
 import { BrowsePage } from '@/features/browse'
 import { CinemaPage } from '@/features/library'
 import { FilmPage } from '@/features/films'
+import { RoomPage, RoomsPage } from '@/features/rooms'
 
 /**
  * Route table. Paths follow the screens on the design canvas. `PlaceholderPage` marks screens a feature task
@@ -32,8 +33,8 @@ export const routes: RouteObject[] = [
           { path: '/profile', element: <PlaceholderPage title="Profile & settings" feature="profile" /> },
         ],
       },
-      { path: '/rooms', element: <PlaceholderPage title="Movie nights" feature="rooms" /> },
-      { path: '/rooms/:code', element: <PlaceholderPage title="Room lobby" feature="rooms" /> },
+      { path: '/rooms', element: <RoomsPage /> },
+      { path: '/rooms/:code', element: <RoomPage /> },
       { path: '/rooms/:code/swipe', element: <PlaceholderPage title="Group swipe" feature="rooms" /> },
       { path: '/rooms/:code/result', element: <PlaceholderPage title="It's a match" feature="rooms" /> },
       { path: '/browse', element: <BrowsePage /> },

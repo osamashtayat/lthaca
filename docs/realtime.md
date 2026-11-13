@@ -31,6 +31,10 @@ authorization stays in one place. Group name per room: `RoomEvents.GroupFor(room
 ## Client rules
 - `useRoomHub({ enabled, handlers })` is the only hub access. It opens one connection per mounted screen, auto-reconnects
   (0, 2, 10, 30 s) and reports `connecting | connected | reconnecting | disconnected`.
+- `useRoomHub({ room: code, onSynced })` also invokes `JoinRoom(code)` after the first connect and after every reconnect (the
+  server drops group membership with the connection), then calls `onSynced`. Rooms use it through `useRoomLive(code, enabled)`
+  (features/rooms), which refetches the room on `memberJoined`, `memberLeft`, `roomMatched`, `roomClosed` and on every sync.
+- There is no event for "host started" or "member ready" yet, so the lobby also polls the room every 4 s while `status` is `lobby`.
 - Handlers invalidate TanStack Query keys; on reconnect, invalidate the room's queries (events may have been missed).
 - Votes and swipes are HTTP mutations (retry 0) with a client-generated id, never hub calls (ADR-0015).
 - Scaling out needs a SignalR backplane first (ADR-0016).
