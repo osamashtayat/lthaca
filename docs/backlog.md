@@ -115,7 +115,7 @@ lint, test, build.
 - **Tests:** one parameterised slice test (each stub → 501 + code); `ErrorStatusCodesTests`; OpenAPI drift.
 - **Docs:** api-contract.md (deviations found), backend-conventions.md (a line on stubs).
 
-### FE-01 — TMDB logo in the footer · `Todo` (needs the owner's OK to download the official asset)
+### FE-01 — TMDB logo in the footer · `In progress` (owner approved the asset 2026-11-13)
 - **Objective:** meet TMDB's attribution terms (ADR-0017): logo next to the existing notice, less prominent than the
   Ithaca wordmark.
 - **Deps:** FE-00, owner approval. **Modules:** `src/frontend/src/app/layout/AppFooter.tsx`, the asset under
