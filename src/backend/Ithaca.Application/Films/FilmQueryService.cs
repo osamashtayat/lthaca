@@ -11,6 +11,9 @@ namespace Ithaca.Application.Films;
 /// </summary>
 public sealed class FilmQueryService(IAppDbContext db, ICurrentActor current)
 {
+    private const int Under90Minutes = 90;
+    private const int UpTo2hMinutes = 120;
+
     public async Task<Result<FilmDto>> GetByTmdbIdAsync(int tmdbId, CancellationToken ct)
     {
         var film = await db.Films
@@ -90,7 +93,4 @@ public sealed class FilmQueryService(IAppDbContext db, ICurrentActor current)
             .ToListAsync(ct);
         return Result<IReadOnlyList<string>>.Success(genres);
     }
-
-    private const int Under90Minutes = 90;
-    private const int UpTo2hMinutes = 120;
 }

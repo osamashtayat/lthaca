@@ -122,7 +122,8 @@ public sealed class Film
 
     /// <summary>
     /// TMDB answered 404 for a film user data references (ADR-0019): keep the row, clear the TMDB-derived display fields
-    /// (overview, poster), mark it unavailable. <see cref="SyncedAt"/> is refreshed: we now hold nothing TMDB asked us to
+    /// (overview, poster, backdrop), mark it unavailable. The score, vote count and language are bare figures, not text or
+    /// images, and stay so the film keeps its place in the user's library. <see cref="SyncedAt"/> is refreshed: we now hold nothing TMDB asked us to
     /// drop, and referenced films are never purged anyway.
     /// </summary>
     public void MarkUnavailable(DateTimeOffset now)
