@@ -7,7 +7,8 @@ The LLM is used **only at the edges**: (1) parse mood text into filters, (2) ran
 > **Data sources (ADR-0017):** TMDB is for **display** (details, posters, trailers); **Wikidata** (CC0) feeds the **AI**
 > (embeddings, ranking, explanations). Never send TMDB-derived text (overviews, taglines, TMDB keywords) to the LLM or the
 > embedding model; keep `CatalogSync:EmbedOverviews = false`. Mood parsing (user text + generic genre names) is unaffected.
-> Our own user data (votes, likes, ratings, imports) may be used freely. The Wikidata enricher is not built yet.
+> Our own user data (votes, likes, ratings, imports) may be used freely. AI-safe film data lives in `film_facts`
+> (`FilmFacts`), filled by the Wikidata enricher; `films` holds the TMDB display data.
 
 ## Pieces
 | Concern | Interface (Application) | Implementations (Infrastructure) | Config |
@@ -17,6 +18,7 @@ The LLM is used **only at the edges**: (1) parse mood text into filters, (2) ran
 | Prompts | `IPromptLibrary.RenderAsync(PromptId, variables)` → text + output schema | `FilePromptLibrary` (reads `prompts/`) | `Ai:PromptsPath` |
 | Typed output | `StructuredOutput.Parse<T>(response) → Result<T>` | — | — |
 | Movie data | `ITmdbClient` (returns `Result`) | `FakeTmdbClient`, `TmdbHttpClient` | `Tmdb:Client`, `Tmdb:Language`, `Tmdb:ApiKey` |
+| AI-safe film facts | `IWikidataClient.GetFilmsAsync(tmdbIds)` (returns `Result`) | `FakeWikidataClient`, `WikidataHttpClient` (SPARQL) | `Wikidata:Client`, `Wikidata:Endpoint`, `Wikidata:UserAgent`, `Wikidata:BatchSize`, `Wikidata:RefreshDays` (no key) |
 
 Provider selection happens once, in `Infrastructure/DependencyInjection.cs → AddExternalClients`. Callers never know which
 provider runs. Selecting a provider that isn't built, or a real provider without its key, fails at startup with a clear message.
@@ -70,9 +72,29 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
 
 ## Catalog sync (ADR-0003)
 - `CatalogSyncService`: TMDB discover pages (most popular first) → upsert by `TmdbId` → optional embedding → delete films not
-  refreshed within `CatalogSync:MaxAgeDays` (≤ 180: TMDB's 6-month caching limit). Saves once per page.
+  refreshed within `CatalogSync:MaxAgeDays` (≤ 180: TMDB's 6-month caching limit) → Wikidata enrichment (below). Saves once
+  per page and once per Wikidata batch. A Wikidata failure fails the run (`wikidata.unavailable`); the TMDB work and the
+  purge are already saved.
 - Run once: `dotnet run --project src/backend/Ithaca.Api -- --sync-catalog`. Nightly: `CatalogSync:Enabled = true`.
 - Attribution: the footer notice is required wherever TMDB data is shown (logo still TODO, ADR-0017).
+
+## Wikidata enricher (ADR-0017)
+- `WikidataEnricher` (a collaborator of `CatalogSyncService`, not a use-case service), the last step of the sync: films without `FilmFacts`, or with facts older than
+  `Wikidata:RefreshDays` (30), in TMDB-id order, `Wikidata:BatchSize` (100) per SPARQL query, one save per batch, so a
+  failed run keeps its finished batches and the next run continues. Films Wikidata doesn't link are logged (TMDB ids
+  only) and skipped, and retried next run.
+- Linking: Wikidata's "TMDB movie ID" (P4947) only, never title matching. Two items for one id → the oldest (lowest Q).
+- Facts (English labels): genres (P136), main subjects (P921), directors (P57), cast (P161, best-known first by sitelink
+  count, since Wikidata keeps no billing order), countries of origin (P495), original languages (P364), earliest
+  publication year (P577), shortest duration (P2047, in minutes), awards (P166). Lists are de-duplicated and capped
+  (`FilmFacts.Max*`).
+- `FilmFacts.EmbeddingText` is built by `FilmFacts.BuildEmbeddingText(WikidataFacts)`: one labelled line per fact in a fixed
+  order, deterministic. Its only input is the Wikidata record, so TMDB text can't reach it (a test checks this). BE-04
+  embeds it; changing the format means re-embedding the catalog.
+- `Wikidata:Client`: `Fake` (default; knows films 550 and 27205, not 496243) or `Http`. The HTTP client POSTs to
+  `query.wikidata.org/sparql` with the descriptive User-Agent from `Wikidata:UserAgent` (a project URL, never a personal
+  email), 70 s timeout; any failure status (incl. 429), timeout or unreadable body is `wikidata.unavailable`.
+- Wikidata is CC0: no attribution or age limit; `film_facts` rows go when their film is purged (cascade).
 
 ## Adding a provider (e.g. Voyage embeddings, OpenAI chat)
 1. Implement the interface in `Infrastructure/Ai/` (official SDK if one exists for .NET; otherwise a typed `HttpClient`).

@@ -1,0 +1,2007 @@
+{
+  "head" : {
+    "vars" : [ "tmdb", "item", "kind", "label", "ord", "num" ]
+  },
+  "results" : {
+    "bindings" : [ {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "item"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "item"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "2010"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "year"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "2010"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "year"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "2010"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "year"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "2010"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "year"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "2010"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "year"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "2010"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "year"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "1999"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "year"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "1999"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "year"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "1999"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "year"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "United States"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "country"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "United States"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "country"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "United Kingdom"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "country"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#decimal",
+        "type" : "literal",
+        "value" : "8340"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "runtimeSeconds"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#decimal",
+        "type" : "literal",
+        "value" : "8880"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "runtimeSeconds"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "David Fincher"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "director"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "drama film"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "genre"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "drama film"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "genre"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "alter ego"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "subject"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "telepresence"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "subject"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "dream world"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "subject"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Germany"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "country"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "French"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "language"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "science fiction film"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "genre"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "adventure film"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "genre"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "English"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "language"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "English"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "language"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Academy Award for Best Sound"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "award"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Jupiter Award"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "award"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Hugo Award for Best Dramatic Presentation, Long Form"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "award"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Academy Award for Best Cinematography"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "award"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Academy Award for Best Visual Effects"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "award"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "heist film"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "genre"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "psychological thriller"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "genre"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Total Film Magazine Award"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "award"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Academy Award for Best Sound Editing"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "award"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Japanese"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "language"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "action film"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "genre"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "science fiction action film"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "genre"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "flashback film"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "genre"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "148"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Brad Pitt"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "150"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Leonardo DiCaprio"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "94"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Marion Cotillard"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "90"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Edward Norton"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "mystery film"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "genre"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "thriller film"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "genre"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "thriller film"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "genre"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "109"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Michael Caine"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "22"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Zach Grenier"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "60"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Meat Loaf"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Saturn Award for Best Science Fiction Film"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "award"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "National Board of Review: Top Ten Films"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "award"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Online Film & Television Association Award"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "award"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Empire Awards, UK for best british actress"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "award"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Online Film Critics Society Awards"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "award"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "70"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Joseph Gordon-Levitt"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "87"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Helena Bonham Carter"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "83"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Elliot Page"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "89"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Cillian Murphy"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "88"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Tom Hardy"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "56"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Ken Watanabe"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "15"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Matt Winston"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "17"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "David Lee Smith"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "12"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Bob Stephenson"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "17"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "David Andrews"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "20"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Michael Gaston"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "17"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Richmond Arquette"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "20"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Dileep Rao"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "17"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Brian Tochi"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "5"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Paul Dillon"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "30"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Eion Bailey"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "50"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Pete Postlethwaite"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "89"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Jared Leto"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "12"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Stuart Blumberg"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "31"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Holt McCallany"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "1"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Eddie Hargitay"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "13"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Ezra Buzzington"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "8"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Paul Carafotes"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "30"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Lukas Haas"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "4"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Christina Cabot"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "2"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Taylor Geare"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "19"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Earl Cameron"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "4"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Eugenie Bondurant"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "13"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Tim de Zarn"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "9"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Michael Shamus Wiles"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "50"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Tom Berenger"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "42"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Talulah Riley"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "1"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Phil Hawn"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "1"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Silvie Laguna"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "16"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Yuji Okumoto"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "3"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Virgile Bramly"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "8"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Carl Ciarfalio"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "9"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Tohoru Masamune"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "27205"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q25188"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "2"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Claire Geare"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "0"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Rachel Singer"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "2"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Pat McNamara"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    }, {
+      "tmdb" : {
+        "type" : "literal",
+        "value" : "550"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q190050"
+      },
+      "num" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "1"
+      },
+      "label" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Charlie Dell"
+      },
+      "kind" : {
+        "type" : "literal",
+        "value" : "cast"
+      }
+    } ]
+  }
+}

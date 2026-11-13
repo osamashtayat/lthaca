@@ -19,6 +19,7 @@ public static class ErrorStatusCodes
         [ErrorCodes.AiUnavailable] = StatusCodes.Status503ServiceUnavailable,
         [ErrorCodes.AiRefused] = StatusCodes.Status422UnprocessableEntity,
         [ErrorCodes.TmdbUnavailable] = StatusCodes.Status503ServiceUnavailable,
+        [ErrorCodes.WikidataUnavailable] = StatusCodes.Status503ServiceUnavailable,
         [ErrorCodes.ServerError] = StatusCodes.Status500InternalServerError,
         [ErrorCodes.ServerNotImplemented] = StatusCodes.Status501NotImplemented,
         [ErrorCodes.AuthAntiforgeryFailed] = StatusCodes.Status400BadRequest,

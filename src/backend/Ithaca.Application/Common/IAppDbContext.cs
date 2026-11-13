@@ -14,6 +14,9 @@ public interface IAppDbContext
 {
     DbSet<Film> Films { get; }
 
+    /// <summary>Wikidata facts per film (ADR-0017): the only film data AI may see.</summary>
+    DbSet<FilmFacts> FilmFacts { get; }
+
     /// <summary>Registered users, read-only: accounts are created and changed through <c>ISessionManager</c> (Identity).</summary>
     IQueryable<UserReadModel> Users { get; }
 

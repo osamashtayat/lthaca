@@ -94,6 +94,76 @@ namespace Ithaca.Infrastructure.Migrations
                     b.ToTable("films", (string)null);
                 });
 
+            modelBuilder.Entity("Ithaca.Domain.Films.FilmFacts", b =>
+                {
+                    b.Property<Guid>("FilmId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("film_id");
+
+                    b.PrimitiveCollection<string[]>("Awards")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("awards");
+
+                    b.PrimitiveCollection<string[]>("Cast")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("cast");
+
+                    b.PrimitiveCollection<string[]>("Countries")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("countries");
+
+                    b.PrimitiveCollection<string[]>("Directors")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("directors");
+
+                    b.Property<string>("EmbeddingText")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("embedding_text");
+
+                    b.Property<DateTimeOffset>("FetchedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fetched_at");
+
+                    b.PrimitiveCollection<string[]>("Genres")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("genres");
+
+                    b.PrimitiveCollection<string[]>("Languages")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("languages");
+
+                    b.PrimitiveCollection<string[]>("MainSubjects")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("main_subjects");
+
+                    b.Property<int?>("ReleaseYear")
+                        .HasColumnType("integer")
+                        .HasColumnName("release_year");
+
+                    b.Property<int?>("RuntimeMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("runtime_minutes");
+
+                    b.Property<string>("WikidataId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("wikidata_id");
+
+                    b.HasKey("FilmId")
+                        .HasName("pk_film_facts");
+
+                    b.ToTable("film_facts", (string)null);
+                });
+
             modelBuilder.Entity("Ithaca.Domain.Users.Guest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -288,6 +358,16 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasName("pk_user_tokens");
 
                     b.ToTable("user_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Films.FilmFacts", b =>
+                {
+                    b.HasOne("Ithaca.Domain.Films.Film", null)
+                        .WithOne()
+                        .HasForeignKey("Ithaca.Domain.Films.FilmFacts", "FilmId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_film_facts_films_film_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>

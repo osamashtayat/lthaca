@@ -3,12 +3,14 @@ using Ithaca.Application.Ai;
 using Ithaca.Application.Catalog;
 using Ithaca.Application.Common;
 using Ithaca.Application.Tmdb;
+using Ithaca.Application.Wikidata;
 using Ithaca.Infrastructure.Ai;
 using Ithaca.Infrastructure.Configuration;
 using Ithaca.Infrastructure.Identity;
 using Ithaca.Infrastructure.Jobs;
 using Ithaca.Infrastructure.Persistence;
 using Ithaca.Infrastructure.Tmdb;
+using Ithaca.Infrastructure.Wikidata;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -47,7 +49,8 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// TMDB, LLM and embedding clients, each picked by config (docs/ai.md). Built: Fake everywhere, Anthropic (LLM), Http (TMDB).
+    /// TMDB, Wikidata, LLM and embedding clients, each picked by config (docs/ai.md). Built: Fake everywhere, Anthropic (LLM),
+    /// Http (TMDB, Wikidata).
     /// A real provider without its key, or a provider that isn't built, fails at startup with a clear message.
     /// </summary>
     private static void AddExternalClients(this IServiceCollection services, IConfiguration configuration)
@@ -87,6 +90,22 @@ public static class DependencyInjection
             TmdbClientKind.Fake => new FakeTmdbClient(),
             TmdbClientKind.Http => sp.GetRequiredService<TmdbHttpClient>(),
             var other => throw NotImplemented("TMDB", other),
+        });
+
+        // Wikidata needs no key; the User-Agent (validated non-empty) is required by Wikimedia's policy.
+        services.AddValidatedOptions<WikidataOptions>(configuration);
+        services.AddHttpClient<WikidataHttpClient>((sp, http) =>
+        {
+            var wikidata = sp.GetRequiredService<IOptions<WikidataOptions>>().Value;
+            http.BaseAddress = new Uri(wikidata.Endpoint);
+            http.DefaultRequestHeaders.UserAgent.ParseAdd(wikidata.UserAgent);
+            http.Timeout = TimeSpan.FromSeconds(70);
+        });
+        services.AddTransient<IWikidataClient>(sp => sp.GetRequiredService<IOptions<WikidataOptions>>().Value.Client switch
+        {
+            WikidataClientKind.Fake => new FakeWikidataClient(),
+            WikidataClientKind.Http => sp.GetRequiredService<WikidataHttpClient>(),
+            var other => throw NotImplemented("Wikidata", other),
         });
     }
 

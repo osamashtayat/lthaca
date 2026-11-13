@@ -10,11 +10,17 @@ namespace Ithaca.Application.Catalog;
 /// <summary>
 /// TMDB → <c>films</c> sync (ADR-0003). Pages through TMDB's most popular films, upserts each by <c>TmdbId</c>, optionally
 /// embeds it (off by default, ADR-0017), then deletes films not refreshed within <see cref="CatalogSyncOptions.MaxAgeDays"/>
-/// (TMDB's 6-month caching limit). Saves once per page, so a failure mid-run keeps the pages already done; the next run
-/// continues where TMDB data changed. Called by <c>CatalogSyncJob</c> and the <c>--sync-catalog</c> command.
+/// (TMDB's 6-month caching limit), then gives the remaining films their Wikidata facts
+/// (<see cref="WikidataEnricher"/>). Saves once per page (and once per Wikidata batch), so a failure mid-run keeps
+/// the work already done; the next run continues. Called by <c>CatalogSyncJob</c> and the <c>--sync-catalog</c> command.
 /// </summary>
 public sealed class CatalogSyncService(
-    IAppDbContext db, ITmdbClient tmdb, IEmbeddingClient embeddings, IOptions<CatalogSyncOptions> options, TimeProvider time)
+    IAppDbContext db,
+    ITmdbClient tmdb,
+    IEmbeddingClient embeddings,
+    WikidataEnricher facts,
+    IOptions<CatalogSyncOptions> options,
+    TimeProvider time)
 {
     public async Task<Result<CatalogSyncReport>> RunAsync(CancellationToken ct)
     {
@@ -78,7 +84,15 @@ public sealed class CatalogSyncService(
 
         var cutoff = time.GetUtcNow().AddDays(-settings.MaxAgeDays);
         var purged = await db.Films.Where(f => f.SyncedAt < cutoff).ExecuteDeleteAsync(ct);
-        return new CatalogSyncReport(pages, added, updated, skipped, embedded, purged);
+
+        // After the purge, so no batch is spent on films about to go. A Wikidata failure fails the run; TMDB work is kept.
+        var enrichment = await facts.RunAsync(ct);
+        if (!enrichment.IsSuccess)
+        {
+            return enrichment.Error;
+        }
+
+        return new CatalogSyncReport(pages, added, updated, skipped, embedded, purged, enrichment.Value.Enriched, enrichment.Value.Unmatched);
     }
 
     /// <summary>What a film's vector represents. Changing this means re-embedding the catalog.</summary>

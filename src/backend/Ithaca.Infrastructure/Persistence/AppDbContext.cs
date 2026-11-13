@@ -20,6 +20,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<Film> Films => Set<Film>();
 
+    public DbSet<FilmFacts> FilmFacts => Set<FilmFacts>();
+
     public DbSet<Guest> Guests => Set<Guest>();
 
     IQueryable<UserReadModel> IAppDbContext.Users =>

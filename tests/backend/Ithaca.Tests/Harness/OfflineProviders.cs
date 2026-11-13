@@ -13,6 +13,7 @@ internal static class OfflineProviders
         ["Ai:LlmProvider"] = "Fake",
         ["Ai:EmbeddingProvider"] = "Fake",
         ["Tmdb:Client"] = "Fake",
+        ["Wikidata:Client"] = "Fake",
         ["CatalogSync:Enabled"] = "false",
     };
 
