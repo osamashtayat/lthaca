@@ -4,8 +4,8 @@ type FilmDto = components['schemas']['FilmDto']
 
 /**
  * Mock catalog: the same three TMDB ids the backend's Development seed uses (550, 27205, 496243), so links work with
- * mocks on or off. Overviews are our own one-liners, not TMDB text. Posters are null (no network in mocks); backdrop, votes and
- * language stay null like the real API until BE-06 syncs them.
+ * mocks on or off. Overviews are our own one-liners, not TMDB text. Posters are null (no network in mocks); backdrop and language
+ * stay null like the real API until BE-06 syncs them; votes are filled so the score shows.
  */
 export const mockFilms: readonly FilmDto[] = [
   {
@@ -17,8 +17,8 @@ export const mockFilms: readonly FilmDto[] = [
     runtimeMinutes: 139,
     genres: ['Drama', 'Thriller'],
     backdropPath: null,
-    voteAverage: null,
-    voteCount: null,
+    voteAverage: 8.4,
+    voteCount: 28000,
     originalLanguage: null,
   },
   {
@@ -30,8 +30,8 @@ export const mockFilms: readonly FilmDto[] = [
     runtimeMinutes: 148,
     genres: ['Action', 'Science Fiction', 'Adventure'],
     backdropPath: null,
-    voteAverage: null,
-    voteCount: null,
+    voteAverage: 8.4,
+    voteCount: 37000,
     originalLanguage: null,
   },
   {
@@ -43,12 +43,18 @@ export const mockFilms: readonly FilmDto[] = [
     runtimeMinutes: 133,
     genres: ['Comedy', 'Thriller', 'Drama'],
     backdropPath: null,
-    voteAverage: null,
-    voteCount: null,
+    voteAverage: 8.5,
+    voteCount: 19000,
     originalLanguage: null,
   },
 ]
 
 export function findMockFilm(tmdbId: number): FilmDto | undefined {
   return mockFilms.find((film) => film.tmdbId === tmdbId)
+}
+
+/** Mock trailers: a real-looking YouTube key for two films, none for Parasite (exercises the "no trailer" state). */
+export const mockTrailers: Readonly<Record<number, { site: 'YouTube'; key: string; name: string }>> = {
+  550: { site: 'YouTube', key: 'SUXWAEX2jlg', name: 'Fight Club — Trailer' },
+  27205: { site: 'YouTube', key: 'YoHD9XEInc0', name: 'Inception — Trailer' },
 }

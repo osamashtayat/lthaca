@@ -17,6 +17,7 @@ src/shared/styles/  tokens.css (design tokens), global.css (base styles)
 src/mocks/          MSW mock API for the dev server and Vitest (ADR-0020); src/test/setup.ts starts it in Vitest
 src/features/<f>/   api/ (hooks) · components/ · pages/ · types.ts · index.ts (public surface)
 ```
+Film details (`features/films`) reads the caller's library state through `features/library`'s hooks (`useUserFilm`, `useUpdateUserFilm`: optimistic `PUT` with rollback + toast); visitors' actions go to `/sign-in?next=…`.
 Features: `tonight`, `deck`, `rooms`, `mood`, `taste`, `library`, `browse`, `profile`, `import`, `auth` (+ `films`, the slice).
 A feature imports `@/shared/*` and other features' `index.ts` only.
 

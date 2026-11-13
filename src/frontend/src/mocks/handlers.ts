@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { addMockAccount, findMockAccount, getMockSession, isMockEmailTaken, setMockSession } from './authStore'
-import { findMockFilm } from './fixtures'
+import { findMockFilm, mockTrailers } from './fixtures'
+import { getMockUserFilm, putMockUserFilm } from './libraryStore'
 import { apiPath, problem, type RequestOf, type ResponseOf } from './http'
 
 /**
@@ -16,6 +17,11 @@ const filmHandlers = [
   http.get(apiPath('/api/films/{tmdbId}'), ({ params }) => {
     const film = findMockFilm(Number(params.tmdbId))
     return film ? HttpResponse.json<ResponseOf<'/api/films/{tmdbId}', 'get', 200>>(film) : problem(404, 'film.not_found')
+  }),
+  http.get(apiPath('/api/films/{tmdbId}/trailer'), ({ params }) => {
+    const tmdbId = Number(params.tmdbId)
+    if (!findMockFilm(tmdbId)) return problem(404, 'film.not_found')
+    return HttpResponse.json<ResponseOf<'/api/films/{tmdbId}/trailer', 'get', 200>>({ trailer: mockTrailers[tmdbId] ?? null })
   }),
 ]
 
@@ -60,4 +66,19 @@ const authHandlers = [
   }),
 ]
 
-export const handlers = [...healthHandlers, ...authHandlers, ...filmHandlers]
+const libraryHandlers = [
+  http.get(apiPath('/api/library/{tmdbId}'), ({ params }) => {
+    if (!getMockSession()) return problem(401, 'auth.unauthenticated')
+    const item = getMockUserFilm(Number(params.tmdbId))
+    return item ? HttpResponse.json<ResponseOf<'/api/library/{tmdbId}', 'get', 200>>(item) : problem(404, 'film.not_found')
+  }),
+  http.put(apiPath('/api/library/{tmdbId}'), async ({ params, request }) => {
+    if (!getMockSession()) return problem(401, 'auth.unauthenticated')
+    const body = (await request.json()) as RequestOf<'/api/library/{tmdbId}', 'put'>
+    if (body.rating !== null && (body.rating < 1 || body.rating > 5)) return problem(400, 'validation', { rating: ['Use 1 to 5.'] })
+    const item = putMockUserFilm(Number(params.tmdbId), body)
+    return item ? HttpResponse.json<ResponseOf<'/api/library/{tmdbId}', 'put', 200>>(item) : problem(404, 'film.not_found')
+  }),
+]
+
+export const handlers = [...healthHandlers, ...authHandlers, ...filmHandlers, ...libraryHandlers]
