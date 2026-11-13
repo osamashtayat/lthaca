@@ -89,7 +89,7 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
   embeddings (above). Saves once per page and once per Wikidata or embedding batch. A Wikidata or embedding failure fails
   the run (`wikidata.unavailable`, `ai.*`); the work before it is already saved.
 - Run once: `dotnet run --project src/backend/Ithaca.Api -- --sync-catalog`. Nightly: `CatalogSync:Enabled = true`.
-- Attribution: the footer notice is required wherever TMDB data is shown (logo still TODO, ADR-0017).
+- Attribution: the footer notice is required wherever TMDB data is shown (notice + small TMDB logo in `AppFooter`, ADR-0017).
 
 ## Wikidata enricher (ADR-0017)
 - `WikidataEnricher` (a collaborator of `CatalogSyncService`, not a use-case service), the last step of the sync: films without `FilmFacts`, or with facts older than

@@ -115,7 +115,7 @@ lint, test, build.
 - **Tests:** one parameterised slice test (each stub → 501 + code); `ErrorStatusCodesTests`; OpenAPI drift.
 - **Docs:** api-contract.md (deviations found), backend-conventions.md (a line on stubs).
 
-### FE-01 — TMDB logo in the footer · `Todo` (needs the owner's OK to download the official asset)
+### FE-01 — TMDB logo in the footer · `Done` (owner approved the asset 2026-11-13)
 - **Objective:** meet TMDB's attribution terms (ADR-0017): logo next to the existing notice, less prominent than the
   Ithaca wordmark.
 - **Deps:** FE-00, owner approval. **Modules:** `src/frontend/src/app/layout/AppFooter.tsx`, the asset under
@@ -271,7 +271,7 @@ lint, test, build.
 - **Tests:** mapping table; Fake LLM → filters; each ADR-0022 row as a slice test; invalid genres dropped; evals green.
 - **Docs:** docs/ai.md (mood flow), api-contract.md §5.
 
-### FE-06 — By mood picker · `Todo`
+### FE-06 — By mood picker · `Done` (PR #16)
 - **Objective:** the "Solo — by mood" board.
 - **Deps:** FE-05, BE-09a. **Modules:** `src/features/mood/`, `src/features/deck/`, `src/mocks/`.
 - **Contract:** §5 (incl. `mood.unclear`, `textIgnored`).

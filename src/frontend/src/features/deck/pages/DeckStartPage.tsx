@@ -12,10 +12,10 @@ export function DeckStartPage() {
     // Once per visit (StrictMode runs effects twice in dev); "Try again" below starts a fresh attempt.
     if (started.current) return
     started.current = true
-    create.mutate()
+    create.mutate(undefined)
   }, [create])
 
   if (create.isSuccess) return <Navigate to={`/deck/${create.data.id}`} replace />
-  if (create.isError) return <ErrorState error={create.error} onRetry={() => create.mutate()} />
+  if (create.isError) return <ErrorState error={create.error} onRetry={() => create.mutate(undefined)} />
   return <LoadingState label="Shuffling the deck…" />
 }

@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { addMockAccount, findMockAccount, getMockSession, isMockEmailTaken, setMockSession } from './authStore'
 import { findMockFilm, mockTrailers } from './fixtures'
-import { createMockDeck, mockDeckDto, mockDeckTop, nextMockBatch, recordMockSwipe } from './deckStore'
+import { createMockDeck, mockDeckDto, parseMockMood, mockDeckTop, nextMockBatch, recordMockSwipe } from './deckStore'
 import { getMockUserFilm, putMockUserFilm, setMockWatchlist } from './libraryStore'
 import { apiPath, problem, type RequestOf, type ResponseOf } from './http'
 
@@ -97,13 +97,21 @@ const watchlistHandlers = [
   }),
 ]
 
-/** Solo decks (api-contract §5): "Just swipe" only; mood decks arrive with FE-06. State in deckStore.ts. */
+/** Solo decks (api-contract §5): "Just swipe" and "By mood" (scripted mood-parse outcomes, see parseMockMood). State in deckStore.ts. */
 const deckHandlers = [
   http.post(apiPath('/api/decks'), async ({ request }) => {
     if (!getMockSession()) return problem(401, 'auth.unauthenticated')
     const body = (await request.json()) as RequestOf<'/api/decks', 'post'>
-    if (body.source !== 'justSwipe') return problem(400, 'validation', { source: ['Only "justSwipe" is mocked.'] })
-    const deck = createMockDeck()
+    if ((body.source === 'mood') !== (body.mood !== null)) return problem(400, 'validation', { mood: ['Required with source "mood" only.'] })
+    let mood = null
+    if (body.mood) {
+      const outcome = parseMockMood(body.mood)
+      if (outcome.kind === 'error') {
+        return problem(outcome.status, outcome.code, outcome.code === 'validation' ? { mood: ['Check the moods and text.'] } : undefined)
+      }
+      mood = outcome.mood
+    }
+    const deck = createMockDeck(mood)
     return HttpResponse.json<ResponseOf<'/api/decks', 'post', 201>>(deck, {
       status: 201,
       headers: { Location: `/api/decks/${deck.id}` },
