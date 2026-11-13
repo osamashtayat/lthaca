@@ -433,7 +433,7 @@ lint, test, build.
   matches the board.
 - **Tests:** toggle + rollback; rating keyboard use.
 
-### FE-08 — Browse · `Todo`
+### FE-08 — Browse · `In progress`
 - **Objective:** the "Browse" board. **Deps:** BE-01, FE-02. **Modules:** `src/features/browse/`, `src/mocks/`.
 - **Contract:** §9.
 - **Scope:** in: search, chips (Under 2h, Hide seen, ★ 7+), "Trending this week" (sort popular), genre tiles, results with
