@@ -1,7 +1,8 @@
 import { http, HttpResponse } from 'msw'
 import { addMockAccount, findMockAccount, getMockSession, isMockEmailTaken, setMockSession } from './authStore'
 import { findMockFilm, mockTrailers } from './fixtures'
-import { getMockUserFilm, putMockUserFilm } from './libraryStore'
+import { createMockDeck, mockDeckDto, mockDeckTop, nextMockBatch, recordMockSwipe } from './deckStore'
+import { getMockUserFilm, putMockUserFilm, setMockWatchlist } from './libraryStore'
 import { apiPath, problem, type RequestOf, type ResponseOf } from './http'
 
 /**
@@ -81,4 +82,62 @@ const libraryHandlers = [
   }),
 ]
 
-export const handlers = [...healthHandlers, ...authHandlers, ...filmHandlers, ...libraryHandlers]
+const watchlistHandlers = [
+  http.put(apiPath('/api/library/{tmdbId}/watchlist'), ({ params }) => {
+    if (!getMockSession()) return problem(401, 'auth.unauthenticated')
+    if (!findMockFilm(Number(params.tmdbId))) return problem(404, 'film.not_found')
+    setMockWatchlist(Number(params.tmdbId), true)
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.delete(apiPath('/api/library/{tmdbId}/watchlist'), ({ params }) => {
+    if (!getMockSession()) return problem(401, 'auth.unauthenticated')
+    if (!findMockFilm(Number(params.tmdbId))) return problem(404, 'film.not_found')
+    setMockWatchlist(Number(params.tmdbId), false)
+    return new HttpResponse(null, { status: 204 })
+  }),
+]
+
+/** Solo decks (api-contract §5): "Just swipe" only; mood decks arrive with FE-06. State in deckStore.ts. */
+const deckHandlers = [
+  http.post(apiPath('/api/decks'), async ({ request }) => {
+    if (!getMockSession()) return problem(401, 'auth.unauthenticated')
+    const body = (await request.json()) as RequestOf<'/api/decks', 'post'>
+    if (body.source !== 'justSwipe') return problem(400, 'validation', { source: ['Only "justSwipe" is mocked.'] })
+    const deck = createMockDeck()
+    return HttpResponse.json<ResponseOf<'/api/decks', 'post', 201>>(deck, {
+      status: 201,
+      headers: { Location: `/api/decks/${deck.id}` },
+    })
+  }),
+  http.get(apiPath('/api/decks/{deckId}'), ({ params }) => {
+    if (!getMockSession()) return problem(401, 'auth.unauthenticated')
+    const deck = mockDeckDto(String(params.deckId))
+    return deck ? HttpResponse.json<ResponseOf<'/api/decks/{deckId}', 'get', 200>>(deck) : problem(404, 'deck.not_found')
+  }),
+  http.post(apiPath('/api/decks/{deckId}/items'), ({ params }) => {
+    if (!getMockSession()) return problem(401, 'auth.unauthenticated')
+    const items = nextMockBatch(String(params.deckId))
+    return items ? HttpResponse.json<ResponseOf<'/api/decks/{deckId}/items', 'post', 200>>(items) : problem(404, 'deck.not_found')
+  }),
+  http.post(apiPath('/api/decks/{deckId}/swipes'), async ({ params, request }) => {
+    if (!getMockSession()) return problem(401, 'auth.unauthenticated')
+    const body = (await request.json()) as RequestOf<'/api/decks/{deckId}/swipes', 'post'>
+    if (body.seenVerdict !== null && body.direction !== 'up') {
+      return problem(400, 'validation', { seenVerdict: ['Only with an up swipe.'] })
+    }
+    const outcome = recordMockSwipe(String(params.deckId), body)
+    if (outcome === 'deck_not_found') return problem(404, 'deck.not_found')
+    if (outcome === 'item_not_found') return problem(404, 'deck.item_not_found')
+    if (outcome === 'already_swiped') return problem(409, 'deck.already_swiped')
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.get(apiPath('/api/decks/{deckId}/top'), ({ params }) => {
+    if (!getMockSession()) return problem(401, 'auth.unauthenticated')
+    const top = mockDeckTop(String(params.deckId))
+    if (top === undefined) return problem(404, 'deck.not_found')
+    if (top === null) return problem(422, 'deck.no_yeses')
+    return HttpResponse.json<ResponseOf<'/api/decks/{deckId}/top', 'get', 200>>(top)
+  }),
+]
+
+export const handlers = [...healthHandlers, ...authHandlers, ...filmHandlers, ...libraryHandlers, ...watchlistHandlers, ...deckHandlers]
