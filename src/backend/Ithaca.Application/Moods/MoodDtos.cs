@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Ithaca.Domain.Moods;
 
 namespace Ithaca.Application.Moods;
 

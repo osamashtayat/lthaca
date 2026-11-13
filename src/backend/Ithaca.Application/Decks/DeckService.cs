@@ -1,9 +1,11 @@
 using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
 using Ithaca.Application.Films;
+using Ithaca.Application.Moods;
 using Ithaca.Domain.Decks;
 using Ithaca.Domain.Films;
 using Ithaca.Domain.Library;
+using Ithaca.Domain.Moods;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ithaca.Application.Decks;
@@ -11,10 +13,11 @@ namespace Ithaca.Application.Decks;
 /// <summary>
 /// Solo decks and swipes (api-contract.md §5), for the signed-in user from <see cref="ICurrentActor"/>; another user's deck
 /// is <c>deck.not_found</c>. "Just swipe" (BE-08): the first batch is the <see cref="DeckSampler"/>'s varied sampler; later
-/// batches adapt to this deck's swipes and the user's library. Films come from our own catalog only (ADR-0003): available,
-/// not yet in this deck, not seen by the user. By mood is BE-09 and still answers 501.
+/// batches adapt to this deck's swipes and the user's library. "By mood" (BE-09): the <see cref="MoodInterpreter"/> turns the
+/// input into a <see cref="MoodQuery"/>; its filters narrow every batch, and its genres count as a strong signal. Films come
+/// from our own catalog only (ADR-0003): available, not yet in this deck, not seen by the user.
 /// </summary>
-public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimeProvider time)
+public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInterpreter moods, TimeProvider time)
 {
     /// <summary>Most popular eligible films the sampler chooses from per batch.</summary>
     private const int CandidatePool = 500;
@@ -27,6 +30,9 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimePro
     /// <summary>Tries at dealing a batch when concurrent requests for the same deck collide.</summary>
     private const int DealAttempts = 3;
 
+    /// <summary>How much a deck's mood genres count, next to one right swipe (1).</summary>
+    private const double MoodSignalWeight = 2;
+
     public async Task<Result<DeckDto>> CreateAsync(CreateDeckRequest request, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -35,20 +41,29 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimePro
             return AuthErrors.Unauthenticated;
         }
 
-        if (request.Source == DeckSource.Mood)
+        MoodQuery? mood = null;
+        switch (request.Source, request.Mood)
         {
-            return ContractStub.NotImplemented; // BE-09
-        }
+            case (DeckSource.Mood, null):
+                return Error.Validation("mood", "A deck by mood needs a mood.");
+            case (DeckSource.Mood, { } input):
+                var interpreted = await moods.InterpretAsync(userId, input, ct);
+                if (!interpreted.IsSuccess)
+                {
+                    return interpreted.Error; // nothing is created (ADR-0022)
+                }
 
-        if (request.Mood is not null)
-        {
-            return Error.Validation("mood", "A mood only goes with a deck by mood.");
+                mood = interpreted.Value;
+                db.MoodQueries.Add(mood);
+                break;
+            case (_, not null):
+                return Error.Validation("mood", "A mood only goes with a deck by mood.");
         }
 
         var now = time.GetUtcNow();
-        var deck = Deck.Create(userId, request.Source, now);
+        var deck = Deck.Create(userId, request.Source, mood?.Id, now);
         db.Decks.Add(deck);
-        await DealAsync(deck.Id, userId, dealt: 0, signals: [], now, ct);
+        await DealAsync(deck.Id, userId, dealt: 0, MoodSignals(mood), mood, now, ct);
         await db.SaveChangesAsync(ct);
 
         return await DeckDtoAsync(deck.Id, userId, ct) ?? throw new InvalidOperationException("The deck just created is missing.");
@@ -77,11 +92,12 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimePro
             return DeckErrors.NotFound;
         }
 
-        var signals = await SignalsAsync(deckId, userId, ct);
+        var mood = await MoodOfAsync(deckId, ct);
+        var signals = MoodSignals(mood).Concat(await SignalsAsync(deckId, userId, ct)).ToList();
         for (var attempt = 1; ; attempt++)
         {
             var dealt = await db.DeckItems.CountAsync(i => i.DeckId == deckId, ct);
-            var added = await DealAsync(deckId, userId, dealt, signals, time.GetUtcNow(), ct);
+            var added = await DealAsync(deckId, userId, dealt, signals, mood, time.GetUtcNow(), ct);
             if (added.Count == 0)
             {
                 return Array.Empty<DeckItemDto>();
@@ -203,7 +219,7 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimePro
             return DeckErrors.NoYeses;
         }
 
-        var signals = await SignalsAsync(deckId, userId, ct, includeEmbeddings: false);
+        var signals = MoodSignals(await MoodOfAsync(deckId, ct)).Concat(await SignalsAsync(deckId, userId, ct, includeEmbeddings: false)).ToList();
         var ranked = DeckSampler.RankByGenreFit(
             yeses.Select(y => new SamplerFilm(y.Id, y.Genres, y.ReleaseYear, y.RuntimeMinutes, y.Popularity ?? 0, null)).ToList(),
             signals.Select(sig => sig.ToDeckSignal(model: null)).ToList());
@@ -218,7 +234,8 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimePro
     /// Adds up to <see cref="Deck.BatchSize"/> new items (positions after <paramref name="dealt"/>), never past
     /// <see cref="Deck.MaxItems"/>. Not saved here: the caller saves once.
     /// </summary>
-    private async Task<List<DeckItem>> DealAsync(Guid deckId, Guid userId, int dealt, IReadOnlyList<SignalRow> signals, DateTimeOffset now, CancellationToken ct)
+    private async Task<List<DeckItem>> DealAsync(
+        Guid deckId, Guid userId, int dealt, IReadOnlyList<SignalRow> signals, MoodQuery? mood, DateTimeOffset now, CancellationToken ct)
     {
         var count = Math.Min(Deck.BatchSize, Deck.MaxItems - dealt);
         if (count <= 0)
@@ -230,7 +247,7 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimePro
         var model = signals.Where(s => s.Embedding is not null).GroupBy(s => s.EmbeddingModel).MaxBy(g => g.Count())?.Key;
         var inDeck = db.DeckItems.Where(i => i.DeckId == deckId).Select(i => i.FilmId);
         var seen = db.UserFilms.Where(u => u.UserId == userId && u.Seen).Select(u => u.FilmId);
-        var candidates = await db.Films.AsNoTracking()
+        var candidates = await Filtered(db.Films.AsNoTracking(), mood)
             .Where(f => f.IsAvailable && !inDeck.Contains(f.Id) && !seen.Contains(f.Id))
             .OrderBy(f => f.Popularity == null).ThenByDescending(f => f.Popularity).ThenBy(f => f.TmdbId)
             .Take(CandidatePool)
@@ -323,10 +340,65 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, TimePro
             return null;
         }
 
+        var mood = await MoodOfAsync(deckId, ct);
         var items = await ItemDtosAsync(db.DeckItems.Where(i => i.DeckId == deckId), userId, ct);
         return new DeckDto(
-            deck.Id, deck.Source, deck.CreatedAt, null, items,
+            deck.Id, deck.Source, deck.CreatedAt, mood is null ? null : MoodQueryDtos.From(mood), items,
             items.Count(i => i.Swipe is not null), items.Count(i => i.Swipe?.Direction == SwipeDirection.Right));
+    }
+
+    private async Task<MoodQuery?> MoodOfAsync(Guid deckId, CancellationToken ct) =>
+        await db.Decks.AsNoTracking()
+            .Where(d => d.Id == deckId && d.MoodQueryId != null)
+            .Join(db.MoodQueries.AsNoTracking(), d => d.MoodQueryId, m => m.Id, (d, m) => m)
+            .SingleOrDefaultAsync(ct);
+
+    /// <summary>A deck's mood genres as one strong signal, so batches and the top 3 lean towards them.</summary>
+    private static List<SignalRow> MoodSignals(MoodQuery? mood) =>
+        mood is { IncludeGenres.Length: > 0 } ? [new SignalRow(mood.IncludeGenres, null, null, null, MoodSignalWeight)] : [];
+
+    /// <summary>
+    /// A mood's filters as hard limits: any included genre, no excluded genre, runtime, release years, original language.
+    /// A film missing the value a filter needs doesn't pass it.
+    /// </summary>
+    private static IQueryable<Film> Filtered(IQueryable<Film> films, MoodQuery? mood)
+    {
+        if (mood is null)
+        {
+            return films;
+        }
+
+        if (mood.IncludeGenres is { Length: > 0 } include)
+        {
+            films = films.Where(f => f.Genres.Any(g => include.Contains(g)));
+        }
+
+        if (mood.ExcludeGenres is { Length: > 0 } exclude)
+        {
+            films = films.Where(f => !f.Genres.Any(g => exclude.Contains(g)));
+        }
+
+        if (mood.MaxRuntimeMinutes is { } minutes)
+        {
+            films = films.Where(f => f.RuntimeMinutes <= minutes);
+        }
+
+        if (mood.MinReleaseYear is { } from)
+        {
+            films = films.Where(f => f.ReleaseYear >= from);
+        }
+
+        if (mood.MaxReleaseYear is { } to)
+        {
+            films = films.Where(f => f.ReleaseYear <= to);
+        }
+
+        if (mood.Language is { } language)
+        {
+            films = films.Where(f => f.OriginalLanguage == language);
+        }
+
+        return films;
     }
 
     /// <summary>Items in position order with their film, the caller's swipe and the caller's watchlist flag.</summary>

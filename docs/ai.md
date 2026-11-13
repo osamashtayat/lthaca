@@ -47,6 +47,8 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
 
 ## Prompts
 - Files: `prompts/<name>.v<N>.md` + `prompts/<name>.v<N>.schema.json`; ids in `Application/Ai/IPromptLibrary.cs → Prompts`.
+  Both ship next to the API binary (`Ithaca.Api.csproj` links `*.md` and `*.schema.json`; a test loads every declared
+  prompt from the shipped folder).
 - Schemas are closed (`additionalProperties: false`, every property in `required`; optional values as `anyOf [type, null]`)
   and match the C# output record (`MoodParseOutput`, `RankCandidatesOutput`).
 - `{{variable}}` placeholders are filled by the caller. **User text (mood words) goes in `LlmRequest.Input`, never into the
@@ -66,6 +68,27 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
 - The mood service decides: chips + non-mood text → chips only, `textIgnored: true`; no chips + non-mood text → 422
   `mood.unclear`; empty text → no LLM call. Real refusals stay `ai.refused`.
 - Never repeat the user's text in a response, message or log; user-facing copy says "we", never "the AI".
+
+## Mood flow (BE-09)
+`POST /api/decks` with `source: "mood"` → `DeckService` → `MoodInterpreter` (a collaborator, reused by the room mood step
+in BE-11) → a `MoodQuery` saved with the deck:
+1. **Chips** → genres by the server-side table `MoodChips` (Domain/Moods): cozy = Comedy, Family, Animation, Romance
+   (not Horror, War, Thriller, Crime); laugh = Comedy (not Horror, War); keep me guessing = Mystery, Thriller, Crime;
+   make me feel = Drama, Romance; take me away = Adventure, Fantasy, Science Fiction, Animation; surprise = no filter.
+   Two chips add up, and a genre one chip includes is never excluded by the other. **Runtime** (`under90` < 90 min,
+   `upTo2h` ≤ 120) and **language** (original language) are plain filters. None of this calls the LLM.
+2. **Empty or whitespace text** → no LLM call.
+3. **Text** → `mood-parse.v2` with `{{genres}}` = our catalog's genres (`CatalogGenres`) and `{{year}}`; the text is the
+   user message only. The reply is parsed into `MoodParseOutput`; genres we don't have are dropped (case-insensitive,
+   our spelling kept).
+4. **Intent** (ADR-0022): `mood` → text filters join the chips' (a chip's genre is never excluded by the text; the
+   stricter runtime wins). `unclear` / `offTopic` → with chips: chips only, `textIgnored: true`, nothing from the reply
+   is used; without chips: 422 `mood.unclear`, nothing saved. Model failures pass through as `ai.*`, nothing saved.
+5. The deck's filters are hard limits on every batch (any included genre, no excluded genre, runtime, years, language;
+   a film missing a value doesn't pass), and its included genres are a strong signal for adaptation and the top 3.
+   `keywords` are stored for later (BE-13) but don't filter yet.
+6. The text is stored with the user's `MoodQuery` and returned only in their own `DeckDto.mood`; it is never logged
+   (a slice test checks the logs) and never put in an error message.
 
 ## Embeddings and similarity (ADR-0002, ADR-0013)
 - One vector per film in `films.embedding` (`vector(1024)`, HNSW cosine index) plus `films.embedding_model`.
@@ -122,10 +145,13 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
 ## Evals (`evals/`)
 - `evals/cases/*.json`, one case per file:
   `id`, `description`, `prompt` (`name.vN`), `variables`, `input` or `candidates` (TMDB ids), `recordedResponse`, `checks[]`.
-- Check types (`EvalChecks.cs`): `validJson`, `excludesGenre`, `doesNotIncludeGenre`, `idsFromCandidates`, `excludesTmdbId`;
-  BE-09 adds `intentIs` and `mustNotContain` (text that must not appear anywhere in the reply).
-- Each case has a `kind`: `representative`, `edge` or `adversarial` (BE-09); the runner reports counts per kind. A
-  prompt's suite covers all three, e.g. mood-parse: ~10 / ~5 / ~5 (ADR-0022).
+- Check types (`EvalChecks.cs`): `validJson`, `includesGenre`, `excludesGenre`, `doesNotIncludeGenre`, `idsFromCandidates`,
+  `excludesTmdbId`, `intentIs`, `intentIsNot` (for text where `unclear` and `offTopic` are both fine), `hasNoFilters`
+  (a non-mood reply sets nothing) and `mustNotContain` (text that must not appear anywhere in the reply).
+- Each case has a `kind`: `representative`, `edge` or `adversarial`; the runner reports pass counts per kind. A
+  prompt's suite covers all three. mood-parse.v2 has 21 cases (10 / 5 / 6, `evals/cases/mood-parse.v2.*.json`), their
+  `recordedResponse`s recorded from a live Anthropic run (`claude-opus-5-5`, 2026-11-13, 21/21 passing).
+- Run one prompt's cases with `--case <id prefix>`, e.g. `-- --live --case mood-parse`.
 - **Replay mode (default):** the recorded reply is checked. No network, safe for CI.
 - **Live mode (`-- --live`):** the configured `ILlmClient` answers and the reply is printed. With `Fake` the cases are expected
   to fail (no intelligence); with Anthropic this is the quality gate before shipping a prompt version. Live runs cost money.

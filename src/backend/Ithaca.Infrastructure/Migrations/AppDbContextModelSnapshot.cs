@@ -34,6 +34,10 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<Guid?>("MoodQueryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("mood_query_id");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -47,10 +51,16 @@ namespace Ithaca.Infrastructure.Migrations
                     b.HasKey("Id")
                         .HasName("pk_decks");
 
+                    b.HasIndex("MoodQueryId")
+                        .HasDatabaseName("ix_decks_mood_query_id");
+
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_decks_user_id");
 
-                    b.ToTable("decks", (string)null);
+                    b.ToTable("decks", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_decks_mood_query", "(source = 'Mood') = (mood_query_id IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("Ithaca.Domain.Decks.DeckItem", b =>
@@ -386,6 +396,81 @@ namespace Ithaca.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ithaca.Domain.Moods.MoodQuery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.PrimitiveCollection<string[]>("ExcludeGenres")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("exclude_genres");
+
+                    b.PrimitiveCollection<string[]>("IncludeGenres")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("include_genres");
+
+                    b.PrimitiveCollection<string[]>("Keywords")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("keywords");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("language");
+
+                    b.Property<int?>("MaxReleaseYear")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_release_year");
+
+                    b.Property<string>("MaxRuntime")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("max_runtime");
+
+                    b.Property<int?>("MaxRuntimeMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_runtime_minutes");
+
+                    b.Property<int?>("MinReleaseYear")
+                        .HasColumnType("integer")
+                        .HasColumnName("min_release_year");
+
+                    b.PrimitiveCollection<string[]>("Moods")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("moods");
+
+                    b.Property<string>("Text")
+                        .HasMaxLength(280)
+                        .HasColumnType("character varying(280)")
+                        .HasColumnName("text");
+
+                    b.Property<bool>("TextIgnored")
+                        .HasColumnType("boolean")
+                        .HasColumnName("text_ignored");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mood_queries");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_mood_queries_user_id");
+
+                    b.ToTable("mood_queries", (string)null);
+                });
+
             modelBuilder.Entity("Ithaca.Domain.Users.Guest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -584,6 +669,12 @@ namespace Ithaca.Infrastructure.Migrations
 
             modelBuilder.Entity("Ithaca.Domain.Decks.Deck", b =>
                 {
+                    b.HasOne("Ithaca.Domain.Moods.MoodQuery", null)
+                        .WithMany()
+                        .HasForeignKey("MoodQueryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_decks_mood_queries_mood_query_id");
+
                     b.HasOne("Ithaca.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -654,6 +745,16 @@ namespace Ithaca.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_user_films_users_user_id");
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Moods.MoodQuery", b =>
+                {
+                    b.HasOne("Ithaca.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_mood_queries_users_user_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>

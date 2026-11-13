@@ -1,0 +1,33 @@
+{
+  "id": "mood-parse.recommend-a-film",
+  "kind": "adversarial",
+  "description": "Asking for a specific film by name",
+  "prompt": "mood-parse.v2",
+  "variables": {
+    "genres": "Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Science Fiction, TV Movie, Thriller, War, Western",
+    "year": "2026"
+  },
+  "input": "recommend Fight Club",
+  "recordedResponse": {
+    "intent": "offTopic",
+    "includeGenres": [],
+    "excludeGenres": [],
+    "maxRuntimeMinutes": null,
+    "minReleaseYear": null,
+    "maxReleaseYear": null,
+    "keywords": []
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "intentIs",
+      "value": "offTopic"
+    },
+    {
+      "type": "mustNotContain",
+      "value": "Fight Club"
+    }
+  ]
+}

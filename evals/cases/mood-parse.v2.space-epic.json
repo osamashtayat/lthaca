@@ -1,0 +1,40 @@
+{
+  "id": "mood-parse.space-epic",
+  "kind": "representative",
+  "description": "Science fiction adventure",
+  "prompt": "mood-parse.v2",
+  "variables": {
+    "genres": "Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Science Fiction, TV Movie, Thriller, War, Western",
+    "year": "2026"
+  },
+  "input": "a big sci-fi adventure set in space",
+  "recordedResponse": {
+    "intent": "mood",
+    "includeGenres": [
+      "Science Fiction",
+      "Adventure"
+    ],
+    "excludeGenres": [],
+    "maxRuntimeMinutes": null,
+    "minReleaseYear": null,
+    "maxReleaseYear": null,
+    "keywords": [
+      "space",
+      "epic",
+      "space exploration"
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "intentIs",
+      "value": "mood"
+    },
+    {
+      "type": "includesGenre",
+      "value": "Science Fiction"
+    }
+  ]
+}

@@ -29,7 +29,7 @@ public sealed record RenderedPrompt(PromptId Id, string Text, string OutputSchem
 /// <summary>The prompts that exist. Use these, not ad-hoc ids.</summary>
 public static class Prompts
 {
-    public static readonly PromptId MoodParse = new("mood-parse", 1);
+    public static readonly PromptId MoodParse = new("mood-parse", 2);
     public static readonly PromptId RankCandidates = new("rank-candidates", 1);
     public static readonly PromptId ExplainPick = new("explain-pick", 1);
 }

@@ -9,7 +9,7 @@ namespace Ithaca.Evals;
 /// </summary>
 internal static class EvalChecks
 {
-    public static readonly string[] Known = ["validJson", "excludesGenre", "doesNotIncludeGenre", "idsFromCandidates", "excludesTmdbId"];
+    public static readonly string[] Known = ["validJson", "excludesGenre", "doesNotIncludeGenre", "idsFromCandidates", "excludesTmdbId", "intentIs", "intentIsNot", "mustNotContain", "includesGenre", "hasNoFilters"];
 
     public static string? Run(EvalCheck check, EvalCase evalCase, string replyJson)
     {
@@ -34,9 +34,26 @@ internal static class EvalChecks
                 ? $"invented ids not in candidates: {string.Join(", ", invented)}" : null,
             "excludesTmdbId" => RankedIds(reply).Contains(check.Value!.GetValue<int>())
                 ? $"returned hard-no film {check.Value}" : null,
+            "includesGenre" => Strings(reply?["includeGenres"]).Contains(Text(check), StringComparer.OrdinalIgnoreCase)
+                ? null : $"includeGenres lacks '{Text(check)}'",
+            "intentIs" => string.Equals(reply?["intent"]?.GetValue<string>(), Text(check), StringComparison.Ordinal)
+                ? null : $"intent is '{reply?["intent"]}', expected '{Text(check)}'",
+            "intentIsNot" => string.Equals(reply?["intent"]?.GetValue<string>(), Text(check), StringComparison.Ordinal)
+                ? $"intent is '{Text(check)}', which this case rules out" : null,
+            "mustNotContain" => replyJson.Contains(Text(check), StringComparison.OrdinalIgnoreCase)
+                ? $"reply contains forbidden text '{Text(check)}'" : null,
+            "hasNoFilters" => HasFilters(reply) ? "a non-mood reply carries filters" : null,
             _ => $"unknown check type '{check.Type}' (known: {string.Join(", ", Known)})",
         };
     }
+
+    /// <summary>Any genre, keyword, runtime or year set: a reply that isn't a mood must have none (mood-parse.v2).</summary>
+    private static bool HasFilters(JsonNode? reply) =>
+        ListFilters.Any(k => Strings(reply?[k]).Any()) || NumberFilters.Any(k => reply?[k] is JsonValue);
+
+    private static readonly string[] ListFilters = ["includeGenres", "excludeGenres", "keywords"];
+
+    private static readonly string[] NumberFilters = ["maxRuntimeMinutes", "minReleaseYear", "maxReleaseYear"];
 
     private static string Text(EvalCheck check) => check.Value?.GetValue<string>() ?? "";
 

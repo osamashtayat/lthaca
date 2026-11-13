@@ -1,4 +1,4 @@
-namespace Ithaca.Application.Moods;
+namespace Ithaca.Domain.Moods;
 
 /// <summary>A mood chip. The labels are UI copy in the frontend; the server owns what each one means (api-contract.md §3).</summary>
 public enum Mood

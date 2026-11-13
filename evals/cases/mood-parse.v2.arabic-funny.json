@@ -1,0 +1,42 @@
+{
+  "id": "mood-parse.arabic-funny",
+  "kind": "edge",
+  "description": "Arabic: a funny, light film",
+  "prompt": "mood-parse.v2",
+  "variables": {
+    "genres": "Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Science Fiction, TV Movie, Thriller, War, Western",
+    "year": "2026"
+  },
+  "input": "فيلم مضحك وخفيف",
+  "recordedResponse": {
+    "intent": "mood",
+    "includeGenres": [
+      "Comedy"
+    ],
+    "excludeGenres": [
+      "Horror",
+      "War"
+    ],
+    "maxRuntimeMinutes": null,
+    "minReleaseYear": null,
+    "maxReleaseYear": null,
+    "keywords": [
+      "funny",
+      "light-hearted",
+      "easy watch"
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "intentIs",
+      "value": "mood"
+    },
+    {
+      "type": "includesGenre",
+      "value": "Comedy"
+    }
+  ]
+}

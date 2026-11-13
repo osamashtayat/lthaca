@@ -1,6 +1,6 @@
 using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
-using Ithaca.Application.Moods;
+using Ithaca.Domain.Moods;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ithaca.Application.Films;
@@ -82,13 +82,7 @@ public sealed class FilmQueryService(IAppDbContext db, ICurrentActor current)
     /// <summary>Genres present in our catalog (available films), alphabetical.</summary>
     public async Task<Result<IReadOnlyList<string>>> GetGenresAsync(CancellationToken ct)
     {
-        IReadOnlyList<string> genres = await db.Films
-            .AsNoTracking()
-            .Where(f => f.IsAvailable)
-            .SelectMany(f => f.Genres)
-            .Distinct()
-            .OrderBy(g => g)
-            .ToListAsync(ct);
+        IReadOnlyList<string> genres = await CatalogGenres.ListAsync(db, ct);
         return Result<IReadOnlyList<string>>.Success(genres);
     }
 }

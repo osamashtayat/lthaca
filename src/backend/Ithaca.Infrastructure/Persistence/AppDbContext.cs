@@ -3,6 +3,7 @@ using Ithaca.Application.Users;
 using Ithaca.Domain.Decks;
 using Ithaca.Domain.Films;
 using Ithaca.Domain.Library;
+using Ithaca.Domain.Moods;
 using Ithaca.Domain.Users;
 using Ithaca.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -29,6 +30,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Guest> Guests => Set<Guest>();
 
     public DbSet<UserFilm> UserFilms => Set<UserFilm>();
+
+    public DbSet<MoodQuery> MoodQueries => Set<MoodQuery>();
 
     public DbSet<Deck> Decks => Set<Deck>();
 

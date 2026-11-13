@@ -17,7 +17,7 @@ internal sealed class FakeLlmClient : ILlmClient
         var id = request.Prompt.Id;
         var json = id.Name switch
         {
-            "mood-parse" => """{"includeGenres":[],"excludeGenres":[],"maxRuntimeMinutes":null,"minReleaseYear":null,"maxReleaseYear":null,"keywords":[]}""",
+            "mood-parse" => """{"intent":"mood","includeGenres":[],"excludeGenres":[],"maxRuntimeMinutes":null,"minReleaseYear":null,"maxReleaseYear":null,"keywords":[]}""",
             "rank-candidates" => EchoCandidates(request.Input),
             "explain-pick" => """{"explanation":"A fake explanation."}""",
             _ => "{}",

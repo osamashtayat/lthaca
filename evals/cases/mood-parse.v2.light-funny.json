@@ -1,0 +1,49 @@
+{
+  "id": "mood-parse.light-funny",
+  "kind": "representative",
+  "description": "Light and funny, nothing scary",
+  "prompt": "mood-parse.v2",
+  "variables": {
+    "genres": "Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Science Fiction, TV Movie, Thriller, War, Western",
+    "year": "2026"
+  },
+  "input": "something light and funny for tonight, nothing scary",
+  "recordedResponse": {
+    "intent": "mood",
+    "includeGenres": [
+      "Comedy"
+    ],
+    "excludeGenres": [
+      "Horror"
+    ],
+    "maxRuntimeMinutes": null,
+    "minReleaseYear": null,
+    "maxReleaseYear": null,
+    "keywords": [
+      "light",
+      "funny",
+      "feel-good"
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "intentIs",
+      "value": "mood"
+    },
+    {
+      "type": "includesGenre",
+      "value": "Comedy"
+    },
+    {
+      "type": "excludesGenre",
+      "value": "Horror"
+    },
+    {
+      "type": "doesNotIncludeGenre",
+      "value": "Horror"
+    }
+  ]
+}

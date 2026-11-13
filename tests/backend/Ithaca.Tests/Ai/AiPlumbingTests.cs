@@ -12,6 +12,18 @@ public sealed class AiPlumbingTests
         new(Options.Create(new AiOptions { PromptsPath = RepoPaths.File("prompts") }));
 
     [Fact]
+    public async Task EveryDeclaredPrompt_ShipsWithTheApi_WithItsSchema()
+    {
+        // The default PromptsPath ("prompts" next to the binary): what the API and its Docker image actually read.
+        var shipped = new FilePromptLibrary(Options.Create(new AiOptions()));
+        foreach (var id in new[] { Prompts.MoodParse, Prompts.RankCandidates, Prompts.ExplainPick })
+        {
+            var prompt = await shipped.RenderAsync(id, new Dictionary<string, string>(), TestContext.Current.CancellationToken);
+            prompt.OutputSchemaJson.ShouldNotBeNullOrWhiteSpace($"{id.SchemaFileName} must be copied to the API's output");
+        }
+    }
+
+    [Fact]
     public async Task EveryDeclaredPrompt_HasAFile()
     {
         foreach (var id in new[] { Prompts.MoodParse, Prompts.RankCandidates, Prompts.ExplainPick })
