@@ -11,4 +11,5 @@ public sealed record CatalogSyncReport(
     int FactsEnriched,
     int FactsUnmatched,
     int ReferencedRefreshed,
-    int ReferencedUnavailable);
+    int ReferencedUnavailable,
+    int TrailersPurged);

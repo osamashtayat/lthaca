@@ -328,6 +328,11 @@ type LibrarySummaryDto = { liked: number; watchlist: number; seen: number }
 type FilmTrailerDto = { trailer: { site: "YouTube"; key: string; name: string } | null }
 ```
 - The trailer comes from TMDB on first request and is cached (ADR-0003), at most 180 days (ADR-0017). Never on the swipe path.
+- As built (BE-07): the first trailer TMDB lists on YouTube (`site` "YouTube", case-insensitive), `null` when there is none;
+  both answers are cached per film (`film_trailers`). A cached answer is served without calling TMDB for 30 days, then
+  refreshed; if TMDB fails, a cached answer up to 180 days old is served, and `503 tmdb.unavailable` only when there is
+  none. The nightly sync deletes cached trailers older than 180 days. A film TMDB no longer knows (A14) answers
+  `{ trailer: null }` without calling TMDB.
 - The caller's state on the details page comes from `GET /api/library/{tmdbId}` (signed in only).
 - Out of scope: the personal "WHY" note (needs taste + Wikidata: P-03), certification ("PG-13"), and where to watch
   ("Watch on Mubi / Rent on Apple TV / Open in Letterboxd": proposed task P-01, needs the owner's approval).

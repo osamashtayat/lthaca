@@ -55,8 +55,6 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
         { "GET", $"{Room}/result", null },
         { "POST", $"{Room}/leave", null },
         { "POST", $"{Room}/close", null },
-
-        { "GET", "/api/films/550/trailer", null },
     };
 
     [Theory]

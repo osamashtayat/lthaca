@@ -196,6 +196,38 @@ namespace Ithaca.Infrastructure.Migrations
                     b.ToTable("film_facts", (string)null);
                 });
 
+            modelBuilder.Entity("Ithaca.Domain.Films.FilmTrailer", b =>
+                {
+                    b.Property<Guid>("FilmId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("film_id");
+
+                    b.Property<DateTimeOffset>("FetchedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fetched_at");
+
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("key");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("name");
+
+                    b.HasKey("FilmId")
+                        .HasName("pk_film_trailers");
+
+                    b.HasIndex("FetchedAt")
+                        .HasDatabaseName("ix_film_trailers_fetched_at");
+
+                    b.ToTable("film_trailers", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_film_trailers_key_and_name", "(key IS NULL) = (name IS NULL)");
+                        });
+                });
+
             modelBuilder.Entity("Ithaca.Domain.Library.UserFilm", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -449,6 +481,16 @@ namespace Ithaca.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_film_facts_films_film_id");
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Films.FilmTrailer", b =>
+                {
+                    b.HasOne("Ithaca.Domain.Films.Film", null)
+                        .WithOne()
+                        .HasForeignKey("Ithaca.Domain.Films.FilmTrailer", "FilmId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_film_trailers_films_film_id");
                 });
 
             modelBuilder.Entity("Ithaca.Domain.Library.UserFilm", b =>
