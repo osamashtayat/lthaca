@@ -14,6 +14,8 @@ export function useRoomLive(code: string, enabled: boolean) {
   const handlers: RoomEventHandlers = {
     memberJoined: refetchRoom,
     memberLeft: refetchRoom,
+    memberReady: refetchRoom,
+    roomStarted: refetchRoom,
     roomMatched: refetchRoom,
     roomClosed: refetchRoom,
   }

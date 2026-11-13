@@ -20,6 +20,11 @@ public interface ITmdbClient
 
 public sealed record TmdbFilmSummary(int TmdbId, string Title, int? ReleaseYear, double Popularity);
 
+/// <summary>
+/// Full TMDB details for one film. The last four fields are required parameters so no caller can drop them by accident;
+/// each is null when TMDB doesn't provide it (<see cref="BackdropPath"/>, <see cref="VoteAverage"/>, <see cref="VoteCount"/>,
+/// <see cref="OriginalLanguage"/>).
+/// </summary>
 public sealed record TmdbFilmDetails(
     int TmdbId,
     string Title,
@@ -29,9 +34,9 @@ public sealed record TmdbFilmDetails(
     int? RuntimeMinutes,
     IReadOnlyList<string> Genres,
     double? Popularity,
-    string? BackdropPath = null,
-    double? VoteAverage = null,
-    int? VoteCount = null,
-    string? OriginalLanguage = null);
+    string? BackdropPath,
+    double? VoteAverage,
+    int? VoteCount,
+    string? OriginalLanguage);
 
 public sealed record TmdbVideo(string Site, string Key, string Name);

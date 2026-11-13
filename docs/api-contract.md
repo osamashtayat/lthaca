@@ -262,6 +262,7 @@ type RoomPickDto = {
 Rules (all in services; see docs/realtime.md for when each event is published):
 - **Join** is idempotent (already a member → 200). Late arrivals may join while `swiping` ("Late arrivals can still hop in").
   Joining publishes `memberJoined`; leave publishes `memberLeft`; close publishes `roomClosed`.
+  `PUT …/mood` publishes `memberReady`; `POST …/start` publishes `roomStarted` (both land with BE-11).
 - **Ready:** in `mood` rooms a member is ready after `PUT …/mood`; in `justSwipe` rooms every member is ready. The host
   may start with members not ready ("2 OF 3 READY").
 - **Hard nos** are private to the member ("the group never sees these") and a film matching any member's hard no never
