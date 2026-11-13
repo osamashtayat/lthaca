@@ -14,7 +14,7 @@ Ithaca's design embeds TMDB overviews (pgvector) and gives TMDB film data to Cla
 
 ## Decision
 Already done regardless of the outcome:
-- Attribution notice in the site footer (logo still TODO).
+- Attribution notice in the site footer (logo still TODO; done, see Follow-up).
 - The sync deletes films not refreshed within 180 days (`CatalogSync:MaxAgeDays`).
 - Embedding TMDB-derived text is OFF (`CatalogSync:EmbedOverviews = false`). The LLM receives only user text and generic genre names until this is decided; rank/explain features must not be built on TMDB text before then.
 
@@ -33,6 +33,9 @@ The owner chose **option 2**: Wikidata feeds the AI, TMDB provides the full deta
   `CatalogSync:EmbedOverviews` (which embeds TMDB text) stays false and will be replaced by a Wikidata-based embedding text.
 - Wikipedia plot text (CC BY-SA) is a possible later addition for richer embeddings; it needs an attribution decision first.
 - Not built yet: the Wikidata enricher (next feature).
+
+### Follow-up (2026-11-13)
+The TMDB logo (official "alt short" blue SVG, unmodified, 12px tall) is now in the footer, above the notice (FE-01).
 
 ## Consequences
 Until decided: deck features can use our own data (votes, likes, genres) and mood parsing; ranking/explanations and embeddings over TMDB text wait.
