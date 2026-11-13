@@ -163,9 +163,8 @@ its help pages, never guessed), phone first, and one line on what we do with the
 feature that owns the topic (`LetterboxdHelpSheet` in `features/import`, exported from its `index.ts`) and every screen
 that needs them reuses it (FE-13's empty state, FE-14's `/import`).
 
-**Import entry points:** `/import` is reached from My Cinema (link under the counts), from Profile ("Letterboxd" row,
-FE-15) and from By taste when the server says there isn't enough history (FE-13). All of them link to `/import`; none
-uploads by itself.
+**Import entry points** (where they are: ADR-0024 → Where users meet it): each is a link to `/import`; none uploads by
+itself or reimplements the help steps.
 
 ## Accessibility
 - Real `<button>`/`<a>`; radio-style widgets (SegmentedControl, StubRating) are native `<input type="radio">` (visually

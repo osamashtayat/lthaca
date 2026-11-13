@@ -62,7 +62,7 @@ Facts that shape the decision (checked on Letterboxd's own help pages, 2026-11-1
 7. **Re-import is safe.** A newer export runs the same rules: one `UserFilm` per user and film (the existing unique key),
    so nothing is duplicated and only what's new is added. One active job per user at a time.
 8. **Hostile files are expected.** Size limit on the upload; ZIP-bomb limits (entry count, total and per-entry
-   uncompressed size, compression ratio, counted while reading, not trusted from the headers); type checked by
+   uncompressed size of the files we read, compression ratio, counted while reading, not trusted from the headers); type checked by
    content (ZIP signature or a UTF-8 CSV with a recognised header), never by extension or `Content-Type`; nested
    archives ignored; a row cap per import. Limits are config (`ImportOptions`) with defaults in §13 of the contract.
    Creating imports is rate-limited per user (BE-19). Titles and rows are never logged (they reveal what someone
@@ -79,7 +79,10 @@ Facts that shape the decision (checked on Letterboxd's own help pages, 2026-11-1
   from Profile (FE-15).
 
 The contract is [api-contract.md §13](../api-contract.md#13-import-letterboxd) and the §7 rating change; the tasks are
-OPS-12, BE-15a, BE-15, BE-20, FE-13, FE-14, FE-20 in [the backlog](../backlog.md).
+OPS-12, BE-15a, BE-15, BE-20, FE-13, FE-14, FE-20, with scope added to BE-14a, BE-14, BE-16a, BE-19 and FE-15, in
+[the backlog](../backlog.md). OPS-12 also wrote the design into api-contract.md (backend-owned) and
+frontend-conventions.md (frontend-owned) because the owner decided both sides at once; the backend and frontend tasks
+above own those sections from here on ("as built").
 
 ## Consequences
 + New users can reach "By taste" in minutes with history they already have; nothing they did in Ithaca is overwritten.
@@ -111,7 +114,7 @@ OPS-12, BE-15a, BE-15, BE-20, FE-13, FE-14, FE-20 in [the backlog](../backlog.md
 ## Open questions (owner)
 | Id | Question | Recommendation | Assumed until decided |
 |---|---|---|---|
-| Q1 | Guests and import: guests have no library (ADR-0012) and solo needs an account (A3). Where would a guest's import live? (a) create an account first, then import; (b) a temporary, room-scoped import used only for that room's group taste and deleted with the room; (c) no import for guests. | **(a)**: keeps ADR-0012 intact, one import path, and guest upgrade already keeps their room votes. (b) needs a second, room-scoped store, a new retention rule and group-taste logic for half-anonymous data; (c) is a dead end for exactly the people we want to convert. | (a): guests see "Create a free account to import" |
+| Q1 | Guests and import: guests have no library (ADR-0012) and solo needs an account (A3). Where would a guest's import live? (a) create an account first, then import; (b) a temporary, room-scoped import used only for that room's group taste and deleted with the room; (c) no import for guests. | **(a)**: keeps ADR-0012 intact, one import path, and guest upgrade already keeps their room votes. (b) needs a second, room-scoped store, a new retention rule and group-taste logic for half-anonymous data; (c) is a dead end for exactly the people we want to convert. | (a): `/import` sends guests to sign in or create an account |
 | Q2 | How much history is "enough" for By taste without asking for an import? | At least **10 films with a positive signal** (liked, rated ≥ 3.5, or "loved it"), a config value BE-14 can tune | 10, owned by BE-14a/§12 |
 | Q3 | Extra entry point: My Cinema, Profile, or both? | **Both**: My Cinema already links to `/import`; Profile gets a "Letterboxd · Import" row | both |
 | Q4 | Grow the catalog first (L6) so imports match more of it locally? | Not a blocker: the import adds missing films itself. A bigger catalog (L6) just means fewer TMDB lookups per import | import does not wait for L6 |

@@ -16,6 +16,7 @@ Use these names exactly in code (types, tables, routes, UI copy where it fits). 
 | `TasteProfile` | A user's (or room's) taste vector in the film-embedding space, plus what built it. | Built after a few swipes or from history. |
 | `MoodQuery` | A mood request: tapped moods and/or free text, and the structured filters the LLM parsed from it. | Output of `mood-parse.vN`. |
 | `ImportJob` | One upload of a user's Letterboxd export (ZIP or one CSV from it), processed in the background: progress, counts, and the films it couldn't match. Its parsed rows are `ImportItem`s; the file itself is never stored. | Feeds `UserFilm`; only adds, never removes; existing Ithaca choices win (ADR-0024). Tables `import_jobs`, `import_items`. |
+| `LetterboxdFilmLink` | A Letterboxd film URI and the TMDB id an import matched it to (ids only), shared by all users so re-imports don't search TMDB again. | Written by the import job (ADR-0024). Table `letterboxd_film_links`. |
 
 Other words used in docs and UI:
 - **Deck** — the swipeable stack. **Sampler** — the varied first cards of "Just swipe" before a `TasteProfile` exists.
