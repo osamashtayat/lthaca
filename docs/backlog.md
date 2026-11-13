@@ -421,7 +421,7 @@ lint, test, build.
 - **Acceptance:** a second call inside the window makes no TMDB call; no trailer → `{ trailer: null }`.
 - **Tests:** Fake TMDB call counter; 404 film; TMDB failure with/without cache.
 
-### FE-04 — Film details (A) · `Todo`
+### FE-04 — Film details (A) · `Done` (PR #10)
 - **Objective:** rebuild `FilmPage` to the "Film details (A)" board (ignore "Direction B").
 - **Deps:** BE-01, FE-02, FE-03. **Modules:** `src/features/films/`, `src/mocks/`.
 - **Contract:** §7, §8.

@@ -14,5 +14,10 @@ export const queryKeys = {
   films: {
     all: ['films'] as const,
     detail: (tmdbId: number) => ['films', 'detail', tmdbId] as const,
+    trailer: (tmdbId: number) => ['films', 'trailer', tmdbId] as const,
+  },
+  library: {
+    all: ['library'] as const,
+    detail: (tmdbId: number) => ['library', 'detail', tmdbId] as const,
   },
 } as const

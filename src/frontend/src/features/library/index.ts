@@ -1,5 +1,4 @@
-/**
- * Public surface of the library feature (not built yet). Export pages and hooks other code may use;
- * keep everything else internal. Copy the shape of features/films (docs/frontend-conventions.md).
- */
-export {}
+/** Public surface of the library feature: hooks for the signed-in user's state on a film. Pages arrive with FE-07. */
+export { useUserFilm } from './api/useUserFilm'
+export { useUpdateUserFilm } from './api/useUpdateUserFilm'
+export type { UserFilm, UserFilmState } from './types'
