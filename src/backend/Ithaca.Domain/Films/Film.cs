@@ -11,6 +11,9 @@ public sealed class Film
 {
     public const int TitleMaxLength = 300;
 
+    /// <summary>TMDB's terms cap caching of anything obtained from TMDB at 6 months (ADR-0017); the one home of that limit.</summary>
+    public const int TmdbMaxCacheDays = 180;
+
     /// <summary>Length of every embedding vector (Voyage 4-series default, ADR-0013). Changing it needs a migration and a re-embed.</summary>
     public const int EmbeddingDimensions = 1024;
 

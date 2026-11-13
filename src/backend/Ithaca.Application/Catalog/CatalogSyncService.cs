@@ -10,7 +10,8 @@ namespace Ithaca.Application.Catalog;
 /// TMDB → <c>films</c> sync (ADR-0003). Pages through TMDB's most popular films and upserts each by <c>TmdbId</c> (display
 /// data only); re-fetches by id every film user data references that this run hasn't refreshed yet, marking the ones TMDB
 /// no longer knows unavailable (ADR-0019); deletes only unreferenced films not refreshed within
-/// <see cref="CatalogSyncOptions.MaxAgeDays"/> (TMDB's 6-month caching limit); gives the remaining films their Wikidata
+/// <see cref="CatalogSyncOptions.MaxAgeDays"/> (TMDB's 6-month caching limit) and cached trailers older than
+/// <see cref="FilmTrailer.MaxAge"/>; gives the remaining films their Wikidata
 /// facts (<see cref="WikidataEnricher"/>); then embeds the facts' text (<see cref="FilmEmbedder"/>; never TMDB text,
 /// ADR-0017). Saves once per page and once per refresh, Wikidata or embedding batch, so a failure mid-run keeps the work
 /// already done; the next run continues. A failure before the purge skips it. Called by <c>CatalogSyncJob</c> and the
@@ -93,6 +94,10 @@ public sealed class CatalogSyncService(
         var referenced = ReferencedFilmIds();
         var purged = await db.Films.Where(f => f.SyncedAt < cutoff && !referenced.Contains(f.Id)).ExecuteDeleteAsync(ct);
 
+        // Cached trailers are TMDB data too; the trailer service never serves them past MaxAge either.
+        var trailerCutoff = time.GetUtcNow() - FilmTrailer.MaxAge;
+        var trailersPurged = await db.FilmTrailers.Where(t => t.FetchedAt < trailerCutoff).ExecuteDeleteAsync(ct);
+
         // After the purge, so no batch is spent on films about to go. A Wikidata failure fails the run; TMDB work is kept.
         var enrichment = await facts.RunAsync(ct);
         if (!enrichment.IsSuccess)
@@ -108,7 +113,7 @@ public sealed class CatalogSyncService(
 
         return new CatalogSyncReport(
             pages, added, updated, skipped, embedded.Value, purged, enrichment.Value.Enriched, enrichment.Value.Unmatched,
-            refresh.Value.Refreshed, refresh.Value.Unavailable);
+            refresh.Value.Refreshed, refresh.Value.Unavailable, trailersPurged);
     }
 
     /// <summary>

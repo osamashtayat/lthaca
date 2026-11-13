@@ -23,6 +23,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<FilmFacts> FilmFacts => Set<FilmFacts>();
 
+    public DbSet<FilmTrailer> FilmTrailers => Set<FilmTrailer>();
+
     public DbSet<Guest> Guests => Set<Guest>();
 
     public DbSet<UserFilm> UserFilms => Set<UserFilm>();

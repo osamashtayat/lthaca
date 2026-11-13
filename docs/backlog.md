@@ -483,7 +483,7 @@ lint, test, build.
 - **Tests:** slice tests for search, each filter, sort, paging bounds.
 - **Docs:** api-contract.md §9.
 
-### BE-07 — Trailer, cached · `Todo`
+### BE-07 — Trailer, cached · `Done` (PR #29)
 - **Objective:** the details page's trailer without TMDB on the hot path.
 - **Deps:** BE-01. **Modules:** `Application/Films`, `Infrastructure/Tmdb`, migration (cache table).
 - **Contract:** §8.
