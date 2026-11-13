@@ -177,7 +177,7 @@ public sealed class CatalogRetentionTests(PostgresFixture postgres)
             }
 
             return Task.FromResult(Result<TmdbFilmDetails?>.Success(known.TryGetValue(tmdbId, out var title)
-                ? new TmdbFilmDetails(tmdbId, title, 2001, $"Overview of {title}", "/fresh.jpg", 101, ["Drama"], 2)
+                ? new TmdbFilmDetails(tmdbId, title, 2001, $"Overview of {title}", "/fresh.jpg", 101, ["Drama"], 2, null, null, null, null)
                 : FakeTmdbClient.Films.FirstOrDefault(f => f.TmdbId == tmdbId)));
         }
 
