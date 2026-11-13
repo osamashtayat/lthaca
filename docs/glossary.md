@@ -8,14 +8,15 @@ Use these names exactly in code (types, tables, routes, UI copy where it fits). 
 | `Guest` | Someone who joined a room from a shared link without an account. | Can vote in that room only. |
 | `Film` | A movie in **our** catalog, synced from TMDB, with an optional embedding and the model that made it. | Public id is `TmdbId`. Table `films`. Refreshed at least every 180 days (TMDB terms); films user data references are refreshed by id and never purged (ADR-0019). |
 | `FilmFacts` | What Wikidata (CC0) says about a `Film` — genres, subjects, directors, cast, countries, languages, year, runtime, awards — and the embedding text built only from them. | The only film data AI may see (ADR-0017). Table `film_facts`, one row per matched film. |
-| `UserFilm` | A user's relation to a film: liked, watchlist, seen, personal rating (1–5). No "watching" state. | Powers "My Cinema" (Library). |
+| `UserFilm` | A user's relation to a film: liked, watchlist, seen, personal rating (0.5–5 in half steps, shown as ticket stubs). No "watching" state. | Powers "My Cinema" (Library). Stored as half stars 1–10 (ADR-0024). |
 | `Room` | A group session with one shared deck, joined by link or code. | Stored in the DB; real-time via RoomHub. |
 | `RoomMember` | A `User` or `Guest` in a `Room`. | Host is a member with extra rights. |
 | `DeckItem` | One card (a `Film`) at a position in a deck — solo or a room's shared deck. | Group "Just swipe" adds them in batches. |
 | `Vote` | A member's swipe on a `DeckItem`: right (I'd watch it), left (not for me), up (seen it → loved it / not for me). | Same three gestures everywhere. |
 | `TasteProfile` | A user's (or room's) taste vector in the film-embedding space, plus what built it. | Built after a few swipes or from history. |
 | `MoodQuery` | A mood request: tapped moods and/or free text, and the structured filters the LLM parsed from it. | Output of `mood-parse.vN`. |
-| `ImportJob` | A Letterboxd CSV/ZIP import and its progress/result. | Feeds `UserFilm`. |
+| `ImportJob` | One upload of a user's Letterboxd export (ZIP or one CSV from it), processed in the background: progress, counts, and the films it couldn't match. Its parsed rows are `ImportItem`s; the file itself is never stored. | Feeds `UserFilm`; only adds, never removes; existing Ithaca choices win (ADR-0024). Tables `import_jobs`, `import_items`. |
+| `LetterboxdFilmLink` | A Letterboxd film URI and the TMDB id an import matched it to (ids only), shared by all users so re-imports don't search TMDB again. | Written by the import job (ADR-0024). Table `letterboxd_film_links`. |
 
 Other words used in docs and UI:
 - **Deck** — the swipeable stack. **Sampler** — the varied first cards of "Just swipe" before a `TasteProfile` exists.

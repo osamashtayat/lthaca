@@ -7,7 +7,8 @@ swipes (incl. mood), rooms and votes, library (My Cinema), film details, browse.
 
 Not repeated here: the error pipeline (docs/backend-conventions.md → Result and errors), real-time events
 (`contracts/realtime-events.json` + docs/realtime.md), domain names (docs/glossary.md), AI rules (docs/ai.md).
-Second-wave features (taste, import, profile, Tonight) get their contract sections in their own backlog task.
+Second-wave features (taste, import, profile, Tonight) get their contract sections in their own backlog task; §13 Import
+was designed with its decision (OPS-12, ADR-0024) and BE-15a makes it executable.
 
 Places where the docs, ADRs or design leave a gap are marked **⚠ Open** with the assumption this contract makes.
 They are collected in §11 and in the backlog's open questions; the owner confirms or changes them.
@@ -60,6 +61,13 @@ BE-01 adds all of them at once, so mocks and screens can use them from day one.
 | 409 | `room.full` | the room already has 8 members |
 | 409 | `room.invalid_state` | action not allowed in the room's current `status` (e.g. vote in the lobby, start twice) |
 | 409 | `room.no_result` | result requested before there is one |
+| 413 | `request.too_large` | the request body is over the server's limit for that endpoint (the pipeline refuses it before any service runs; mapped in `ProblemDetailsExceptionHandler`) — BE-15a |
+| 404 | `import.not_found` | no such import **for this user** (another user's import is also 404) — BE-15a |
+| 400 | `import.invalid_file` | not a Letterboxd export: wrong type, unreadable, no recognised file or header, or a ZIP over the entry-count / ratio limits (§13) — BE-15a |
+| 409 | `import.already_running` | the user already has a `queued` or `running` import — BE-15a |
+| 413 | `import.file_too_large` | the files read from the upload unpack to more than the limit (§13) — BE-15a |
+| 422 | `import.nothing_to_import` | a valid export with no rows in the files we read — BE-15a |
+| 422 | `import.too_many_films` | more distinct films than the per-import cap (§13) — BE-15a |
 | 422 | `deck.no_yeses` | top 3 requested before any right swipe |
 | 422 | `mood.unclear` | mood text isn't a mood (unclear or off-topic) and no chips were tapped; nothing created (ADR-0022) |
 | 422 / 502 / 503 | `ai.refused` / `ai.invalid_output` / `ai.unavailable` | mood parsing failed — exist (docs/ai.md) |
@@ -275,8 +283,8 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 
 ## 7. Library — My Cinema (UserFilm, ADR-0019)
 
-One `UserFilm` per user and film, with independent flags (the Details A board toggles Like, Saved, Seen it) and a 1–5
-rating in ticket stubs. There is no "Watching" state (A9, decided: dropped).
+One `UserFilm` per user and film, with independent flags (the Details A board toggles Like, Saved, Seen it) and a rating
+of 0.5–5 in steps of 0.5, shown as ticket stubs (half stars, ADR-0024; until BE-20 lands the API takes whole 1–5). There is no "Watching" state (A9, decided: dropped).
 
 | Method & path | Access | Body | Success | Errors |
 |---|---|---|---|---|
@@ -290,14 +298,17 @@ rating in ticket stubs. There is no "Watching" state (A9, decided: dropped).
 ```ts
 type LibraryShelf = "liked" | "watchlist" | "seen"
 type LibrarySort  = "recent" | "title" | "rating"
-type UpdateUserFilmRequest = { liked: boolean; onWatchlist: boolean; seen: boolean; rating: number | null }  // rating 1–5
+type UpdateUserFilmRequest = { liked: boolean; onWatchlist: boolean; seen: boolean; rating: number | null }  // rating 0.5–5, steps of 0.5
 type UserFilmDto = UpdateUserFilmRequest & { film: FilmSummaryDto; updatedAt: string }
 type LibrarySummaryDto = { liked: number; watchlist: number; seen: number }
 ```
 - `PUT` replaces the whole state (last write wins); all false + `rating: null` deletes the row. The `/watchlist`
   pair changes only that flag, for the deck card's watchlist button, where the client doesn't hold the full state.
 - A rating implies `seen = true` (server rule; A8, decided). `liked` stays a separate flag; the Liked shelf shows the
-  rating when there is one.
+  rating when there is one (e.g. "3.5/5").
+- **Half stars (ADR-0024, BE-20):** `rating` is 0.5, 1, 1.5 … 5 or `null`. Anything else (0, 5.5, 3.25, 7) → 400
+  `validation` with `errors.rating`. Stored as an integer count of half stars (1–10); the API never shows that number.
+  `sort=rating` is unchanged (highest first, unrated last). Imports write ratings through the same rules (§13).
 - ADR-0019 lands here: referenced films are refreshed by the sync, never purged; FKs to `films` are `ON DELETE RESTRICT`.
 - As built (BE-05): `shelf` defaults to `liked`, `sort` to `recent` (last change first); `title` is A→Z; `rating` is
   highest first, unrated last; every order ends on `tmdbId`. `genre` matches one of the film's genres exactly. An
@@ -378,3 +389,95 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
 | A12 | The glossary has no names for a solo deck's parent record or a solo swipe (`Vote` is a room member's) | `swipe`/`SwipeDto`/`swipeId` in the contract; BE-08 proposes glossary entries |
 | A13 | Room mood has no `language` (solo mood does); is it stored as a `MoodQuery`? | No language in rooms; stored per member as a `MoodQuery` |
 | A14 | ADR-0019's "unavailable" films (TMDB 404) have no flag in `FilmDto` | Add `isAvailable` additively in BE-05 if screens need it |
+| A15 | Can guests import (ADR-0024 Q1)? Guests have no library (ADR-0012) | No: `/api/imports` is user-only; `/import` sends guests to sign in or create an account (recommended option (a)) |
+| A16 | How much history makes By taste "ready" without an import (ADR-0024 Q2)? | ≥ 10 films liked, rated ≥ 3.5 or "loved it"; the server decides and §12 (BE-14a) exposes it |
+| A17 | Does a re-import update a rating that came from an earlier import (ADR-0024 Q5)? | No: any existing rating wins. Recommended instead: track the rating's source so imports may update imported ratings only |
+| A18 | A single uploaded CSV has the same columns whether it is watched, watchlist or likes | Identified by its export file name; anything else is `import.invalid_file` |
+
+## 13. Import (Letterboxd)
+
+Design of ADR-0024 (written by OPS-12; BE-15a adds the DTOs, codes and 501 stubs, BE-15 the logic). The user uploads
+their Letterboxd export; a background `ImportJob` merges it into their library and reports what it couldn't match.
+
+| Method & path | Access | Body | Success | Errors |
+|---|---|---|---|---|
+| `POST /api/imports` | user | `multipart/form-data`: `CreateImportRequest` | 201 `ImportJobDto` (`queued`), `Location: /api/imports/{id}` | 400 `validation` (no file) / `import.invalid_file`, 401, 409 `import.already_running`, 413 `request.too_large` / `import.file_too_large`, 422 `import.nothing_to_import` / `import.too_many_films`, 429 `rate.limited` (once BE-19 adds it) |
+| `GET /api/imports?page&pageSize` | user | — | 200 `PagedResult<ImportJobDto>`, newest first | 400, 401 |
+| `GET /api/imports/{id}` | user | — | 200 `ImportJobDto` | 401, 404 `import.not_found` |
+| `GET /api/imports/{id}/not-found?page&pageSize` | user | — | 200 `PagedResult<ImportNotFoundDto>` | 400, 401, 404 `import.not_found` |
+
+```ts
+type CreateImportRequest = { file: Blob }   // form field "file": the Letterboxd ZIP, or one CSV from it
+type ImportStatus = "queued" | "running" | "completed" | "failed"
+type ImportJobDto = {
+  id: string; status: ImportStatus; createdAt: string; finishedAt: string | null;
+  filmCount: number;            // distinct films in the file (after merging the four files)
+  processedCount: number;       // 0…filmCount: progress
+  matchedCount: number;         // found in our catalog or on TMDB
+  addedToCatalogCount: number;  // of matchedCount: films the job added from TMDB
+  notFoundCount: number;        // films not found, kept even after the list itself is emptied (job rule 6)
+  notFoundListKept: boolean;    // false for older imports: their not-found list returns an empty page
+  changes: ImportChangesDto;    // what it changed in My Cinema; grows while running
+}
+type ImportChangesDto = {
+  newFilms: number;     // UserFilm rows created
+  seen: number; rated: number; liked: number; watchlist: number;   // flags/ratings newly set
+  ratingsKept: number;  // films whose Ithaca rating was kept over the file's (job rule 3)
+}
+type ImportNotFoundReason = "noMatch" | "lookupFailed"
+type ImportNotFoundDto = { title: string; year: number | null; letterboxdUri: string | null; reason: ImportNotFoundReason }
+```
+
+**Upload** (`POST`, all checks before anything is stored; the file itself is never stored, ADR-0024):
+- Type by content: a ZIP (local-file signature) or a UTF-8 CSV whose header row is a Letterboxd export header. Extension
+  and `Content-Type` are ignored. Anything else → 400 `import.invalid_file`.
+- From a ZIP only `watched.csv`, `ratings.csv`, `watchlist.csv` and `likes/films.csv` are read; every other entry
+  (`profile.csv`, `reviews.csv`, `diary.csv`, `comments.csv`, `lists/`, `deleted/`, nested archives…) is skipped
+  unopened. None of the four present → 400 `import.invalid_file`. Columns used: `Name`, `Year`, `Letterboxd URI`, and
+  `Rating` in `ratings.csv`; others are ignored; a missing `Name` column → `import.invalid_file`.
+- A single CSV is identified by its file name (`watched.csv`, `ratings.csv`, `watchlist.csv`, or `films.csv` = likes);
+  any other name → `import.invalid_file` (A18).
+- Limits: upload ≤ **25 MB**, a constant (`ImportLimits.MaxUploadBytes`, since `[RequestSizeLimit]` needs one) → else 413
+  `request.too_large` from the request pipeline. The rest in `ImportOptions`, these defaults: ZIP ≤ **2,000 entries** and compression
+  ratio ≤ **100:1** per entry → else 400 `import.invalid_file`; the four files ≤ **50 MB** uncompressed in total, counted
+  while reading (headers aren't trusted) → else 413; ≤ **20,000** distinct films → else 422 `import.too_many_films`.
+- An empty `Year` is allowed (title-only matching, job rule 2). Rows with an empty `Name`, a present but non-numeric
+  `Year` or a `Rating` outside 0.5–5 / not a half step are skipped and not
+  counted; the file is still accepted. No usable rows at all → 422 `import.nothing_to_import`.
+- One `queued` or `running` import per user → else 409 `import.already_running`. Creating imports is rate-limited per
+  user (BE-19).
+- Success: 201 with `status: "queued"`, `filmCount` known, all other counts 0.
+
+**The job** (background, ADR-0008; never on a request path, ADR-0003):
+1. A film is identified by its Letterboxd URI, else by title + year; the four files are merged per film first.
+2. **Matching:** a URI matched before (by any user) reuses its TMDB id. Otherwise our catalog by normalised title
+   (case, accents, punctuation) and exact year; else TMDB `search/movie` with the year: the result whose normalised
+   title or original title equals the row's and whose release year equals it (else ±1); several → the most popular;
+   none → `noMatch`; a row without a year matches only when exactly one result has the same normalised title. A
+   URI → TMDB-id match is stored as a `LetterboxdFilmLink` (ids only). A found film not in our catalog is added by the
+   same add-a-film step the catalog sync uses. TMDB failures are
+   retried with back-off; still failing after the job's retry budget → `lookupFailed` and the job goes on.
+3. **Merge, per matched film (ADR-0024: never remove, Ithaca wins):** `seen` ← existing or watched or rated; `liked` ←
+   existing or liked; `onWatchlist` ← existing or on the watchlist; `rating` ← the file's rating **only if** the
+   `UserFilm` has none (else counted in `ratingsKept`). Nothing is ever set to false and no row is deleted. A rating
+   implies seen (A8). Changed rows get `updatedAt` = the time they were written; untouched rows keep theirs.
+4. **Re-import:** the same rules on the existing rows; no duplicates (one `UserFilm` per user and film). A rating
+   imported earlier counts as existing (A17).
+5. Progress (`processedCount`, counts) is saved in batches; a job interrupted by a restart resumes. `completed` when
+   every film is processed (even with not-found rows); `failed` only on an unexpected error, with nothing already
+   written rolled back (a re-import is safe). No real-time event: the client polls `GET /api/imports/{id}` while the
+   job is `queued` or `running`.
+6. **Not-found list:** kept for the user's **latest** import only (an older import's list is emptied, its counts
+   stay, `notFoundListKept: false`, and its not-found endpoint returns 200 with an empty page); sorted by title, then
+   year. Deleting the account deletes imports and lists (FK cascade; §14).
+7. Imported likes and ratings are plain `UserFilm` data and feed the `TasteProfile` like any other (§12, ADR-0017).
+   Titles and rows are never logged.
+
+**Who:** users only. A guest gets 401 `auth.unauthenticated` like every user-only endpoint (ADR-0023); `/import` sends
+guests and visitors to sign in or create an account first (A15).
+
+**Upload types (layering, AGENTS.md §2):** `CreateImportRequest` is the one request type that lives in the Api
+(next to `ImportsController` in `Ithaca.Api/Controllers/`), because it carries an `IFormFile`, an ASP.NET Core type Application can't reference. The
+action converts it with one Api helper (`request.ToImportUpload()`, no other logic) and calls
+`ImportService.CreateAsync(ImportUpload upload, …)`; `ImportUpload(Stream Content, string FileName, long Length)` lives
+in `Application/Imports`.
