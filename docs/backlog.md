@@ -271,7 +271,7 @@ lint, test, build.
 - **Tests:** mapping table; Fake LLM → filters; each ADR-0022 row as a slice test; invalid genres dropped; evals green.
 - **Docs:** docs/ai.md (mood flow), api-contract.md §5.
 
-### FE-06 — By mood picker · `Todo`
+### FE-06 — By mood picker · `In progress`
 - **Objective:** the "Solo — by mood" board.
 - **Deps:** FE-05, BE-09a. **Modules:** `src/features/mood/`, `src/features/deck/`, `src/mocks/`.
 - **Contract:** §5 (incl. `mood.unclear`, `textIgnored`).
