@@ -50,7 +50,7 @@ public sealed class RoomsController(RoomService rooms) : ControllerBase
         this.ToActionResult(await rooms.GetAsync(code, ct));
 
     [HttpPut("{code}/mood")]
-    [ProducesResponseType<RoomMemberDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<RoomMoodDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
@@ -60,7 +60,7 @@ public sealed class RoomsController(RoomService rooms) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
     [ContractStub]
-    public async Task<ActionResult<RoomMemberDto>> SetMood(string code, SetRoomMoodRequest request, CancellationToken ct) =>
+    public async Task<ActionResult<RoomMoodDto>> SetMood(string code, SetRoomMoodRequest request, CancellationToken ct) =>
         this.ToActionResult(await rooms.SetMoodAsync(code, request, ct));
 
     [HttpPost("{code}/start")]

@@ -18,7 +18,7 @@ public sealed class RoomService
 
     public Task<Result<RoomDto>> GetAsync(string code, CancellationToken ct) => ContractStub.Of<RoomDto>();
 
-    public Task<Result<RoomMemberDto>> SetMoodAsync(string code, SetRoomMoodRequest request, CancellationToken ct) => ContractStub.Of<RoomMemberDto>();
+    public Task<Result<RoomMoodDto>> SetMoodAsync(string code, SetRoomMoodRequest request, CancellationToken ct) => ContractStub.Of<RoomMoodDto>();
 
     public Task<Result<RoomDto>> StartAsync(string code, CancellationToken ct) => ContractStub.Of<RoomDto>();
 
