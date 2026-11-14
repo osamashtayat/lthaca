@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { addMockAccount, findMockAccount, getMockSession, isMockEmailTaken, setMockSession } from './authStore'
 import { findMockFilm, mockFilms, mockTrailers } from './fixtures'
 import { createMockDeck, mockDeckDto, parseMockMood, mockDeckTop, nextMockBatch, recordMockSwipe } from './deckStore'
+import { getMockTaste } from './tasteStore'
 import { castMockVote, finishMockRoom, mockRoomDeck, mockRoomProgress, mockRoomResult, setMockMemberReady, addMockRoomMember, createMockRoom, findMockRoom, mockRoomFor, removeMockRoomMember, setMockRoomStatus, MOCK_MAX_MEMBERS } from './roomStore'
 import { getMockUserFilm, listMockUserFilms, putMockUserFilm, setMockWatchlist } from './libraryStore'
 import { apiPath, problem, type RequestOf, type ResponseOf } from './http'
@@ -184,6 +185,8 @@ const deckHandlers = [
       }
       mood = outcome.mood
     }
+    // Validation (400) comes before readiness (422), api-contract §12.
+    if (body.source === 'taste' && !getMockTaste().ready) return problem(422, 'taste.not_ready')
     const deck = createMockDeck(mood)
     return HttpResponse.json<ResponseOf<'/api/decks', 'post', 201>>(deck, {
       status: 201,
@@ -218,6 +221,13 @@ const deckHandlers = [
     if (top === undefined) return problem(404, 'deck.not_found')
     if (top === null) return problem(422, 'deck.no_yeses')
     return HttpResponse.json<ResponseOf<'/api/decks/{deckId}/top', 'get', 200>>(top)
+  }),
+]
+
+const tasteHandlers = [
+  http.get(apiPath('/api/taste'), () => {
+    if (getMockSession()?.kind !== 'user') return problem(401, 'auth.unauthenticated')
+    return HttpResponse.json<ResponseOf<'/api/taste', 'get', 200>>(getMockTaste())
   }),
 ]
 
@@ -356,4 +366,4 @@ const roomHandlers = [
   }),
 ]
 
-export const handlers = [...healthHandlers, ...authHandlers, ...filmHandlers, ...libraryHandlers, ...watchlistHandlers, ...deckHandlers, ...roomHandlers]
+export const handlers = [...healthHandlers, ...authHandlers, ...filmHandlers, ...libraryHandlers, ...watchlistHandlers, ...deckHandlers, ...tasteHandlers, ...roomHandlers]
