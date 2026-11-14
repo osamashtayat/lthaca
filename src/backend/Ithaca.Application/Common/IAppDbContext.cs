@@ -3,6 +3,7 @@ using Ithaca.Domain.Decks;
 using Ithaca.Domain.Moods;
 using Ithaca.Domain.Films;
 using Ithaca.Domain.Library;
+using Ithaca.Domain.Rooms;
 using Ithaca.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,6 +43,12 @@ public interface IAppDbContext
 
     /// <summary>Solo swipes, one per deck item (glossary: <c>Swipe</c>).</summary>
     DbSet<Swipe> Swipes { get; }
+
+    /// <summary>Group rooms (glossary: <c>Room</c>).</summary>
+    DbSet<Room> Rooms { get; }
+
+    /// <summary>Users and guests in rooms, present or left (glossary: <c>RoomMember</c>).</summary>
+    DbSet<RoomMember> RoomMembers { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

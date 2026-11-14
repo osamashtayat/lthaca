@@ -9,6 +9,7 @@ using Ithaca.Infrastructure;
 using Ithaca.Infrastructure.Jobs;
 using Ithaca.Infrastructure.Seeding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
+using Microsoft.AspNetCore.SignalR;
 
 // `--sync-catalog`: run one TMDB catalog sync and exit (a switch, not configuration; removed before config reads args).
 const string SyncCatalogFlag = "--sync-catalog";
@@ -44,7 +45,11 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Real-time: the hub and its publisher live in the Api (ADR-0007).
-builder.Services.AddSignalR(options => options.EnableDetailedErrors = false)
+builder.Services.AddSignalR(options =>
+    {
+        options.EnableDetailedErrors = false;
+        options.AddFilter<HubCallerPrincipalFilter>();
+    })
     .AddJsonProtocol(options => JsonSetup.Configure(options.PayloadSerializerOptions));
 builder.Services.AddSingleton<IRoomEventPublisher, SignalRRoomEventPublisher>();
 

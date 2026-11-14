@@ -9,7 +9,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Ithaca.Api.Controllers;
 
-/// <summary>Group rooms and votes (api-contract.md §6, ADR-0015). Votes are HTTP; the hub only broadcasts.</summary>
+/// <summary>
+/// Group rooms and votes (api-contract.md §6, ADR-0015). Votes are HTTP; the hub only broadcasts. Join and leave can change
+/// the caller (a guest session starts or ends), so they issue a fresh <c>XSRF-TOKEN</c>.
+/// </summary>
 [ApiController]
 [Route("api/rooms")]
 [Tags("Rooms")]
@@ -20,23 +23,21 @@ public sealed class RoomsController(RoomService rooms) : ControllerBase
     [ProducesResponseType<RoomDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
-    [ContractStub]
     public async Task<ActionResult<RoomDto>> Create(CreateRoomRequest request, CancellationToken ct) =>
         this.ToCreatedResult(await rooms.CreateAsync(request, ct), room => $"/api/rooms/{room.Code}");
 
     [HttpGet("{code}/preview")]
     [ProducesResponseType<RoomPreviewDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ContractStub]
     public async Task<ActionResult<RoomPreviewDto>> Preview(string code, CancellationToken ct) =>
         this.ToActionResult(await rooms.GetPreviewAsync(code, ct));
 
     [HttpPost("{code}/join")]
+    [IssueXsrfToken]
     [ProducesResponseType<RoomDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    [ContractStub]
     public async Task<ActionResult<RoomDto>> Join(string code, JoinRoomRequest request, CancellationToken ct) =>
         this.ToActionResult(await rooms.JoinAsync(code, request, ct));
 
@@ -45,7 +46,6 @@ public sealed class RoomsController(RoomService rooms) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ContractStub]
     public async Task<ActionResult<RoomDto>> Get(string code, CancellationToken ct) =>
         this.ToActionResult(await rooms.GetAsync(code, ct));
 
@@ -126,11 +126,11 @@ public sealed class RoomsController(RoomService rooms) : ControllerBase
         this.ToActionResult(await rooms.GetResultAsync(code, ct));
 
     [HttpPost("{code}/leave")]
+    [IssueXsrfToken]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ContractStub]
     public async Task<ActionResult> Leave(string code, CancellationToken ct) =>
         this.ToActionResult(await rooms.LeaveAsync(code, ct));
 
@@ -139,7 +139,6 @@ public sealed class RoomsController(RoomService rooms) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ContractStub]
     public async Task<ActionResult> Close(string code, CancellationToken ct) =>
         this.ToActionResult(await rooms.CloseAsync(code, ct));
 }

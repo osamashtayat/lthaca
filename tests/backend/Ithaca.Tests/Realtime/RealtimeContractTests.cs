@@ -1,6 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
-using Ithaca.Api.Hubs;
+using Ithaca.Application.Realtime;
 using Ithaca.Tests.Harness;
 
 namespace Ithaca.Tests.Realtime;

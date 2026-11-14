@@ -1,6 +1,6 @@
 # ADR-0007: RoomHub and its publisher live in the Api (deviation from FlowOps)
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by [ADR-0025](0025-room-events-in-application.md) (`RoomEvents` moved to Application)
 - **Date:** 2026-11-12
 
 ## Context

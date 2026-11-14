@@ -1,18 +1,20 @@
 using Ithaca.Application.Common;
+using Ithaca.Application.Rooms;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ithaca.Application.Auth;
 
 /// <summary>
 /// Sessions for users and guests (ADR-0012, api-contract.md §4). The caller always comes from <see cref="ICurrentActor"/>;
-/// the cookie itself is <see cref="ISessionManager"/>'s.
+/// the cookie itself is <see cref="ISessionManager"/>'s. Registering or signing in while holding a guest cookie is a guest
+/// upgrade (<see cref="GuestUpgrade"/>): the guest's room membership moves to the user.
 /// </summary>
-public sealed class AuthService(ISessionManager sessions, ICurrentActor current, IAppDbContext db)
+public sealed class AuthService(ISessionManager sessions, ICurrentActor current, IAppDbContext db, GuestUpgrade upgrade)
 {
     public Task<Result<CurrentUserDto>> GetCurrentAsync(CancellationToken ct) =>
         current.Actor is { } actor ? LoadAsync(actor, ct) : Task.FromResult<Result<CurrentUserDto>>(AuthErrors.Unauthenticated);
 
-    /// <summary>Creates the account and signs it in. Moving a guest's membership to the new user is BE-10's (guest upgrade).</summary>
+    /// <summary>Creates the account and signs it in; a guest caller's room membership moves to it.</summary>
     public async Task<Result<CurrentUserDto>> RegisterAsync(RegisterRequest request, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -22,15 +24,17 @@ public sealed class AuthService(ISessionManager sessions, ICurrentActor current,
             return Error.Validation("displayName", "Enter a display name.");
         }
 
+        var guest = current.Actor; // read before the session switches to the new user
         var signedIn = await sessions.RegisterAsync(request.Email.Trim(), request.Password, displayName, ct);
-        return signedIn.IsSuccess ? await LoadUserAsync(signedIn.Value, ct) : signedIn.Error;
+        return signedIn.IsSuccess ? await UpgradeAndLoadAsync(guest, signedIn.Value, ct) : signedIn.Error;
     }
 
     public async Task<Result<CurrentUserDto>> SignInAsync(SignInRequest request, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var guest = current.Actor; // read before the session switches to the user
         var signedIn = await sessions.PasswordSignInAsync(request.Email.Trim(), request.Password, ct);
-        return signedIn.IsSuccess ? await LoadUserAsync(signedIn.Value, ct) : signedIn.Error;
+        return signedIn.IsSuccess ? await UpgradeAndLoadAsync(guest, signedIn.Value, ct) : signedIn.Error;
     }
 
     /// <summary>Clears the cookie of whoever is signed in; signing out twice is not an error.</summary>
@@ -38,6 +42,16 @@ public sealed class AuthService(ISessionManager sessions, ICurrentActor current,
     {
         await sessions.SignOutAsync();
         return Result.Success();
+    }
+
+    private async Task<Result<CurrentUserDto>> UpgradeAndLoadAsync(Actor? previous, Guid userId, CancellationToken ct)
+    {
+        if (await upgrade.StageAsync(previous, userId, ct))
+        {
+            await db.SaveChangesAsync(ct);
+        }
+
+        return await LoadUserAsync(userId, ct);
     }
 
     private Task<Result<CurrentUserDto>> LoadAsync(Actor actor, CancellationToken ct) =>

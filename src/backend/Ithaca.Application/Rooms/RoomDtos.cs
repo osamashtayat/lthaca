@@ -1,5 +1,6 @@
 using Ithaca.Application.Auth;
 using Ithaca.Application.Films;
+using Ithaca.Domain.Rooms;
 
 namespace Ithaca.Application.Rooms;
 

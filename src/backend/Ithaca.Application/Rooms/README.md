@@ -1,6 +1,10 @@
-# Rooms (not built yet)
+# Rooms
 
-Group `Room`s, `RoomMember`s (users and `Guest`s), shared deck, `Vote`s, match / best compromise. Publishes through `IRoomEventPublisher` after commit.
+Group `Room`s and `RoomMember`s (users and `Guest`s), api-contract.md §6.
 
-Put this feature's services, DTOs (`…Request` in, `…Dto` out), errors (`RoomsErrors`) and Application-side interfaces here.
-Copy the shape of `../Films/` (the reference slice). See `docs/backend-conventions.md`.
+- `RoomService` — the room endpoints. BE-10: create, preview, join, get, leave, close. Mood step, start, deck, votes
+  (BE-11) and the result (BE-12) are contract stubs until then.
+- `RoomMembershipService` — the hub's `JoinRoom` / `LeaveRoom` (docs/realtime.md).
+- `RoomAccess` — collaborator: the one member / host rule (host = present longest). `GuestUpgrade` — collaborator of
+  `AuthService`: a guest who registers or signs in keeps their membership.
+- Publishes through `IRoomEventPublisher` after commit, with the names in `Realtime/RoomEvents` (ADR-0025).

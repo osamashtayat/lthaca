@@ -115,7 +115,7 @@ Cookie session (ASP.NET Core Identity, HttpOnly, SameSite=Lax, Secure in Product
 **401 JSON, never a redirect**. Antiforgery copies FlowOps: the server sets a JS-readable `XSRF-TOKEN` cookie; the client
 (`shared/api/client.ts`, BE-02/FE-03) echoes it in `X-XSRF-TOKEN` on every POST/PUT/PATCH/DELETE. No endpoint is exempt:
 `GET /api/auth/me` issues the cookie even when it answers 401, and every call that changes the principal (register,
-sign-in, sign-out, room join) re-issues it.
+sign-in, sign-out, room join, and a guest's room leave) re-issues it.
 
 | Method & path | Access | Body | Success | Errors |
 |---|---|---|---|---|
@@ -305,6 +305,31 @@ Rules (all in services; see docs/realtime.md for when each event is published):
   shown. Nobody's "no" can be singled out, while the reason a film lost ("one of you has seen it") stays visible.
 - **Hub:** `JoinRoom(code)` / `LeaveRoom(code)` on `/hubs/rooms`, membership checked by a service (ADR-0012); clients
   then refetch through the endpoints above. Events: `contracts/realtime-events.json`.
+
+**As built (BE-10):** create, preview, join, get, leave and close are live; the rest stay 501 until BE-11/BE-12.
+- **Codes** are drawn at random (`AAA-100`…`ZZZ-999`), unique, stored upper case; any case and surrounding spaces are
+  accepted. A malformed code is `room.not_found`. Closed rooms keep their code and stay previewable (`status: "closed"`).
+- **Check order** for member and host endpoints: `room.not_found` (404), then `auth.unauthenticated` (401), then
+  `room.not_member` / `room.not_host` (403). A guest is a member only of the room their cookie names; their cookie gets
+  403 `room.not_member` anywhere else.
+- **Host** (owner's rule): the member present longest. The creator hosts while in the room; when the host leaves, hosting
+  passes to the next longest-present member, guest or user. The last member to leave closes the room (`roomClosed`;
+  known gap: two last members leaving at the same moment can leave it open, issue #39).
+- **Join:** a present member gets 200 and no event (idempotent, even once closed). Otherwise `room.closed` once the
+  room is `result` or `closed`, then `room.full` with 8 present members. A user joins under their account name
+  (`displayName` ignored) and, after leaving, comes back as the same member (no longer host). Anyone else, including a
+  guest of another room (A1), needs `displayName` (400 `validation` on `displayName`) and becomes a new guest with a
+  session for this room only. Join answers with a fresh `XSRF-TOKEN`.
+- **Leave** (owner's rule): a guest's session ends with it (cookie cleared, fresh `XSRF-TOKEN`; `GET /api/auth/me` →
+  401); coming back means joining as a new guest. A user stays signed in.
+- **Close** is host-only and idempotent (204 again); members still `GET` the room (`status: "closed"`), nobody joins.
+- **Guest upgrade:** `register` or `sign-in` with a guest cookie moves that guest's membership (same member id, so its
+  votes follow) to the user. If the user is already present in that room, the user's membership stays and the guest's ends.
+- `deckSize` is 0 until the deck is dealt at start (BE-11); `isReady` is true for everyone in `justSwipe` rooms and false
+  in `mood` rooms until the mood step lands (BE-11).
+- **Hub:** `JoinRoom(code)` fails with a `HubException` whose message is the error code (`room.not_found`,
+  `auth.unauthenticated`, `room.not_member`). The connection's identity is the one it connected with: a client that just
+  joined (or upgraded) over HTTP reconnects before `JoinRoom`. `LeaveRoom(code)` only stops that connection's events.
 
 ## 7. Library — My Cinema (UserFilm, ADR-0019)
 

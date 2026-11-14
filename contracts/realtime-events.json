@@ -1,5 +1,5 @@
 {
-  "$comment": "Single source of truth for RoomHub. Backend: Ithaca.Api/Hubs/RoomEvents.cs (a test keeps them equal). Frontend: imported by src/shared/realtime/events.ts. See docs/realtime.md.",
+  "$comment": "Single source of truth for RoomHub. Backend: Ithaca.Application/Realtime/RoomEvents.cs (ADR-0025) (a test keeps them equal). Frontend: imported by src/shared/realtime/events.ts. See docs/realtime.md.",
   "hubPath": "/hubs/rooms",
   "serverToClient": {
     "memberJoined": "A member (user or guest) joined the room. Payload: { roomId, memberId }",
