@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { isUser, RoomCodeForm, useCurrentUser } from '@/features/auth'
-import { Button, ButtonLink, MonoLabel, SegmentedControl, TicketCard } from '@/shared/ui'
+import { ButtonLink, MonoLabel, SegmentedControl, TicketCard } from '@/shared/ui'
 import { dayLabelFor, greetingFor } from '../greeting'
 
 type Who = 'solo' | 'group'
@@ -70,10 +70,8 @@ export function TonightPage({ now: given }: { now?: Date }) {
         <TicketCard stubLabel="BY TASTE" stubValue="♥">
           <div className="flex flex-col gap-3">
             <h2 className="text-xl font-extrabold tracking-tight">By taste</h2>
-            <p className="text-ink-muted">Soon: a deck built from what you have loved.</p>
-            <Button variant="outline" disabled>
-              Coming soon
-            </Button>
+            <p className="text-ink-muted">A deck built from the films you have loved.</p>
+            <ButtonLink to={to('/taste')}>Build from my taste</ButtonLink>
           </div>
         </TicketCard>
       </div>

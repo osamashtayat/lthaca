@@ -18,5 +18,6 @@ export function useWatchlist() {
     },
     onError: (error) => notify.apiError(error),
     onSettled: () => void queryClient.invalidateQueries({ queryKey: queryKeys.library.all }),
+    // (The watchlist is not a taste signal, so `queryKeys.taste.all` stays as it is.)
   })
 }

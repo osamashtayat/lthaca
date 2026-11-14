@@ -11,3 +11,4 @@ export const slowUnavailableDeckCreate = (ms: number) =>
   })
 export const notHostStart = () => http.post(apiPath('/api/rooms/{code}/start'), () => problem(403, 'room.not_host'))
 export const failRoomVote = () => http.post(apiPath('/api/rooms/{code}/votes'), () => problem(500, 'server.error'))
+export const notReadyTasteDeck = () => http.post(apiPath('/api/decks'), () => problem(422, 'taste.not_ready'))
