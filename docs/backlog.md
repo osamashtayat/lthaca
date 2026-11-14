@@ -310,7 +310,7 @@ lint, test, build.
   them on that scale; imported `UserFilm`s count like any other (ADR-0024 decision 9). Out: import (BE-15).
 - **Acceptance:** per §12. **Tests:** slice tests; deterministic vector test with the Fake embedding client.
 
-### FE-13 — By taste screen · `Todo`
+### FE-13 — By taste screen · `In progress`
 - **Objective:** the "Solo — by taste" board, and no dead end for people without history.
 - **Deps:** BE-14a, FE-05. **Modules:** `src/features/taste/`, `src/mocks/`, and
   `src/features/import/components/LetterboxdHelpSheet.tsx` if FE-14 hasn't built it yet (used via `@/features/import`).
