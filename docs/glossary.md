@@ -26,4 +26,6 @@ Other words used in docs and UI:
 - **Just swipe / By mood / By taste** — the three ways to start a deck. **Solo / Group** — alone or in a `Room`.
 - **Match** — every member said yes to the same film. **Best compromise** — the highest-scoring film when there's no match.
 - **Hard no** — a member's explicit exclusion; must never appear in the group result.
+- **Taste picks** — the 10–20 films someone picks as "films I love" when they have too little history (ADR-0026): a
+  user's become likes in My Cinema; a guest's are kept on their `RoomMember` for that room only.
 - **My Cinema** — the Library screen. **Tonight** — the home screen.
