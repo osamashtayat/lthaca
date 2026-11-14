@@ -159,6 +159,26 @@ public sealed class RoomSwipingEndpointTests(PostgresFixture postgres) : IAsyncL
     }
 
     [Fact]
+    public async Task StartRacingClose_AlwaysEndsClosed_Over10Runs()
+    {
+        using var host = await BrowserClient.RegisteredAsync(_factory, Ct);
+        for (var run = 0; run < 10; run++)
+        {
+            var code = RoomsEndpointTests.Code(await RoomsEndpointTests.CreateAsync(host));
+
+            var start = host.PostAsync(new Uri($"/api/rooms/{code}/start", UriKind.Relative), null, Ct);
+            var close = host.PostAsync(new Uri($"/api/rooms/{code}/close", UriKind.Relative), null, Ct);
+            using var started = await start;
+            using var closed = await close;
+
+            closed.StatusCode.ShouldBe(HttpStatusCode.NoContent, $"run {run}: {await closed.Content.ReadAsStringAsync(Ct)}");
+            started.StatusCode.ShouldBeOneOf([HttpStatusCode.OK, HttpStatusCode.Conflict], $"run {run}: {await started.Content.ReadAsStringAsync(Ct)}");
+            (await host.GetFromJsonAsync<JsonElement>($"/api/rooms/{code}", Ct)).GetProperty("status").GetString()
+                .ShouldBe("closed", $"run {run}: a start never reopens a closed room");
+        }
+    }
+
+    [Fact]
     public async Task MoodStep_MakesTheMemberReady_PublishesOnce_AndOnlyInAMoodLobby()
     {
         var (host, guest, code) = await RoomWithGuestAsync("mood");

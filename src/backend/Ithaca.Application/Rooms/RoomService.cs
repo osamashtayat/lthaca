@@ -27,6 +27,9 @@ public sealed class RoomService(
     /// </summary>
     private const int JoinAttempts = Room.MaxMembers + 1;
 
+    /// <summary>Tries at closing a room when a concurrent start changed it first (rooms carry a concurrency token).</summary>
+    private const int WriteAttempts = 3;
+
     /// <summary>The creator is the first member, so the host, of a new lobby. Nobody is listening yet: no event.</summary>
     public async Task<Result<RoomDto>> CreateAsync(CreateRoomRequest request, CancellationToken ct)
     {
@@ -187,10 +190,22 @@ public sealed class RoomService(
         var now = time.GetUtcNow();
         var member = await db.RoomMembers.SingleAsync(m => m.Id == memberId, ct);
         member.Leave(now);
-        var closes = !await db.RoomMembers.AnyAsync(m => m.RoomId == roomId && m.LeftAt == null && m.Id != memberId, ct)
-            && (await db.Rooms.SingleAsync(r => r.Id == roomId, ct)).Close(now);
-
-        await db.SaveChangesAsync(ct);
+        bool closes;
+        for (var attempt = 1; ; attempt++)
+        {
+            closes = !await db.RoomMembers.AnyAsync(m => m.RoomId == roomId && m.LeftAt == null && m.Id != memberId, ct)
+                && (await db.Rooms.SingleAsync(r => r.Id == roomId, ct)).Close(now);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                break;
+            }
+            catch (Exception e) when (WriteConflicts.IsWriteConflict(e) && closes && attempt < WriteAttempts)
+            {
+                // The host started the room at the same moment (rooms carry a concurrency token): read it again, close again.
+                await db.Rooms.Entry(await db.Rooms.SingleAsync(r => r.Id == roomId, ct)).ReloadAsync(ct);
+            }
+        }
         if (actor.IsGuest)
         {
             await sessions.SignOutAsync();
@@ -215,12 +230,25 @@ public sealed class RoomService(
         }
 
         var roomId = host.Value.RoomId;
-        if (!(await db.Rooms.SingleAsync(r => r.Id == roomId, ct)).Close(time.GetUtcNow()))
+        for (var attempt = 1; ; attempt++)
         {
-            return Result.Success(); // already closed: nothing changed, nothing to announce
-        }
+            var room = await db.Rooms.SingleAsync(r => r.Id == roomId, ct);
+            if (!room.Close(time.GetUtcNow()))
+            {
+                return Result.Success(); // already closed: nothing changed, nothing to announce
+            }
 
-        await db.SaveChangesAsync(ct);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                break;
+            }
+            catch (Exception e) when (WriteConflicts.IsWriteConflict(e) && attempt < WriteAttempts)
+            {
+                // A start (or a leave) changed the room at the same moment: read it again and decide again.
+                await db.Rooms.Entry(room).ReloadAsync(ct);
+            }
+        }
         await events.PublishAsync(roomId, RoomEvents.RoomClosed, new RoomEvent(roomId), ct);
         return Result.Success();
     }

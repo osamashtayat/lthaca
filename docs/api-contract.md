@@ -357,6 +357,9 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 - **Extension** (owner: cap 30): when a voter has 3 or fewer cards left, the next batch of 10 is dealt (same filters),
   up to 30 cards; `deckExtended` carries the first new position. A room deck at 30 doesn't grow; ending a room is BE-12.
 - **Progress:** present members, host first, with how many cards each voted on; `deckSize` 0 in the lobby.
+- **Races:** rooms carry an optimistic concurrency token (Postgres `xmin`), so a start racing a close or the last member
+  leaving can't reopen the room: the close wins and the start answers 409 `room.invalid_state`. Start on a `taste` room
+  stays 501 until BE-14. Known gap: guests' room moods (with their text) are never deleted (issue #51).
 
 ## 7. Library — My Cinema (UserFilm, ADR-0019)
 

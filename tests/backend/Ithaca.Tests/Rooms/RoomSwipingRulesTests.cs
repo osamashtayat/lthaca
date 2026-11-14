@@ -28,7 +28,7 @@ public sealed class RoomSwipingRulesTests
         filter.IncludeGenres.ShouldBe(["Comedy", "Horror", "Thriller"]);
         filter.ExcludeGenres.ShouldBe(["War", "Romance"], "Horror is wanted by someone");
         filter.MaxRuntimeMinutes.ShouldBe(89);
-        filter.HardNos.IsEmpty.ShouldBeTrue();
+        (filter.HardNos.TmdbGenres.Count, filter.HardNos.WikidataGenreTerms.Count, filter.HardNos.NonEnglish).ShouldBe((0, 0, false));
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public sealed class RoomSwipingRulesTests
         all.WikidataGenreTerms.ShouldBe(["splatter", "slasher", "body horror", "zombie", "gore", "musical", "tragedy"], ignoreOrder: true);
         all.WikidataGenreTerms.ShouldAllBe(t => t.All(c => !char.IsUpper(c)), "matched against lower(label)");
         all.NonEnglish.ShouldBeTrue();
-        HardNoRules.For([]).IsEmpty.ShouldBeTrue();
+        HardNoRules.For([]).ShouldSatisfyAllConditions(f => f.TmdbGenres.ShouldBeEmpty(), f => f.WikidataGenreTerms.ShouldBeEmpty(), f => f.NonEnglish.ShouldBeFalse());
         Enum.GetValues<HardNo>().ShouldAllBe(h => HardNoRules.Table.ContainsKey(h), "every hard no has a rule");
     }
 

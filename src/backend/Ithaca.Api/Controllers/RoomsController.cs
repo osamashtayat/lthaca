@@ -70,6 +70,7 @@ public sealed class RoomsController(RoomService rooms, RoomDeckService swiping) 
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ContractStub] // mode "taste" only, until BE-14
     public async Task<ActionResult<RoomDto>> Start(string code, CancellationToken ct) =>
         this.ToActionResult(await swiping.StartAsync(code, ct));
 

@@ -36,7 +36,4 @@ public static class HardNoRules
 /// Films a hard no rules out: any of <see cref="TmdbGenres"/>, a Wikidata genre label containing any of
 /// <see cref="WikidataGenreTerms"/> (lowercase), or, with <see cref="NonEnglish"/>, a known original language other than English.
 /// </summary>
-public sealed record HardNoFilter(IReadOnlyList<string> TmdbGenres, IReadOnlyList<string> WikidataGenreTerms, bool NonEnglish)
-{
-    public bool IsEmpty => TmdbGenres.Count == 0 && WikidataGenreTerms.Count == 0 && !NonEnglish;
-}
+public sealed record HardNoFilter(IReadOnlyList<string> TmdbGenres, IReadOnlyList<string> WikidataGenreTerms, bool NonEnglish);

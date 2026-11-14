@@ -1,6 +1,5 @@
 using Ithaca.Application.Common;
 using Ithaca.Application.Decks;
-using Ithaca.Application.Films;
 using Ithaca.Application.Moods;
 using Ithaca.Application.Realtime;
 using Ithaca.Domain.Decks;
@@ -24,7 +23,7 @@ namespace Ithaca.Application.Rooms;
 /// Events after the commit: <c>memberReady</c>, <c>roomStarted</c>, <c>voteCast</c> (no values), <c>deckExtended</c>.
 /// </summary>
 public sealed class RoomDeckService(
-    IAppDbContext db, RoomAccess access, RoomReader reader, MoodInterpreter moods, DeckDealer dealer, IRoomEventPublisher events, TimeProvider time)
+    IAppDbContext db, RoomAccess access, RoomReader reader, MoodInterpreter moods, DeckDealer dealer, DeckItemReader cards, IRoomEventPublisher events, TimeProvider time)
 {
     /// <summary>Cards left for a voter at which the next batch is dealt.</summary>
     public const int ExtendWhenLeft = 3;
@@ -128,31 +127,12 @@ public sealed class RoomDeckService(
             return RoomErrors.InvalidState;
         }
 
-        var userId = actor.IsUser ? actor.Id : (Guid?)null;
-        var rows = await (
-            from i in reader.DeckItemsOf(roomId)
-            where i.Position >= fromPosition
-            join f in db.Films.AsNoTracking() on i.FilmId equals f.Id
-            join v in db.Votes.AsNoTracking().Where(v => v.RoomMemberId == memberId) on i.Id equals v.DeckItemId into votes
-            from v in votes.DefaultIfEmpty()
-            orderby i.Position
-            select new
-            {
-                i.Id,
-                i.Position,
-                f.TmdbId,
-                Direction = v == null ? (SwipeDirection?)null : v.Direction,
-                Verdict = v == null ? null : v.SeenVerdict,
-                OnWatchlist = userId != null && db.UserFilms.Any(u => u.UserId == userId && u.FilmId == i.FilmId && u.OnWatchlist),
-            })
-            .ToListAsync(ct);
-
-        var tmdbIds = rows.Select(r => r.TmdbId).ToList();
-        var films = await db.Films.AsNoTracking().Where(f => tmdbIds.Contains(f.TmdbId)).Select(FilmProjections.Dto).ToDictionaryAsync(f => f.TmdbId, ct);
-        return rows
-            .Select(r => new DeckItemDto(
-                r.Id, r.Position, films[r.TmdbId], r.Direction is { } direction ? new SwipeDto(direction, r.Verdict) : null, r.OnWatchlist))
-            .ToList();
+        var mine = db.Votes.AsNoTracking()
+            .Where(v => v.RoomMemberId == memberId)
+            .Select(v => new CardGesture { DeckItemId = v.DeckItemId, Direction = v.Direction, SeenVerdict = v.SeenVerdict });
+        var items = await cards.ItemDtosAsync(
+            reader.DeckItemsOf(roomId).Where(i => i.Position >= fromPosition), mine, actor.IsUser ? actor.Id : null, ct);
+        return Result<IReadOnlyList<DeckItemDto>>.Success(items);
     }
 
     /// <summary>
@@ -171,7 +151,7 @@ public sealed class RoomDeckService(
         var (roomId, memberId, _) = membership.Value;
         if (!Swipe.IsValidVerdict(request.Direction, request.SeenVerdict))
         {
-            return Error.Validation("seenVerdict", "A verdict only goes with an \"up\" vote.");
+            return DeckErrors.VerdictOnlyWithUp;
         }
 
         if (await RetriedAsync(request, memberId, ct) is { } retried)

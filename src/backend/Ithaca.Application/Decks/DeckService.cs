@@ -17,7 +17,7 @@ namespace Ithaca.Application.Decks;
 /// input into a <see cref="MoodQuery"/>; its filters narrow every batch, and its genres count as a strong signal. Films come
 /// from our own catalog only (ADR-0003): available, not yet in this deck, not seen by the user.
 /// </summary>
-public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInterpreter moods, DeckDealer dealer, TimeProvider time)
+public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInterpreter moods, DeckDealer dealer, DeckItemReader cards, TimeProvider time)
 {
     /// <summary>Most recently changed library rows used as signals.</summary>
     private const int LibrarySignalLimit = 200;
@@ -132,7 +132,7 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
 
         if (!Swipe.IsValidVerdict(request.Direction, request.SeenVerdict))
         {
-            return Error.Validation("seenVerdict", "A verdict only goes with an \"up\" swipe.");
+            return DeckErrors.VerdictOnlyWithUp;
         }
 
         if (!await OwnsDeckAsync(deckId, userId, ct))
@@ -224,7 +224,7 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
             signals.Select(sig => sig.ToDeckSignal(model: null)).ToList());
         var tmdbIds = yeses.ToDictionary(y => y.Id, y => y.TmdbId);
         var best = ranked.Take(TopPicks).Select(id => tmdbIds[id]).ToList();
-        var films = await FilmDtosAsync(best, ct);
+        var films = await cards.FilmDtosAsync(best, ct);
 
         return new DeckTopDto(swipes.Count, yeses.Count, best.Select(id => new TopPickDto(films[id], null)).ToList());
     }
@@ -343,41 +343,13 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
     private static List<SignalRow> MoodSignals(MoodQuery? mood) =>
         mood is { IncludeGenres.Length: > 0 } ? [new SignalRow(mood.IncludeGenres, null, null, null, DeckSignals.MoodWeight)] : [];
 
-    /// <summary>Items in position order with their film, the caller's swipe and the caller's watchlist flag.</summary>
-    private async Task<IReadOnlyList<DeckItemDto>> ItemDtosAsync(IQueryable<DeckItem> items, Guid userId, CancellationToken ct)
-    {
-        var rows = await (
-            from i in items.AsNoTracking()
-            join f in db.Films.AsNoTracking() on i.FilmId equals f.Id
-            join s in db.Swipes.AsNoTracking() on i.Id equals s.DeckItemId into swipes
-            from s in swipes.DefaultIfEmpty()
-            orderby i.Position
-            select new
-            {
-                i.Id,
-                i.Position,
-                f.TmdbId,
-                Direction = s == null ? (SwipeDirection?)null : s.Direction,
-                Verdict = s == null ? null : s.SeenVerdict,
-                OnWatchlist = db.UserFilms.Any(u => u.UserId == userId && u.FilmId == i.FilmId && u.OnWatchlist),
-            })
-            .ToListAsync(ct);
-
-        var films = await FilmDtosAsync(rows.Select(r => r.TmdbId).ToList(), ct);
-
-        return rows
-            .Select(r => new DeckItemDto(
-                r.Id, r.Position, films[r.TmdbId],
-                r.Direction is { } direction ? new SwipeDto(direction, r.Verdict) : null,
-                r.OnWatchlist))
-            .ToList();
-    }
-
-    private async Task<Dictionary<int, FilmDto>> FilmDtosAsync(List<int> tmdbIds, CancellationToken ct) =>
-        await db.Films.AsNoTracking()
-            .Where(f => tmdbIds.Contains(f.TmdbId))
-            .Select(FilmProjections.Dto)
-            .ToDictionaryAsync(f => f.TmdbId, ct);
+    /// <summary>The deck's items with the user's own swipes.</summary>
+    private Task<IReadOnlyList<DeckItemDto>> ItemDtosAsync(IQueryable<DeckItem> items, Guid userId, CancellationToken ct) =>
+        cards.ItemDtosAsync(
+            items,
+            db.Swipes.AsNoTracking().Select(s => new CardGesture { DeckItemId = s.DeckItemId, Direction = s.Direction, SeenVerdict = s.SeenVerdict }),
+            userId,
+            ct);
 
     private Guid? UserId() => current.Actor is { IsUser: true } actor ? actor.Id : null;
 
