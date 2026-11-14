@@ -33,6 +33,7 @@ public static class ErrorStatusCodes
         [ErrorCodes.DeckNoYeses] = StatusCodes.Status422UnprocessableEntity,
         [ErrorCodes.TasteNotReady] = StatusCodes.Status422UnprocessableEntity,
         [ErrorCodes.RequestTooLarge] = StatusCodes.Status413PayloadTooLarge,
+        [ErrorCodes.ProfileWrongPassword] = StatusCodes.Status400BadRequest,
         [ErrorCodes.ImportNotFound] = StatusCodes.Status404NotFound,
         [ErrorCodes.ImportInvalidFile] = StatusCodes.Status400BadRequest,
         [ErrorCodes.ImportAlreadyRunning] = StatusCodes.Status409Conflict,

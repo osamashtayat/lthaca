@@ -595,7 +595,7 @@ lint, test, build.
 
 ## Profile
 
-### BE-16a — Profile contract and stubs · `Todo`
+### BE-16a — Profile contract and stubs · `Done` (PR #47)
 - **Objective:** unblock FE-15. **Deps:** BE-02. **Modules:** `docs/api-contract.md` (new §14), DTOs, stubs, contracts.
 - **Contract:** writes §14: display name, password change, delete account (what deletion removes: decided with the owner;
   imports and their lists go with the account by FK cascade, ADR-0024 / BE-15).

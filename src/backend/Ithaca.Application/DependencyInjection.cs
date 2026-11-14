@@ -7,6 +7,7 @@ using Ithaca.Application.Library;
 using Ithaca.Application.Moods;
 using Ithaca.Application.Rooms;
 using Ithaca.Application.Taste;
+using Ithaca.Application.Users;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -36,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<RoomMembershipService>();
         services.AddScoped<LibraryService>();
         services.AddScoped<TasteService>();
+        services.AddScoped<ProfileService>();
         services.AddScoped<ImportService>();
         return services;
     }

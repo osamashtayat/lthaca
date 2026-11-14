@@ -22,6 +22,7 @@ export const PROBLEM_MESSAGES = {
   'deck.already_swiped': 'You already swiped this one.',
   'deck.no_yeses': 'Swipe right on a few films first, then see your top picks.',
   'request.too_large': 'That file is too big to upload.',
+  'profile.wrong_password': "That password isn't right. Try again.",
   'import.not_found': "We couldn't find that import.",
   'import.invalid_file': "That doesn't look like a Letterboxd export. Upload the ZIP from Letterboxd, or one CSV from it.",
   'import.already_running': 'An import is already running. Wait for it to finish, then try again.',
