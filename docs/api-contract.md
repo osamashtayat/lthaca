@@ -441,7 +441,7 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
 | A8 | Rating implies seen? Liked vs rating? | **Decided:** rating ⇒ seen; liked is a separate flag |
 | A9 | "Watching" shelf and "Keep watching · 42 min left" | **Decided: dropped.** No Watching state, shelf or Tonight row |
 | A10 | Room codes `POP-428` vs the board's share link `ithaca.app/r/pop-428` | Links use the existing route `/rooms/POP-428`; a `/r/:code` short link is optional later |
-| A11 | Group taste ("Blend your histories") with guests who have no history | ⚠ Assumed in §12 (BE-14a): the host must be ready; members without history add no taste but their seen films are still skipped |
+| A11 | Group taste ("Blend your histories") with guests who have no history | **Decided (ADR-0026):** the host must be ready; a member is ready with enough history or after picking 10–20 films (guests: kept in the room); the host may start without them |
 | A12 | The glossary has no names for a solo deck's parent record or a solo swipe (`Vote` is a room member's) | **Proposed by BE-08:** `Deck` (table `decks`) and `Swipe` (table `swipes`), in the glossary; owner to confirm |
 | A13 | Room mood has no `language` (solo mood does); is it stored as a `MoodQuery`? | No language in rooms; stored per member as a `MoodQuery` |
 | A14 | ADR-0019's "unavailable" films (TMDB 404) have no flag in `FilmDto` | Add `isAvailable` additively in BE-05 if screens need it |
@@ -455,13 +455,15 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
 "By taste" (solo) and group taste build on the caller's `TasteProfile`: a vector in the film-embedding space made from
 the films they like (BE-14, docs/ai.md). Imported likes and ratings count like any other (ADR-0024 decision 9). The
 server decides readiness; the "Solo — by taste" screen only shows it (FE-13: not ready → the "Import your Letterboxd"
-screen; ready → the board).
+screen; ready → the board). People without enough history can also **pick 10–20 films they love** (ADR-0026).
 
 | Method & path | Access | Body | Success | Errors |
 |---|---|---|---|---|
 | `GET /api/taste` | user | — | 200 `TasteDto` | 401 |
 | `POST /api/decks` with `source: "taste"` (§5) | user | `CreateDeckRequest`, `mood: null` | 201 `DeckDto` | 400, 401, 422 `taste.not_ready` |
 | `POST /api/rooms` with `mode: "taste"` (§6) | user (the host) | `CreateRoomRequest` | 201 `RoomDto` | 400, 401, 422 `taste.not_ready` |
+| `POST /api/taste/picks` | user | `TastePicksRequest` | 200 `TasteDto` (updated) | 400, 401, 404 `film.not_found` |
+| `PUT /api/rooms/{code}/taste` | member | `TastePicksRequest` | 200 `RoomMemberDto` (the caller, now ready) | 400, 401, 403 `room.not_member`, 404 `room.not_found` / `film.not_found`, 409 `room.invalid_state` / `room.closed` |
 
 ```ts
 type TasteDto = {
@@ -473,6 +475,7 @@ type TasteDto = {
   notForYou: string[];         // up to 3 genres turned down ("NOT FOR YOU: HORROR, HEISTS"); [] when not ready
 }
 type TasteGenreDto = { genre: string; percent: number }   // a catalog genre (as in FilmDto.genres); 1–100
+type TastePicksRequest = { tmdbIds: number[] }   // 10–20 distinct films from our catalog (ADR-0026)
 ```
 Rules (BE-14 builds them; until then the three rows answer 501 `server.not_implemented`, other sources and modes work):
 - **Ready** (A16, ADR-0024 Q2): at least `signalsNeeded` films with a positive signal. Guests have no taste (no
@@ -482,9 +485,21 @@ Rules (BE-14 builds them; until then the three rows answer 501 `server.not_imple
   (ADR-0017).
 - **Deck by taste:** like "Just swipe" (§5: batches, swipes, top 3) but ranked by similarity to the profile; skips films
   the user has seen. Not ready → 422 `taste.not_ready`, nothing created. `mood` must be null (400 `errors.mood`).
-- **Group taste** ("Blend your histories"): the host must be ready (else 422 `taste.not_ready`, no room). The shared
-  deck blends present members' profiles; members without history (guests included) add no taste, and a film any member
-  has seen is skipped (A11, ⚠ assumed). Readiness in the lobby works as in `justSwipe` rooms (everyone is ready).
+- **Group taste** ("Blend your histories", ADR-0026): the host must be ready (else 422 `taste.not_ready`, no room). In
+  a taste room `RoomMemberDto.isReady` means "the server has enough taste for this member": a user who meets A16, or a
+  guest who picked films in this room. The host may start with members not ready; their taste isn't in the blend. The
+  shared deck blends present members' taste; a film any member has seen is skipped (users' libraries; guests: unknown).
+- **Film picker** (ADR-0026): the screen searches and browses our catalog with `GET /api/films?search=…` (§9, open to
+  guests) and submits 10–20 `tmdbIds`.
+  - `POST /api/taste/picks` (solo, users): marks each film `liked` in My Cinema, creating the row if needed; it only
+    adds (other flags and ratings untouched; already liked is fine). Answers the updated `TasteDto`.
+  - `PUT /api/rooms/{code}/taste` (taste rooms, any member, while `lobby` or `swiping`): a user's picks become likes as
+    above; a guest's picks are stored on their membership for this room only, replacing earlier picks, and deleted with
+    the room. A non-taste room → 409 `room.invalid_state`; a finished or closed room → 409 `room.closed`. A member who
+    becomes ready this way publishes `memberReady` (docs/realtime.md; BE-14 also widens that event's description).
+  - Fewer than 10, more than 20 or repeated ids → 400 `validation` (`errors.tmdbIds`); an id not in our catalog → 404
+    `film.not_found`, nothing saved.
+  - **Guest upgrade:** a guest's picks become likes in the user's library when they register or sign in (§4).
 - Check order once built: input validation (400: `mood` with a taste deck, a blank room name) before readiness (422).
 - The board's "Because you loved …" lines under the first cards are not in this contract (no field yet); the first
   cards are simply the deck's first items.

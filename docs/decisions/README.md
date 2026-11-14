@@ -31,3 +31,4 @@ ADRs marked *deviation* record where Ithaca differs from the FlowOps reference p
 | [0023](0023-auth-as-built.md) | Auth as built: 30-day sliding sessions, Lax cookies, no antiforgery exemption, guests in the Identity scheme |
 | [0024](0024-letterboxd-import-and-half-star-ratings.md) | Letterboxd import by file upload (never stored, missing films added from TMDB in the background, never removes, Ithaca wins) and half-star ratings 0.5–5 |
 | [0025](0025-room-events-in-application.md) | `RoomEvents` (event names) live in Application so services can publish them; amends ADR-0007 |
+| [0026](0026-taste-readiness-and-film-picker.md) | Taste readiness per mode; a 10–20 film picker for people without history (users: likes; guests: kept in the room) |
