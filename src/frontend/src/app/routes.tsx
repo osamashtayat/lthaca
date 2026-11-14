@@ -8,6 +8,7 @@ import { MoodPage } from '@/features/mood'
 import { BrowsePage } from '@/features/browse'
 import { CinemaPage } from '@/features/library'
 import { FilmPage } from '@/features/films'
+import { ImportPage } from '@/features/import'
 import { TastePage } from '@/features/taste'
 import { TonightPage } from '@/features/tonight'
 import { RoomPage, RoomResultPage, RoomsPage, RoomSwipePage } from '@/features/rooms'
@@ -31,7 +32,7 @@ export const routes: RouteObject[] = [
           { path: '/mood', element: <MoodPage /> },
           { path: '/taste', element: <TastePage /> },
           { path: '/cinema', element: <CinemaPage /> },
-          { path: '/import', element: <PlaceholderPage title="Import from Letterboxd" feature="import" /> },
+          { path: '/import', element: <ImportPage /> },
           { path: '/profile', element: <PlaceholderPage title="Profile & settings" feature="profile" /> },
         ],
       },
