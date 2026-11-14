@@ -291,7 +291,7 @@ lint, test, build.
 
 ## Taste
 
-### BE-14a — Taste contract and stubs · `Todo`
+### BE-14a — Taste contract and stubs · `In progress`
 - **Objective:** unblock FE-13 before the taste logic exists.
 - **Deps:** BE-04. **Modules:** `docs/api-contract.md` (new §12), DTOs, stubs, `openapi.json`, `schema.d.ts`.
 - **Contract:** writes §12: `GET /api/taste`, `source: "taste"` for decks, `mode: "taste"` for rooms (additive enum values).
