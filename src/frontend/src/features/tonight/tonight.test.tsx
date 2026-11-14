@@ -53,11 +53,10 @@ describe('Tonight (signed in)', () => {
     expect(href('Start a room')).toBe('/rooms')
   })
 
-  it('shows By taste as disabled', async () => {
+  it('links By taste to /taste', async () => {
     renderHome()
     await screen.findByRole('heading', { name: /Good evening/ })
-    expect(screen.queryByRole('link', { name: /taste/i })).toBeNull()
-    expect((screen.getByRole('button', { name: 'Coming soon' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(href('Build from my taste')).toBe('/taste')
   })
 })
 
@@ -76,6 +75,7 @@ describe('Tonight (visitor)', () => {
     renderHome()
     await waitFor(() => expect(href('Just swipe')).toBe('/sign-in?next=%2Fdeck'))
     expect(href('Pick a mood')).toBe('/sign-in?next=%2Fmood')
+    expect(href('Build from my taste')).toBe('/sign-in?next=%2Ftaste')
     await user.click(screen.getByRole('radio', { name: 'With friends' }))
     expect(href('Start a room')).toBe('/sign-in?next=%2Frooms')
   })
