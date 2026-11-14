@@ -30,6 +30,16 @@ public static class ErrorCodes
     /// <summary>By taste needs more history: fewer positive signals than the threshold (api-contract.md §12, A16).</summary>
     public const string TasteNotReady = "taste.not_ready";
 
+    /// <summary>The request body is over the endpoint's limit; the pipeline refuses it before any service runs.</summary>
+    public const string RequestTooLarge = "request.too_large";
+
+    public const string ImportNotFound = "import.not_found";
+    public const string ImportInvalidFile = "import.invalid_file";
+    public const string ImportAlreadyRunning = "import.already_running";
+    public const string ImportFileTooLarge = "import.file_too_large";
+    public const string ImportNothingToImport = "import.nothing_to_import";
+    public const string ImportTooManyFilms = "import.too_many_films";
+
     public const string RoomNotFound = "room.not_found";
     public const string RoomNotMember = "room.not_member";
     public const string RoomNotHost = "room.not_host";

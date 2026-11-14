@@ -2,6 +2,7 @@ using Ithaca.Application.Auth;
 using Ithaca.Application.Catalog;
 using Ithaca.Application.Decks;
 using Ithaca.Application.Films;
+using Ithaca.Application.Imports;
 using Ithaca.Application.Library;
 using Ithaca.Application.Moods;
 using Ithaca.Application.Rooms;
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<RoomMembershipService>();
         services.AddScoped<LibraryService>();
         services.AddScoped<TasteService>();
+        services.AddScoped<ImportService>();
         return services;
     }
 }
