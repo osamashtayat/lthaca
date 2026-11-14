@@ -346,7 +346,7 @@ lint, test, build.
 - **Tests:** slice tests; hub membership (SignalR client package, with the reason in the PR); guest scope; upgrade.
 - **Docs:** docs/realtime.md as built; api-contract.md §6.
 
-### BE-11 — Room swiping: mood step, start, shared deck, votes, progress · `Todo`
+### BE-11 — Room swiping: mood step, start, shared deck, votes, progress · `In progress`
 - **Objective:** everyone swipes the same deck; votes are HTTP (ADR-0015).
 - **Deps:** BE-10, BE-08, BE-09. **Modules:** `Application/Rooms`, `Application/Decks`, `Domain/Rooms`, migration.
 - **Contract:** §6 (mood, start, deck, votes, progress); events `memberReady`, `roomStarted` (BE-10a), `voteCast`, `deckExtended`.
