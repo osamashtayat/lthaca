@@ -605,7 +605,7 @@ lint, test, build.
 - **Objective:** implement §14. **Deps:** BE-16a. **Modules:** `Application/Users`, `AuthController` or `ProfileController`.
 - **Contract:** §14. **Scope / Acceptance / Tests:** per §14.
 
-### FE-15 — Profile & settings screen · `Todo`
+### FE-15 — Profile & settings screen · `Done` (PR #49)
 - **Objective:** the "Profile & settings" board. **Deps:** BE-16a, BE-15a, FE-03. **Modules:** `src/features/profile/`,
   `src/mocks/`. **Contract:** §14, §13 (latest import, read-only). **Scope:** in: `/profile` per the board, plus a
   "Letterboxd" row: "Import your history" → `/import`, or the latest import's date and counts when there is one
