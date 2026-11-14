@@ -37,6 +37,11 @@ public sealed class RoomService(
             return AuthErrors.Unauthenticated;
         }
 
+        if (request.Mode == RoomMode.Taste)
+        {
+            return ContractStub.NotImplemented; // group taste: BE-14 (api-contract.md §12)
+        }
+
         if (string.IsNullOrWhiteSpace(request.Name))
         {
             return Error.Validation("name", "Enter a room name.");

@@ -410,6 +410,26 @@
                 }
               }
             }
+          },
+          "501": {
+            "description": "Not Implemented",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -1749,6 +1769,46 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not Implemented",
             "content": {
               "text/plain": {
                 "schema": {
@@ -3405,6 +3465,75 @@
           }
         }
       }
+    },
+    "/api/taste": {
+      "get": {
+        "tags": [
+          "Taste"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasteDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasteDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasteDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not Implemented",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3608,7 +3737,8 @@
       "DeckSource": {
         "enum": [
           "justSwipe",
-          "mood"
+          "mood",
+          "taste"
         ],
         "type": "string"
       },
@@ -4258,7 +4388,8 @@
       "RoomMode": {
         "enum": [
           "justSwipe",
-          "mood"
+          "mood",
+          "taste"
         ],
         "type": "string"
       },
@@ -4547,6 +4678,62 @@
           }
         }
       },
+      "TasteDto": {
+        "required": [
+          "ready",
+          "signalCount",
+          "signalsNeeded",
+          "loggedCount",
+          "topGenres",
+          "notForYou"
+        ],
+        "type": "object",
+        "properties": {
+          "ready": {
+            "type": "boolean"
+          },
+          "signalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "signalsNeeded": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "loggedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "topGenres": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TasteGenreDto"
+            }
+          },
+          "notForYou": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "TasteGenreDto": {
+        "required": [
+          "genre",
+          "percent"
+        ],
+        "type": "object",
+        "properties": {
+          "genre": {
+            "type": "string"
+          },
+          "percent": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "TopPickDto": {
         "required": [
           "film",
@@ -4729,6 +4916,9 @@
     },
     {
       "name": "Rooms"
+    },
+    {
+      "name": "Taste"
     }
   ]
 }

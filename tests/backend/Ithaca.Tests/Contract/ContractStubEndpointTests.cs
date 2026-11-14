@@ -43,6 +43,9 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
         { "GET", $"{Room}/progress", null },
         { "POST", $"{Room}/finish", null },
         { "GET", $"{Room}/result", null },
+        { "GET", "/api/taste", null },
+        { "POST", "/api/decks", """{"source":"taste","mood":null}""" },
+        { "POST", "/api/rooms", """{"name":"Blend night","mode":"taste","startsAt":null}""" },
     };
 
     [Theory]
