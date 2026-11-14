@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { addMockAccount, findMockAccount, getMockSession, isMockEmailTaken, setMockSession } from './authStore'
 import { findMockFilm, mockFilms, mockTrailers } from './fixtures'
 import { createMockDeck, mockDeckDto, parseMockMood, mockDeckTop, nextMockBatch, recordMockSwipe } from './deckStore'
+import { createMockImport, hasActiveMockImport, listMockImports, mockImportOutcome, mockNotFound, readMockImport } from './importStore'
 import { getMockTaste } from './tasteStore'
 import { castMockVote, finishMockRoom, mockRoomDeck, mockRoomProgress, mockRoomResult, setMockMemberReady, addMockRoomMember, createMockRoom, findMockRoom, mockRoomFor, removeMockRoomMember, setMockRoomStatus, MOCK_MAX_MEMBERS } from './roomStore'
 import { getMockUserFilm, listMockUserFilms, putMockUserFilm, setMockWatchlist } from './libraryStore'
@@ -224,6 +225,56 @@ const deckHandlers = [
   }),
 ]
 
+/** Letterboxd import (api-contract §13). File names script the error codes, see importStore.ts. */
+const importHandlers = [
+  http.post(apiPath('/api/imports'), async ({ request }) => {
+    if (getMockSession()?.kind !== 'user') return problem(401, 'auth.unauthenticated')
+    // The mock reads the raw multipart text for the file part's name (request.formData() needs a Node-compatible File,
+    // which jsdom tests don't have). Mocks never look at the file's contents.
+    const fileName = /name="file"; filename="([^"]*)"/.exec(await request.text())?.[1]
+    if (fileName === undefined) return problem(400, 'validation', { file: ['Choose a file.'] })
+    const outcome = mockImportOutcome(fileName)
+    if (outcome) return problem(outcome.status, outcome.code)
+    if (hasActiveMockImport()) return problem(409, 'import.already_running')
+    const job = createMockImport()
+    return HttpResponse.json<ResponseOf<'/api/imports', 'post', 201>>(job, { status: 201, headers: { Location: `/api/imports/${job.id}` } })
+  }),
+  http.get(apiPath('/api/imports'), ({ request }) => {
+    if (getMockSession()?.kind !== 'user') return problem(401, 'auth.unauthenticated')
+    const q = new URL(request.url).searchParams
+    const page = Number(q.get('page') ?? 1)
+    const pageSize = Number(q.get('pageSize') ?? 20)
+    if (page < 1 || pageSize < 1 || pageSize > 100) return problem(400, 'validation', { query: ['Check page and pageSize.'] })
+    const all = listMockImports()
+    return HttpResponse.json<ResponseOf<'/api/imports', 'get', 200>>({
+      items: all.slice((page - 1) * pageSize, page * pageSize),
+      page,
+      pageSize,
+      totalCount: all.length,
+    })
+  }),
+  http.get(apiPath('/api/imports/{importId}/not-found'), ({ params, request }) => {
+    if (getMockSession()?.kind !== 'user') return problem(401, 'auth.unauthenticated')
+    const all = mockNotFound(String(params.importId))
+    if (!all) return problem(404, 'import.not_found')
+    const q = new URL(request.url).searchParams
+    const page = Number(q.get('page') ?? 1)
+    const pageSize = Number(q.get('pageSize') ?? 20)
+    if (page < 1 || pageSize < 1 || pageSize > 100) return problem(400, 'validation', { query: ['Check page and pageSize.'] })
+    return HttpResponse.json<ResponseOf<'/api/imports/{importId}/not-found', 'get', 200>>({
+      items: all.slice((page - 1) * pageSize, page * pageSize),
+      page,
+      pageSize,
+      totalCount: all.length,
+    })
+  }),
+  http.get(apiPath('/api/imports/{importId}'), ({ params }) => {
+    if (getMockSession()?.kind !== 'user') return problem(401, 'auth.unauthenticated')
+    const job = readMockImport(String(params.importId))
+    return job ? HttpResponse.json<ResponseOf<'/api/imports/{importId}', 'get', 200>>(job) : problem(404, 'import.not_found')
+  }),
+]
+
 const tasteHandlers = [
   http.get(apiPath('/api/taste'), () => {
     if (getMockSession()?.kind !== 'user') return problem(401, 'auth.unauthenticated')
@@ -366,4 +417,4 @@ const roomHandlers = [
   }),
 ]
 
-export const handlers = [...healthHandlers, ...authHandlers, ...filmHandlers, ...libraryHandlers, ...watchlistHandlers, ...deckHandlers, ...tasteHandlers, ...roomHandlers]
+export const handlers = [...healthHandlers, ...authHandlers, ...filmHandlers, ...libraryHandlers, ...watchlistHandlers, ...deckHandlers, ...tasteHandlers, ...importHandlers, ...roomHandlers]
