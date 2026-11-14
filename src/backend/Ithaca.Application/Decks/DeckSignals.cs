@@ -25,15 +25,15 @@ public static class DeckSignals
     /// A library row: liked +1, on the watchlist +0.5, a high rating (top fifth of the scale) +1, a low one (bottom two
     /// fifths) −1; summed, then scaled by <see cref="LibraryFactor"/>. Seen alone says nothing about taste: 0.
     /// </summary>
-    public static double OfLibrary(bool liked, bool onWatchlist, int? rating)
+    public static double OfLibrary(bool liked, bool onWatchlist, decimal? rating)
     {
         double weight = 0;
         weight += liked ? 1 : 0;
         weight += onWatchlist ? 0.5 : 0;
         if (rating is { } r)
         {
-            var share = (double)r / UserFilm.MaxRating;
-            weight += share >= 0.8 ? 1 : share <= 0.4 ? -1 : 0;
+            var share = r / UserFilm.MaxRating;
+            weight += share >= 0.8m ? 1 : share <= 0.4m ? -1 : 0;
         }
 
         return weight * LibraryFactor;

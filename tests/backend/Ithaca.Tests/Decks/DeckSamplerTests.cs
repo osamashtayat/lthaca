@@ -139,5 +139,8 @@ public sealed class DeckSamplerTests
         DeckSignals.OfLibrary(liked: true, onWatchlist: false, rating: 5).ShouldBe(2 * DeckSignals.LibraryFactor);
         DeckSignals.OfLibrary(liked: false, onWatchlist: false, rating: 1).ShouldBe(-1 * DeckSignals.LibraryFactor);
         DeckSignals.OfLibrary(liked: false, onWatchlist: false, rating: null).ShouldBe(0);
+        DeckSignals.OfLibrary(liked: false, onWatchlist: false, rating: 4.5m).ShouldBe(1 * DeckSignals.LibraryFactor, "half stars: 4.5 is high");
+        DeckSignals.OfLibrary(liked: false, onWatchlist: false, rating: 2.5m).ShouldBe(0, "2.5 is neither");
+        DeckSignals.OfLibrary(liked: false, onWatchlist: false, rating: 2m).ShouldBe(-1 * DeckSignals.LibraryFactor);
     }
 }
