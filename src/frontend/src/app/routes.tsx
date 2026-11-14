@@ -1,6 +1,5 @@
 import type { RouteObject } from 'react-router'
 import { AppShell } from '@/app/layout/AppShell'
-import { PlaceholderPage } from '@/app/PlaceholderPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { RequireUser, SignInPage } from '@/features/auth'
 import { DeckPage, DeckStartPage, DeckTopPage } from '@/features/deck'
@@ -9,6 +8,7 @@ import { BrowsePage } from '@/features/browse'
 import { CinemaPage } from '@/features/library'
 import { FilmPage } from '@/features/films'
 import { ImportPage } from '@/features/import'
+import { ProfilePage } from '@/features/profile'
 import { TastePage } from '@/features/taste'
 import { TonightPage } from '@/features/tonight'
 import { RoomPage, RoomResultPage, RoomsPage, RoomSwipePage } from '@/features/rooms'
@@ -33,7 +33,7 @@ export const routes: RouteObject[] = [
           { path: '/taste', element: <TastePage /> },
           { path: '/cinema', element: <CinemaPage /> },
           { path: '/import', element: <ImportPage /> },
-          { path: '/profile', element: <PlaceholderPage title="Profile & settings" feature="profile" /> },
+          { path: '/profile', element: <ProfilePage /> },
         ],
       },
       { path: '/rooms', element: <RoomsPage /> },
