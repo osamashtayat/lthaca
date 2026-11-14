@@ -664,6 +664,13 @@ lint, test, build.
 - **Deps:** OPS-12. **Modules:** `docs/decisions/0024-…`, `docs/api-contract.md` §11, `docs/backlog.md`.
 - **Contract:** A15–A17 become decided (no shape changes). **Scope:** in: docs only. **Tests:** none (docs).
 
+### OPS-14 — Taste readiness and the film picker: decision and contract design (ADR-0026) · `In progress`
+- **Objective:** record the owner's decisions on group taste (A11) and a "pick films you love" path for people without
+  history, so BE-14b, BE-14 and FE-21 can start from one design.
+- **Deps:** BE-14a. **Modules:** `docs/decisions/0026-…`, `docs/api-contract.md` §11–§12, `docs/backlog.md`.
+- **Scope:** in: ADR-0026; §12 design (readiness in taste rooms, the picker, guest picks, the warning count); A11
+  decided; new BE-14b and FE-21; BE-14 and FE-13 follow-ups in scope. Out: code (BE-14b, BE-14, FE-21). **Tests:** none (docs).
+
 ### BE-17 — Remove the contract-stub plumbing · `Todo`
 - **Objective:** no stubs left. **Deps:** BE-12, BE-14, BE-15, BE-16. **Modules:** `ErrorCodes.cs`,
   `ErrorStatusCodes.cs`, `problem.ts`, stub test.
