@@ -8,7 +8,8 @@ swipes (incl. mood), rooms and votes, library (My Cinema), film details, browse.
 Not repeated here: the error pipeline (docs/backend-conventions.md → Result and errors), real-time events
 (`contracts/realtime-events.json` + docs/realtime.md), domain names (docs/glossary.md), AI rules (docs/ai.md).
 Second-wave features (taste, import, profile, Tonight) get their contract sections in their own backlog task: §12 Taste
-(BE-14a); §13 Import was designed with its decision (OPS-12, ADR-0024) and BE-15a makes it executable.
+(BE-14a); §13 Import was designed with its decision (OPS-12, ADR-0024) and BE-15a makes it executable; §14
+Profile (BE-16a).
 
 Places where the docs, ADRs or design leave a gap are marked **⚠ Open** with the assumption this contract makes.
 They are collected in §11 and in the backlog's open questions; the owner confirms or changes them.
@@ -62,6 +63,7 @@ BE-01 adds all of them at once, so mocks and screens can use them from day one.
 | 409 | `room.invalid_state` | action not allowed in the room's current `status` (e.g. vote in the lobby, start twice) |
 | 409 | `room.no_result` | result requested before there is one |
 | 413 | `request.too_large` | the request body is over the server's limit for that endpoint (the pipeline refuses it before any service runs; mapped in `ProblemDetailsExceptionHandler`) — BE-15a |
+| 400 | `profile.wrong_password` | password change or account deletion with a wrong current password, also while locked out (§14) — BE-16a |
 | 404 | `import.not_found` | no such import **for this user** (another user's import is also 404) — BE-15a |
 | 400 | `import.invalid_file` | not a Letterboxd export: wrong type, unreadable, no recognised file or header, or a ZIP over the entry-count / ratio limits (§13) — BE-15a |
 | 409 | `import.already_running` | the user already has a `queued` or `running` import — BE-15a |
@@ -586,3 +588,54 @@ larger body; `[ReadFormFirst]` reads the form before model binding (which would 
 `ProblemDetailsExceptionHandler` answers 413 `request.too_large` (tested on real Kestrel). A client that sends the whole
 body before reading the answer may see the connection close instead; browsers read the early 413. List queries use the shared
 paging (`page` 1–10 000, `pageSize` 1–100). `ImportStatus` and `ImportNotFoundReason` are in `Domain/Imports`.
+
+## 14. Profile (BE-16a)
+
+The "Profile & settings" board (`/profile`, FE-15): the user's name, email and join date, editing the display name,
+changing the password, and deleting the account. BE-16a adds the DTOs, the code and 501 stubs; BE-16 the logic
+(`ProfileService` in `Application/Users`).
+
+| Method & path | Access | Body | Success | Errors |
+|---|---|---|---|---|
+| `GET /api/profile` | user | — | 200 `ProfileDto` | 401 |
+| `PUT /api/profile` | user | `UpdateProfileRequest` | 200 `ProfileDto` | 400, 401 |
+| `PUT /api/profile/password` | user | `ChangePasswordRequest` | 204, new `XSRF-TOKEN` | 400 `validation` / `profile.wrong_password`, 401 |
+| `DELETE /api/profile` | user | `DeleteAccountRequest` | 204, signed out, new `XSRF-TOKEN` | 400 `validation` / `profile.wrong_password`, 401 |
+
+```ts
+type ProfileDto           = { id: string; displayName: string; email: string; createdAt: string }  // "since Nov 2026"
+type UpdateProfileRequest = { displayName: string }                           // trimmed, 1–40, as at registration
+type ChangePasswordRequest = { currentPassword: string; newPassword: string } // new: 8–128, length only (ADR-0023)
+type DeleteAccountRequest  = { password: string }                             // the current password
+```
+
+**Rules** (BE-16 builds them; until then all four answer 501 `server.not_implemented`):
+- **Who:** users only; a guest or visitor gets 401 `auth.unauthenticated` (ADR-0023). Guests have no profile.
+- **Display name:** trimmed; blank after trimming → 400 `errors.displayName`. `GET /api/auth/me` returns the new name
+  at once (the client refetches it). Names already shown as a `RoomMember` keep the name they joined with.
+- **Re-authentication (owner, 2026-11-14):** password change and deletion both need the current password, so a stolen
+  session alone can't lock the owner out or erase the account. Wrong → 400 `profile.wrong_password`, nothing changed.
+  A wrong password counts toward the sign-in lockout (5 failures, 15 minutes, §4), and while locked out the answer is
+  the same `profile.wrong_password` (it never reveals the lockout). Check order: input validation (400 `validation`)
+  first, then the password.
+- **Password change:** the new password may equal the old one (length is the only rule). The security stamp changes:
+  the caller's session stays signed in (re-issued cookie), every other session of that user ends. Use the new
+  `XSRF-TOKEN` from the response.
+- **Account deletion (owner, 2026-11-14)** removes, in one use case:
+  - the account (Identity rows) and everything that belongs to it, by FK cascade from `users`: My Cinema (`UserFilm`),
+    decks and their swipes, mood queries, the `TasteProfile`, and imports with their not-found lists (ADR-0024, §13);
+  - the user's room memberships and their votes. Before that, every open room (`lobby` or `swiping`) the user hosts is
+    closed (`roomClosed`, docs/realtime.md); in other open rooms they leave (`memberLeft`). Events are published after
+    the commit. Finished rooms keep their result; that member's votes are gone from it.
+  - **Not** removed: `Film`s (catalog, ADR-0019) and `LetterboxdFilmLink`s (ids only, shared by all users, §13).
+  Then the caller is signed out (session cookie cleared, a new anonymous `XSRF-TOKEN` issued, as after sign-out). The
+  email can register again at once.
+- The board's other rows are not in this contract: taste chips come from `GET /api/taste` (§12); "Film history" from the
+  latest import (`GET /api/imports?pageSize=1`, §13); "Sign out" is §4; streaming services (P-01), notifications
+  (ADR-0014), appearance (a client setting), privacy and group history have no API yet.
+
+**As built (BE-16a):** the four actions exist with the shapes above and answer 501 `server.not_implemented` until
+BE-16; guests and visitors get 401 `auth.unauthenticated`. `DELETE /api/profile` takes a JSON body (`openapi-fetch`
+sends it; keep the `Content-Type: application/json`). Password change and deletion re-issue `XSRF-TOKEN` like the §4 actions
+(checked on the stub answer). A body missing a required property is a 400 `validation` on `$` (deserialisation),
+an empty one a 400 on the field. `profile.wrong_password` is in all three code lists with its user text.

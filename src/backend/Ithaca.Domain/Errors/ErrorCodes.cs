@@ -33,6 +33,9 @@ public static class ErrorCodes
     /// <summary>The request body is over the endpoint's limit; the pipeline refuses it before any service runs.</summary>
     public const string RequestTooLarge = "request.too_large";
 
+    /// <summary>Password change or account deletion with a wrong current password (api-contract.md §14).</summary>
+    public const string ProfileWrongPassword = "profile.wrong_password";
+
     public const string ImportNotFound = "import.not_found";
     public const string ImportInvalidFile = "import.invalid_file";
     public const string ImportAlreadyRunning = "import.already_running";

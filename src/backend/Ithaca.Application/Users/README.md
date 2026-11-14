@@ -1,6 +1,6 @@
-# Users (not built yet)
+# Users
 
-`User` accounts and `Guest`s (join a room by link, no account). Auth design is an open decision.
-
-Put this feature's services, DTOs (`…Request` in, `…Dto` out), errors (`UsersErrors`) and Application-side interfaces here.
-Copy the shape of `../Films/` (the reference slice). See `docs/backend-conventions.md`.
+`User` accounts (Identity, in Infrastructure, read here as `UserReadModel`) and their profile (api-contract.md §14):
+`ProfileService` (display name, password change, account deletion), its requests, `ProfileDto` and `ProfileErrors`.
+Sessions, sign-in and guests are in `../Auth/`. Copy the shape of `../Films/` (the reference slice); see
+`docs/backend-conventions.md`.
