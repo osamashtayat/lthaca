@@ -21,7 +21,7 @@ export const PROBLEM_MESSAGES = {
   'deck.item_not_found': "That card isn't in this deck anymore. Refresh and keep swiping.",
   'deck.already_swiped': 'You already swiped this one.',
   'deck.no_yeses': 'Swipe right on a few films first, then see your top picks.',
-  'request.too_large': 'That file is too big. Upload your Letterboxd export (up to 25 MB).',
+  'request.too_large': 'That file is too big to upload.',
   'import.not_found': "We couldn't find that import.",
   'import.invalid_file': "That doesn't look like a Letterboxd export. Upload the ZIP from Letterboxd, or one CSV from it.",
   'import.already_running': 'An import is already running. Wait for it to finish, then try again.',

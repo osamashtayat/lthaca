@@ -582,5 +582,7 @@ BE-15; guests and visitors get 401 `auth.unauthenticated`. The upload is `multip
 (binary); a request without it is 400 `validation` with `errors.file` (the generated schema doesn't mark the field
 required, so the TypeScript type shows it optional: always send it). The upload is antiforgery-checked like every
 unsafe request (`X-XSRF-TOKEN`). `[RequestSizeLimit(ImportLimits.MaxUploadBytes)]` (25 MB) makes the server refuse a
-larger body, which `ProblemDetailsExceptionHandler` answers as 413 `request.too_large`. List queries use the shared
+larger body; `[ReadFormFirst]` reads the form before model binding (which would otherwise report it as a 400) so
+`ProblemDetailsExceptionHandler` answers 413 `request.too_large` (tested on real Kestrel). A client that sends the whole
+body before reading the answer may see the connection close instead; browsers read the early 413. List queries use the shared
 paging (`page` 1–10 000, `pageSize` 1–100). `ImportStatus` and `ImportNotFoundReason` are in `Domain/Imports`.

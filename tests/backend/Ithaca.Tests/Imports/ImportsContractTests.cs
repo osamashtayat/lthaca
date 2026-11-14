@@ -4,7 +4,10 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Ithaca.Api.Errors;
+using Ithaca.Application.Imports;
 using Ithaca.Tests.Harness;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -16,7 +19,7 @@ namespace Ithaca.Tests.Imports;
 /// <summary>
 /// BE-15a: the import contract (api-contract.md §13) before its logic. Multipart uploads go through the XSRF check like
 /// any unsafe request; the four actions are user-only and answer 501 until BE-15; an oversized body is 413
-/// <c>request.too_large</c>.
+/// <c>request.too_large</c> on real Kestrel (the in-memory TestServer doesn't enforce body limits).
 /// </summary>
 [Collection(DatabaseCollectionDefinition.Name)]
 public sealed class ImportsContractTests(PostgresFixture postgres) : IAsyncLifetime
@@ -108,22 +111,23 @@ public sealed class ImportsContractTests(PostgresFixture postgres) : IAsyncLifet
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
+    /// <summary>On real Kestrel: the in-memory TestServer doesn't enforce <c>[RequestSizeLimit]</c>.</summary>
     [Fact]
-    public async Task BodyTooLarge_IsRequestTooLarge()
+    public async Task Upload_OverTheSizeLimit_IsRequestTooLarge()
     {
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var handler = new ProblemDetailsExceptionHandler(
-            scope.ServiceProvider.GetRequiredService<IProblemDetailsService>(), NullLogger<ProblemDetailsExceptionHandler>.Instance);
-        var http = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
-        http.Response.Body = new MemoryStream();
+        await using var kestrel = new IthacaApiFactory(postgres.ConnectionString);
+        kestrel.UseKestrel(0);
+        kestrel.StartServer();
+        var address = new Uri(kestrel.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First());
+        using var user = await BrowserClient.StartAsync(kestrel, Ct, address);
+        (await user.PostAsJsonAsync("/api/auth/register", new { email = BrowserClient.UniqueEmail(), password = "correct horse", displayName = "Ada" }, Ct)).EnsureSuccessStatusCode();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/imports") { Content = Form(new byte[(int)ImportLimits.MaxUploadBytes + 1024], "watched.csv") };
+        request.Headers.ExpectContinue = true; // read the server's early answer instead of failing mid-upload
 
-        var handled = await handler.TryHandleAsync(http, new BadHttpRequestException("Request body too large.", StatusCodes.Status413PayloadTooLarge), Ct);
+        using var response = await user.SendAsync(request, Ct);
 
-        handled.ShouldBeTrue();
-        http.Response.StatusCode.ShouldBe(StatusCodes.Status413PayloadTooLarge);
-        http.Response.Body.Position = 0;
-        using var problem = await JsonDocument.ParseAsync(http.Response.Body, cancellationToken: Ct);
-        problem.RootElement.GetProperty("code").GetString().ShouldBe("request.too_large");
+        response.StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge, await response.Content.ReadAsStringAsync(Ct));
+        (await CodeAsync(response)).ShouldBe("request.too_large");
     }
 
     [Fact]
