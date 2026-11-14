@@ -50,7 +50,7 @@ public sealed class LibraryEndpointTests(PostgresFixture postgres) : IAsyncLifet
         var body = await JsonAsync(put);
         body.GetProperty("liked").GetBoolean().ShouldBeTrue();
         body.GetProperty("seen").GetBoolean().ShouldBeTrue("a rating implies seen (A8)");
-        body.GetProperty("rating").GetDecimal().ShouldBe(4m);
+        body.GetProperty("rating").GetRawText().ShouldBe("4", "whole numbers stay whole numbers");
 
         using var replaced = await PutAsync(client, 550, onWatchlist: true);
         var after = await JsonAsync(replaced);

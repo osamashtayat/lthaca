@@ -11,7 +11,7 @@ namespace Ithaca.Application.Library;
 public sealed class HalfStarRatingAttribute : ValidationAttribute
 {
     public HalfStarRatingAttribute()
-        : base("The rating must be 0.5-5 in steps of 0.5.")
+        : base(UserFilm.RatingRule)
     {
     }
 

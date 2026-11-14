@@ -22,7 +22,21 @@ public sealed class HalfStarRatingsMigrationTests(PostgresFixture postgres)
     [Fact]
     public async Task Up_DoublesExistingRatings_AndDown_RoundsHalfStarsUp()
     {
-        var connectionString = await NewDatabaseAsync();
+        var (name, connectionString) = await NewDatabaseAsync();
+        try
+        {
+            await RunAsync(connectionString);
+        }
+        finally
+        {
+            NpgsqlConnection.ClearAllPools();
+            await using var admin = await OpenAsync(postgres.ConnectionString);
+            await ExecuteAsync(admin, $"DROP DATABASE IF EXISTS {name} WITH (FORCE);");
+        }
+    }
+
+    private static async Task RunAsync(string connectionString)
+    {
         var options = new DbContextOptionsBuilder<AppDbContext>();
         PersistenceOptions.Configure(options, connectionString);
         await using var db = new AppDbContext(options.Options);
@@ -65,7 +79,7 @@ public sealed class HalfStarRatingsMigrationTests(PostgresFixture postgres)
         }
     }
 
-    private async Task<string> NewDatabaseAsync()
+    private async Task<(string Name, string ConnectionString)> NewDatabaseAsync()
     {
         var name = $"migration_{Guid.NewGuid():N}";
         await using (var admin = await OpenAsync(postgres.ConnectionString))
@@ -73,7 +87,7 @@ public sealed class HalfStarRatingsMigrationTests(PostgresFixture postgres)
             await ExecuteAsync(admin, $"CREATE DATABASE {name};");
         }
 
-        return new NpgsqlConnectionStringBuilder(postgres.ConnectionString) { Database = name }.ConnectionString;
+        return (name, new NpgsqlConnectionStringBuilder(postgres.ConnectionString) { Database = name }.ConnectionString);
     }
 
     private static async Task<NpgsqlConnection> OpenAsync(string connectionString)

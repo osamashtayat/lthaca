@@ -19,6 +19,9 @@ public sealed class UserFilm
     /// <summary>The top of the rating scale (five stars).</summary>
     public const decimal MaxRating = MaxHalfStars / 2m;
 
+    /// <summary>The half-step rule in words, for validation messages.</summary>
+    public const string RatingRule = "rating must be 0.5-5 in steps of 0.5.";
+
     private UserFilm(Guid userId, Guid filmId, DateTimeOffset now)
     {
         UserId = userId;
@@ -79,7 +82,7 @@ public sealed class UserFilm
     {
         if (rating is { } r && !IsValidRating(r))
         {
-            throw new DomainException(ErrorCodes.Validation, "rating must be 0.5-5 in steps of 0.5.", "rating");
+            throw new DomainException(ErrorCodes.Validation, RatingRule, "rating");
         }
 
         Liked = liked;
