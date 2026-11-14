@@ -11,6 +11,9 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
   `[ContractStub]` (documents 501), and its service method returns `ContractStub.Of<T>()` / `ContractStub.Command()`
   (501 `server.not_implemented`). Implementing it: replace the body, drop `[ContractStub]` and the CA1822 suppression,
   remove its row from `ContractStubEndpointTests`, re-export the contract.
+- **A stubbed enum value on a live endpoint** (BE-14a: `source: "taste"`, `mode: "taste"`): the action keeps working and
+  carries `[ContractStub]`; the service returns `ContractStub.NotImplemented` at the top for that value; the value has its
+  own row in `ContractStubEndpointTests`. Implementing it removes all three (guard, attribute, row).
 - List queries derive from `PageRequest` and bind camelCase names (`CamelCaseBindingMetadataProvider`).
 - Declare `[ProducesResponseType]` for every status; they feed `contracts/openapi.json` and the frontend types.
 - Route constraints (`{tmdbId:int:min(1)}`) and DataAnnotations on `…Request` records do input-shape validation

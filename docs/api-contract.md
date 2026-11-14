@@ -485,6 +485,7 @@ Rules (BE-14 builds them; until then the three rows answer 501 `server.not_imple
 - **Group taste** ("Blend your histories"): the host must be ready (else 422 `taste.not_ready`, no room). The shared
   deck blends present members' profiles; members without history (guests included) add no taste, and a film any member
   has seen is skipped (A11, ⚠ assumed). Readiness in the lobby works as in `justSwipe` rooms (everyone is ready).
+- Check order once built: input validation (400: `mood` with a taste deck, a blank room name) before readiness (422).
 - The board's "Because you loved …" lines under the first cards are not in this contract (no field yet); the first
   cards are simply the deck's first items.
 
