@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll } from 'vitest'
 import { resetMockAuth } from '@/mocks/authStore'
 import { resetMockDecks } from '@/mocks/deckStore'
 import { resetMockLibrary } from '@/mocks/libraryStore'
+import { resetMockImports } from '@/mocks/importStore'
 import { resetMockTaste } from '@/mocks/tasteStore'
 import { resetMockRooms } from '@/mocks/roomStore'
 import { server } from '@/mocks/server'
@@ -31,6 +32,7 @@ afterEach(() => {
   resetMockDecks()
   resetMockRooms()
   resetMockTaste()
+  resetMockImports()
 })
 
 afterAll(() => server.close())

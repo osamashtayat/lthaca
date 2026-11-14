@@ -1,2 +1,4 @@
-/** Types for the import feature. API shapes come from @/shared/api (generated), not hand-written. */
-export {}
+import type { components } from '@/shared/api'
+
+export type ImportJob = components['schemas']['ImportJobDto']
+export type ImportNotFound = components['schemas']['ImportNotFoundDto']
