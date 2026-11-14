@@ -559,7 +559,7 @@ lint, test, build.
 - **Docs:** api-contract.md §13 as built; docs/backend-conventions.md (file uploads: limits and never storing them),
   glossary if names change.
 
-### FE-14 — Import screen · `Todo`
+### FE-14 — Import screen · `In progress`
 - **Objective:** the "Import from Letterboxd" board: upload, progress, result and the "not found" list, on a phone.
 - **Deps:** BE-15a, FE-02, FE-03. **Modules:** `src/features/import/` (`useCreateImport`, `useImport` (polling),
   `useImports`, `useImportNotFound`, `components/LetterboxdHelpSheet.tsx` exported from `index.ts`),
