@@ -79,6 +79,7 @@ export function DeckPage() {
             <SwipeCard
               key={current.id}
               film={film}
+              held={seenFilm !== null}
               onSwipe={(direction) => onSwipe(current, direction)}
               corner={<WatchlistButton key={current.id} tmdbId={film.tmdbId} initial={current.onWatchlist} title={film.title} />}
             />

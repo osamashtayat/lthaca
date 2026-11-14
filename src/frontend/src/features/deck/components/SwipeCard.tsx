@@ -19,6 +19,8 @@ type SwipeCardProps = {
   /** Which swipes this deck accepts (the group deck has no "seen it"). Defaults to all three. */
   allowed?: readonly SwipeDirection[]
   disabled?: boolean
+  /** True while the caller keeps this card on screen after an up swipe (the "seen it" sheet): it stays put, then glides back when this turns false. */
+  held?: boolean
   /** Overlaid at the bottom-left, outside the swipe (the watchlist button). Pointer presses on it never start a drag. */
   corner?: ReactNode
 }
@@ -27,8 +29,8 @@ type SwipeCardProps = {
  * The swipeable film card: drag it right / left / up, or focus it and press → ← ↑. Reduced motion: no tilt and no
  * spring-back animation. Presentation only; what a swipe means is the caller's.
  */
-export function SwipeCard({ film, onSwipe, allowed = ['right', 'left', 'up'], disabled = false, corner }: SwipeCardProps) {
-  const { handlers, offset, dragging, pending } = useSwipeGesture({ onSwipe, disabled, allowed })
+export function SwipeCard({ film, onSwipe, allowed = ['right', 'left', 'up'], disabled = false, held = false, corner }: SwipeCardProps) {
+  const { handlers, reset, offset, dragging, pending } = useSwipeGesture({ onSwipe, disabled, allowed, hold: ['up'] })
   const ref = useRef<HTMLElement>(null)
 
   // After a swipe the previous card unmounts and focus falls to <body>: hand it to the next card, so arrow keys keep
@@ -38,6 +40,10 @@ export function SwipeCard({ film, onSwipe, allowed = ['right', 'left', 'up'], di
       ref.current?.focus({ preventScroll: true })
     }
   }, [disabled])
+
+  useEffect(() => {
+    if (!held) reset()
+  }, [held, reset])
 
   function onKeyDown(e: KeyboardEvent<HTMLElement>) {
     if (disabled) return

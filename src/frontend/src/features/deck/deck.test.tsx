@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -97,6 +97,21 @@ describe('solo deck', () => {
     await user.click(await screen.findByRole('button', { name: 'Close' }))
     expect(await title()).toBe(first)
     expect(mockDeckDto(deck.id)?.swipeCount).toBe(0)
+  })
+
+  it('an up drag keeps the card where it was released while the sheet is open, then it glides back', async () => {
+    const deck = createMockDeck()
+    const user = userEvent.setup()
+    renderAt(`/deck/${deck.id}`)
+    await title()
+    const card = screen.getByRole('article')
+    fireEvent.pointerDown(card, { pointerId: 1, clientX: 100, clientY: 400 })
+    fireEvent.pointerMove(card, { pointerId: 1, clientX: 100, clientY: 250 })
+    fireEvent.pointerUp(card, { pointerId: 1 })
+    await screen.findByRole('button', { name: 'Skip' })
+    expect(card.style.transform).toContain('-150px')
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.getByRole('article').style.transform).toMatch(/^translate\(0px/))
   })
 
   it('a failed swipe toasts and the card comes back', async () => {

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import { directionFromDrag, type Offset } from './swipeGesture'
 import type { SwipeDirection } from './types'
@@ -10,6 +10,11 @@ type Options = {
   onSwipe: (direction: SwipeDirection) => void
   disabled?: boolean
   allowed?: readonly SwipeDirection[]
+  /**
+   * Swipes after which the card stays where it was released instead of springing back, because the caller keeps it
+   * on screen (the "seen it" sheet). Call `reset()` when the caller is done, and the card glides back.
+   */
+  hold?: readonly SwipeDirection[]
 }
 
 /**
@@ -17,7 +22,7 @@ type Options = {
  * needs `touch-action: none`) and move it by `offset` while `dragging`. A release that doesn't amount to a swipe
  * springs back. The direction maths is the pure `directionFromDrag`. Reused by the group deck (FE-11).
  */
-export function useSwipeGesture({ onSwipe, disabled = false, allowed }: Options) {
+export function useSwipeGesture({ onSwipe, disabled = false, allowed, hold = [] }: Options) {
   const origin = useRef<{ x: number; y: number } | null>(null)
   const latest = useRef<Offset>(NO_OFFSET)
   const [offset, setOffset] = useState<Offset>(NO_OFFSET)
@@ -29,9 +34,11 @@ export function useSwipeGesture({ onSwipe, disabled = false, allowed }: Options)
     origin.current = null
     latest.current = NO_OFFSET
     setDragging(false)
-    setOffset(NO_OFFSET)
+    if (!direction || !hold.includes(direction)) setOffset(NO_OFFSET)
     if (direction) onSwipe(direction)
   }
+
+  const reset = useCallback(() => setOffset(NO_OFFSET), [])
 
   const handlers = {
     onPointerDown(e: PointerEvent<HTMLElement>) {
@@ -51,6 +58,7 @@ export function useSwipeGesture({ onSwipe, disabled = false, allowed }: Options)
 
   return {
     handlers,
+    reset,
     offset,
     dragging,
     /** The swipe a release would make right now (for the card's hint labels), or null. */
