@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { LetterboxdHelpSheet } from '@/features/import'
-import { ButtonLink, MonoLabel, TicketCard } from '@/shared/ui'
+import { ButtonLink, TicketCard } from '@/shared/ui'
 import type { Taste } from '../types'
 
 /**
@@ -34,11 +34,9 @@ export function ImportYourLetterboxd({ taste }: { taste: Taste }) {
       <ButtonLink to="/deck" variant="outline" className="w-full">
         Just swipe instead
       </ButtonLink>
-      <MonoLabel>
-        <Link to="/browse" className="text-pink-text">
-          Or browse films to like
-        </Link>
-      </MonoLabel>
+      <Link to="/browse" className="inline-flex min-h-11 items-center self-start font-bold text-pink-text">
+        Or browse films to like
+      </Link>
     </section>
   )
 }

@@ -33,6 +33,8 @@ export function useUpdateUserFilm(tmdbId: number) {
       // Refetch other library queries (shelves, counts) once the last pending write for this film has landed.
       if (queryClient.isMutating({ mutationKey: ['library', 'update', tmdbId] }) === 1) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.library.all })
+        // Likes and ratings are what "By taste" is built from (api-contract §12): its readiness must be re-read.
+        void queryClient.invalidateQueries({ queryKey: queryKeys.taste.all })
       }
     },
   })
