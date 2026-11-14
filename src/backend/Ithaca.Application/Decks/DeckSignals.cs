@@ -11,6 +11,9 @@ public static class DeckSignals
 {
     public const double LibraryFactor = 0.6;
 
+    /// <summary>How much a deck's mood genres count as one signal, next to one right swipe (1). Solo and room decks alike.</summary>
+    public const double MoodWeight = 2;
+
     /// <summary>A swipe in this deck: right +1, left −1, seen + loved +1.5, seen + not for me −1, seen without a verdict +0.3.</summary>
     public static double OfSwipe(SwipeDirection direction, SeenVerdict? verdict) => (direction, verdict) switch
     {

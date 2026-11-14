@@ -17,11 +17,8 @@ namespace Ithaca.Application.Decks;
 /// input into a <see cref="MoodQuery"/>; its filters narrow every batch, and its genres count as a strong signal. Films come
 /// from our own catalog only (ADR-0003): available, not yet in this deck, not seen by the user.
 /// </summary>
-public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInterpreter moods, TimeProvider time)
+public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInterpreter moods, DeckDealer dealer, TimeProvider time)
 {
-    /// <summary>Most popular eligible films the sampler chooses from per batch.</summary>
-    private const int CandidatePool = 500;
-
     /// <summary>Most recently changed library rows used as signals.</summary>
     private const int LibrarySignalLimit = 200;
 
@@ -29,9 +26,6 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
 
     /// <summary>Tries at dealing a batch when concurrent requests for the same deck collide.</summary>
     private const int DealAttempts = 3;
-
-    /// <summary>How much a deck's mood genres count, next to one right swipe (1).</summary>
-    private const double MoodSignalWeight = 2;
 
     public async Task<Result<DeckDto>> CreateAsync(CreateDeckRequest request, CancellationToken ct)
     {
@@ -237,35 +231,22 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
 
     /// <summary>
     /// Adds up to <see cref="Deck.BatchSize"/> new items (positions after <paramref name="dealt"/>), never past
-    /// <see cref="Deck.MaxItems"/>. Not saved here: the caller saves once.
+    /// <see cref="Deck.MaxItems"/> nor a film the user has seen. Not saved here: the caller saves once.
     /// </summary>
-    private async Task<List<DeckItem>> DealAsync(
+    private Task<List<DeckItem>> DealAsync(
         Guid deckId, Guid userId, int dealt, IReadOnlyList<SignalRow> signals, MoodQuery? mood, DateTimeOffset now, CancellationToken ct)
     {
         var count = Math.Min(Deck.BatchSize, Deck.MaxItems - dealt);
         if (count <= 0)
         {
-            return [];
+            return Task.FromResult(new List<DeckItem>());
         }
 
         // Vectors from different models are never compared: use the model most signals were embedded with.
         var model = signals.Where(s => s.Embedding is not null).GroupBy(s => s.EmbeddingModel).MaxBy(g => g.Count())?.Key;
-        var inDeck = db.DeckItems.Where(i => i.DeckId == deckId).Select(i => i.FilmId);
         var seen = db.UserFilms.Where(u => u.UserId == userId && u.Seen).Select(u => u.FilmId);
-        var candidates = await Filtered(db.Films.AsNoTracking(), mood)
-            .Where(f => f.IsAvailable && !inDeck.Contains(f.Id) && !seen.Contains(f.Id))
-            .OrderBy(f => f.Popularity == null).ThenByDescending(f => f.Popularity).ThenBy(f => f.TmdbId)
-            .Take(CandidatePool)
-            .Select(f => new SamplerFilm(
-                f.Id, f.Genres, f.ReleaseYear, f.RuntimeMinutes, f.Popularity ?? 0,
-                model != null && f.EmbeddingModel == model ? f.Embedding : null))
-            .ToListAsync(ct);
-
-        var deckSignals = signals.Select(s => s.ToDeckSignal(model)).ToList();
-        var picked = DeckSampler.Pick(candidates, deckSignals, count, Random.Shared);
-        var items = picked.Select((filmId, i) => DeckItem.Create(deckId, filmId, dealt + i + 1, now)).ToList();
-        db.DeckItems.AddRange(items);
-        return items;
+        return dealer.DealAsync(
+            deckId, dealt, count, [DeckFilter.FromMood(mood)], seen, signals.Select(s => s.ToDeckSignal(model)).ToList(), model, now, ct);
     }
 
     /// <summary>This deck's swipes (full weight) and the user's most recent library rows (<see cref="DeckSignals"/>).</summary>
@@ -360,51 +341,7 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
 
     /// <summary>A deck's mood genres as one strong signal, so batches and the top 3 lean towards them.</summary>
     private static List<SignalRow> MoodSignals(MoodQuery? mood) =>
-        mood is { IncludeGenres.Length: > 0 } ? [new SignalRow(mood.IncludeGenres, null, null, null, MoodSignalWeight)] : [];
-
-    /// <summary>
-    /// A mood's filters as hard limits: any included genre, no excluded genre, runtime, release years, original language.
-    /// A film missing the value a filter needs doesn't pass it.
-    /// </summary>
-    private static IQueryable<Film> Filtered(IQueryable<Film> films, MoodQuery? mood)
-    {
-        if (mood is null)
-        {
-            return films;
-        }
-
-        if (mood.IncludeGenres is { Length: > 0 } include)
-        {
-            films = films.Where(f => f.Genres.Any(g => include.Contains(g)));
-        }
-
-        if (mood.ExcludeGenres is { Length: > 0 } exclude)
-        {
-            films = films.Where(f => !f.Genres.Any(g => exclude.Contains(g)));
-        }
-
-        if (mood.MaxRuntimeMinutes is { } minutes)
-        {
-            films = films.Where(f => f.RuntimeMinutes <= minutes);
-        }
-
-        if (mood.MinReleaseYear is { } from)
-        {
-            films = films.Where(f => f.ReleaseYear >= from);
-        }
-
-        if (mood.MaxReleaseYear is { } to)
-        {
-            films = films.Where(f => f.ReleaseYear <= to);
-        }
-
-        if (mood.Language is { } language)
-        {
-            films = films.Where(f => f.OriginalLanguage == language);
-        }
-
-        return films;
-    }
+        mood is { IncludeGenres.Length: > 0 } ? [new SignalRow(mood.IncludeGenres, null, null, null, DeckSignals.MoodWeight)] : [];
 
     /// <summary>Items in position order with their film, the caller's swipe and the caller's watchlist flag.</summary>
     private async Task<IReadOnlyList<DeckItemDto>> ItemDtosAsync(IQueryable<DeckItem> items, Guid userId, CancellationToken ct)

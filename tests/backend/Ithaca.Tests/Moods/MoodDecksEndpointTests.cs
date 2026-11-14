@@ -240,7 +240,7 @@ public sealed class MoodDecksEndpointTests(PostgresFixture postgres) : IAsyncLif
     }
 
     /// <summary>An LLM whose reply or failure each test scripts, counting calls.</summary>
-    private sealed class ScriptedLlm : ILlmClient
+    internal sealed class ScriptedLlm : ILlmClient
     {
         private int _calls;
 

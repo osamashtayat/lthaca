@@ -309,7 +309,7 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 - **Hub:** `JoinRoom(code)` / `LeaveRoom(code)` on `/hubs/rooms`, membership checked by a service (ADR-0012); clients
   then refetch through the endpoints above. Events: `contracts/realtime-events.json`.
 
-**As built (BE-10):** create, preview, join, get, leave and close are live; the rest stay 501 until BE-11/BE-12.
+**As built (BE-10):** create, preview, join, get, leave and close are live; finish and result stay 501 until BE-12.
 - **Codes** are drawn at random (`AAA-100`…`ZZZ-999`), unique, stored upper case; any case and surrounding spaces are
   accepted. A malformed code is `room.not_found`. Closed rooms keep their code and stay previewable (`status: "closed"`).
 - **Check order** for member and host endpoints: `room.not_found` (404), then `auth.unauthenticated` (401), then
@@ -328,11 +328,35 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 - **Close** is host-only and idempotent (204 again); members still `GET` the room (`status: "closed"`), nobody joins.
 - **Guest upgrade:** `register` or `sign-in` with a guest cookie moves that guest's membership (same member id, so its
   votes follow) to the user. If the user is already present in that room, the user's membership stays and the guest's ends.
-- `deckSize` is 0 until the deck is dealt at start (BE-11); `isReady` is true for everyone in `justSwipe` rooms and false
-  in `mood` rooms until the mood step lands (BE-11).
+- `deckSize` is 0 until the deck is dealt at start (BE-11); `isReady` is true for everyone in `justSwipe` rooms and, in
+  `mood` rooms, true once the member answered the mood step (BE-11).
 - **Hub:** `JoinRoom(code)` fails with a `HubException` whose message is the error code (`room.not_found`,
   `auth.unauthenticated`, `room.not_member`). The connection's identity is the one it connected with: a client that just
   joined (or upgraded) over HTTP reconnects before `JoinRoom`. `LeaveRoom(code)` only stops that connection's events.
+
+**As built (BE-11):** mood step, start, deck, votes and progress are live (owner's decisions of 2026-11-14 below).
+- **Mood step** (`PUT …/mood`): `mood` rooms in the `lobby` only, else 409 `room.invalid_state`. Same rules as a solo mood
+  (ADR-0022: `mood.unclear` without chips, `textIgnored` with chips, `ai.*` passed through; nothing changes on an error).
+  A second answer replaces the first. `memberReady` only when the member first becomes ready. Hard nos are stored on the
+  membership and appear in no response.
+- **Hard nos** (owner: "wide nets"; `HardNoRules`): `horror` = TMDB Horror; `gore` = TMDB Horror or a Wikidata genre
+  containing splatter / slasher / body horror / zombie / gore; `musicals` = TMDB Music or Wikidata "musical";
+  `sadEndings` = TMDB War or Wikidata "tragedy"; `subtitles` = a recorded original language other than `en` (films with
+  none pass). Every present member's hard nos apply to every batch.
+- **Start** (host, `lobby` only; a second or concurrent start is 409 `room.invalid_state`): one shared deck per room,
+  first batch of 10. Moods combine (owner: "union, strictest runtime"): any genre a ready member asked for, minus genres a
+  member ruled out unless another asked for them; the shortest runtime limit; years/language only when every mood set
+  one. Members who skipped the mood step don't count; no moods → the sampler. When the moods leave too few films the
+  batch is topped up by the sampler, hard nos still excluded. Members need not be ready.
+- **Deck** (`GET …/deck`): positions `>= fromPosition` (0 = all); 409 `room.invalid_state` in the `lobby`, readable
+  after. `swipe` is the caller's vote; `onWatchlist` is the caller's (always false for guests).
+- **Votes:** check order after membership: 400 `seenVerdict` (a verdict only with `up`), then a known `voteId` (same
+  member and card → 204 even after swiping ended; otherwise 409 `room.already_voted`), then 409 `room.closed` /
+  `room.invalid_state` unless `swiping`, then 404 `deck.item_not_found`, then 409 `room.already_voted`. A vote never
+  touches the library (A5: no).
+- **Extension** (owner: cap 30): when a voter has 3 or fewer cards left, the next batch of 10 is dealt (same filters),
+  up to 30 cards; `deckExtended` carries the first new position. A room deck at 30 doesn't grow; ending a room is BE-12.
+- **Progress:** present members, host first, with how many cards each voted on; `deckSize` 0 in the lobby.
 
 ## 7. Library — My Cinema (UserFilm, ADR-0019)
 

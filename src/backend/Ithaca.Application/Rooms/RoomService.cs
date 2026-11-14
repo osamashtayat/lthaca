@@ -1,6 +1,5 @@
 using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
-using Ithaca.Application.Decks;
 using Ithaca.Application.Realtime;
 using Ithaca.Domain.Rooms;
 using Ithaca.Domain.Users;
@@ -9,15 +8,15 @@ using Microsoft.EntityFrameworkCore;
 namespace Ithaca.Application.Rooms;
 
 /// <summary>
-/// Group rooms and votes (api-contract.md §6, ADR-0012, ADR-0015). BE-10: create, preview, join, get, leave, close; the
-/// mood step, start, deck and votes are BE-11's and the result BE-12's (contract stubs until then). Codes like
+/// Group rooms (api-contract.md §6, ADR-0012). BE-10: create, preview, join, get, leave, close. The mood step, start, deck,
+/// votes and progress are <see cref="RoomDeckService"/>'s (BE-11); the result is BE-12's (contract stubs until then). Codes like
 /// <c>POP-428</c> are case-insensitive. At most <see cref="Room.MaxMembers"/> present members, enforced by their seats.
 /// The host is the longest-present member, so hosting passes on when the host leaves; the last one out closes the room.
 /// Events are published after the commit; a failed publish never fails the request (<see cref="IRoomEventPublisher"/>).
 /// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822", Justification = ContractStub.Justification)] // BE-11/BE-12 stubs below
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822", Justification = ContractStub.Justification)] // BE-12 stubs below
 public sealed class RoomService(
-    IAppDbContext db, ICurrentActor current, RoomAccess access, ISessionManager sessions, IRoomEventPublisher events, TimeProvider time)
+    IAppDbContext db, ICurrentActor current, RoomAccess access, RoomReader reader, ISessionManager sessions, IRoomEventPublisher events, TimeProvider time)
 {
     /// <summary>Tries at creating a room when a concurrent request drew the same code.</summary>
     private const int CreateAttempts = 3;
@@ -57,7 +56,7 @@ public sealed class RoomService(
             try
             {
                 await db.SaveChangesAsync(ct);
-                return await RoomDtoAsync(room.Id, host.Id, ct);
+                return await reader.RoomDtoAsync(room.Id, host.Id, ct);
             }
             catch (Exception e) when (WriteConflicts.IsWriteConflict(e) && attempt < CreateAttempts)
             {
@@ -76,7 +75,7 @@ public sealed class RoomService(
         }
 
         var room = await db.Rooms.AsNoTracking().Where(r => r.Id == roomId).Select(r => new { r.Code, r.Name, r.Mode, r.Status }).SingleAsync(ct);
-        var members = await MembersAsync(roomId, room.Mode, ct);
+        var members = await reader.MembersAsync(roomId, room.Mode, ct);
         return new RoomPreviewDto(room.Code, room.Name, members.FirstOrDefault()?.DisplayName ?? "", room.Mode, room.Status, members.Count, Room.MaxMembers);
     }
 
@@ -102,7 +101,7 @@ public sealed class RoomService(
             var existing = actor is null ? null : await RoomAccess.OfActor(db.RoomMembers, roomId, actor).SingleOrDefaultAsync(ct);
             if (existing is { IsPresent: true })
             {
-                return await RoomDtoAsync(roomId, existing.Id, ct);
+                return await reader.RoomDtoAsync(roomId, existing.Id, ct);
             }
 
             if (!Room.AcceptsJoinsIn(room.Status))
@@ -158,26 +157,14 @@ public sealed class RoomService(
         }
 
         await events.PublishAsync(roomId, RoomEvents.MemberJoined, new RoomMemberEvent(roomId, member.Id), ct);
-        return await RoomDtoAsync(roomId, member.Id, ct);
+        return await reader.RoomDtoAsync(roomId, member.Id, ct);
     }
 
     public async Task<Result<RoomDto>> GetAsync(string code, CancellationToken ct)
     {
         var membership = await access.MemberAsync(code, ct);
-        return membership.IsSuccess ? await RoomDtoAsync(membership.Value.RoomId, membership.Value.MemberId, ct) : membership.Error;
+        return membership.IsSuccess ? await reader.RoomDtoAsync(membership.Value.RoomId, membership.Value.MemberId, ct) : membership.Error;
     }
-
-    public Task<Result<RoomMoodDto>> SetMoodAsync(string code, SetRoomMoodRequest request, CancellationToken ct) => ContractStub.Of<RoomMoodDto>();
-
-    public Task<Result<RoomDto>> StartAsync(string code, CancellationToken ct) => ContractStub.Of<RoomDto>();
-
-    /// <summary>The shared deck from <paramref name="fromPosition"/> on; each item's <c>swipe</c> is the caller's vote.</summary>
-    public Task<Result<IReadOnlyList<DeckItemDto>>> GetDeckAsync(string code, int fromPosition, CancellationToken ct) =>
-        ContractStub.Of<IReadOnlyList<DeckItemDto>>();
-
-    public Task<Result> CastVoteAsync(string code, CastVoteRequest request, CancellationToken ct) => ContractStub.Command();
-
-    public Task<Result<RoomProgressDto>> GetProgressAsync(string code, CancellationToken ct) => ContractStub.Of<RoomProgressDto>();
 
     /// <summary>Host ends swiping early: the result is the best compromise unless there is already a match.</summary>
     public Task<Result<RoomResultDto>> FinishAsync(string code, CancellationToken ct) => ContractStub.Of<RoomResultDto>();
@@ -243,43 +230,5 @@ public sealed class RoomService(
     {
         var taken = await db.RoomMembers.AsNoTracking().Where(m => m.RoomId == roomId && m.LeftAt == null).Select(m => m.Seat).ToListAsync(ct);
         return Enumerable.Range(1, Room.MaxMembers).Cast<int?>().FirstOrDefault(s => !taken.Contains(s!.Value));
-    }
-
-    /// <summary>Present members, host first, with their names (a user's from the account, a guest's from the join).</summary>
-    private async Task<List<RoomMemberDto>> MembersAsync(Guid roomId, RoomMode mode, CancellationToken ct)
-    {
-        var users = db.Users;
-        var guests = db.Guests.AsNoTracking();
-        var rows = await RoomAccess.InHostOrder(db.RoomMembers.AsNoTracking().Where(m => m.RoomId == roomId && m.LeftAt == null))
-            .Select(m => new
-            {
-                m.Id,
-                IsUser = m.UserId != null,
-                m.JoinedAt,
-                Name = m.UserId != null
-                    ? users.Where(u => u.Id == m.UserId).Select(u => u.DisplayName).FirstOrDefault()
-                    : guests.Where(g => g.Id == m.GuestId).Select(g => g.DisplayName).FirstOrDefault(),
-            })
-            .ToListAsync(ct);
-
-        // Readiness: in "just swipe" rooms everyone is ready; mood readiness arrives with the mood step (BE-11).
-        return rows
-            .Select((m, i) => new RoomMemberDto(
-                m.Id, m.Name ?? "", m.IsUser ? PrincipalKind.User : PrincipalKind.Guest, IsHost: i == 0, IsReady: mode == RoomMode.JustSwipe, m.JoinedAt))
-            .ToList();
-    }
-
-    private async Task<RoomDto> RoomDtoAsync(Guid roomId, Guid memberId, CancellationToken ct)
-    {
-        var room = await db.Rooms.AsNoTracking()
-            .Where(r => r.Id == roomId)
-            .Select(r => new { r.Id, r.Code, r.Name, r.Mode, r.Status, r.StartsAt, r.CreatedAt })
-            .SingleAsync(ct);
-        var members = await MembersAsync(roomId, room.Mode, ct);
-
-        // The shared deck is dealt at start (BE-11); a lobby has none yet.
-        return new RoomDto(
-            room.Id, room.Code, room.Name, room.Mode, room.Status, room.StartsAt, room.CreatedAt, DeckSize: 0, Room.MaxMembers,
-            members.Single(m => m.Id == memberId), members);
     }
 }

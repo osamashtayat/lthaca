@@ -16,7 +16,7 @@ namespace Ithaca.Api.Controllers;
 [ApiController]
 [Route("api/rooms")]
 [Tags("Rooms")]
-public sealed class RoomsController(RoomService rooms) : ControllerBase
+public sealed class RoomsController(RoomService rooms, RoomDeckService swiping) : ControllerBase
 {
     [HttpPost]
     [Authorize(Policy = AuthPolicies.User)]
@@ -61,9 +61,8 @@ public sealed class RoomsController(RoomService rooms) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
-    [ContractStub]
     public async Task<ActionResult<RoomMoodDto>> SetMood(string code, SetRoomMoodRequest request, CancellationToken ct) =>
-        this.ToActionResult(await rooms.SetMoodAsync(code, request, ct));
+        this.ToActionResult(await swiping.SetMoodAsync(code, request, ct));
 
     [HttpPost("{code}/start")]
     [ProducesResponseType<RoomDto>(StatusCodes.Status200OK)]
@@ -71,9 +70,8 @@ public sealed class RoomsController(RoomService rooms) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    [ContractStub]
     public async Task<ActionResult<RoomDto>> Start(string code, CancellationToken ct) =>
-        this.ToActionResult(await rooms.StartAsync(code, ct));
+        this.ToActionResult(await swiping.StartAsync(code, ct));
 
     [HttpGet("{code}/deck")]
     [ProducesResponseType<IReadOnlyList<DeckItemDto>>(StatusCodes.Status200OK)]
@@ -82,10 +80,9 @@ public sealed class RoomsController(RoomService rooms) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    [ContractStub]
     public async Task<ActionResult<IReadOnlyList<DeckItemDto>>> Deck(
         string code, [FromQuery, Range(0, int.MaxValue)] int fromPosition, CancellationToken ct) =>
-        this.ToActionResult(await rooms.GetDeckAsync(code, fromPosition, ct));
+        this.ToActionResult(await swiping.GetDeckAsync(code, fromPosition, ct));
 
     [HttpPost("{code}/votes")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -94,18 +91,16 @@ public sealed class RoomsController(RoomService rooms) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    [ContractStub]
     public async Task<ActionResult> Vote(string code, CastVoteRequest request, CancellationToken ct) =>
-        this.ToActionResult(await rooms.CastVoteAsync(code, request, ct));
+        this.ToActionResult(await swiping.CastVoteAsync(code, request, ct));
 
     [HttpGet("{code}/progress")]
     [ProducesResponseType<RoomProgressDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ContractStub]
     public async Task<ActionResult<RoomProgressDto>> Progress(string code, CancellationToken ct) =>
-        this.ToActionResult(await rooms.GetProgressAsync(code, ct));
+        this.ToActionResult(await swiping.GetProgressAsync(code, ct));
 
     [HttpPost("{code}/finish")]
     [ProducesResponseType<RoomResultDto>(StatusCodes.Status200OK)]

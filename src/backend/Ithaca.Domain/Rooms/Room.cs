@@ -77,6 +77,18 @@ public sealed class Room
         return new Room(code, trimmed, mode, startsAt, now);
     }
 
+    /// <summary>The host starts swiping. False unless the room was in the lobby (nothing changed).</summary>
+    public bool Start()
+    {
+        if (Status != RoomStatus.Lobby)
+        {
+            return false;
+        }
+
+        Status = RoomStatus.Swiping;
+        return true;
+    }
+
     /// <summary>Ends the room for everyone. False when it was already closed (nothing changed, nothing to announce).</summary>
     public bool Close(DateTimeOffset now)
     {

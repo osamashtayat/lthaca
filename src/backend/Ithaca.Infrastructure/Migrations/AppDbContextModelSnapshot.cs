@@ -38,13 +38,17 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("mood_query_id");
 
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("room_id");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("source");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
@@ -54,12 +58,18 @@ namespace Ithaca.Infrastructure.Migrations
                     b.HasIndex("MoodQueryId")
                         .HasDatabaseName("ix_decks_mood_query_id");
 
+                    b.HasIndex("RoomId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_decks_room_id");
+
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_decks_user_id");
 
                     b.ToTable("decks", null, t =>
                         {
-                            t.HasCheckConstraint("ck_decks_mood_query", "(source = 'Mood') = (mood_query_id IS NOT NULL)");
+                            t.HasCheckConstraint("ck_decks_mood_query", "CASE WHEN room_id IS NULL THEN (source = 'Mood') = (mood_query_id IS NOT NULL) ELSE mood_query_id IS NULL END");
+
+                            t.HasCheckConstraint("ck_decks_user_or_room", "(user_id IS NULL) <> (room_id IS NULL)");
                         });
                 });
 
@@ -458,7 +468,7 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("text_ignored");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
@@ -533,6 +543,11 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("guest_id");
 
+                    b.PrimitiveCollection<string[]>("HardNos")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("hard_nos");
+
                     b.Property<DateTimeOffset>("JoinedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("joined_at");
@@ -540,6 +555,10 @@ namespace Ithaca.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("LeftAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("left_at");
+
+                    b.Property<Guid?>("MoodQueryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("mood_query_id");
 
                     b.Property<Guid>("RoomId")
                         .HasColumnType("uuid")
@@ -558,6 +577,9 @@ namespace Ithaca.Infrastructure.Migrations
 
                     b.HasIndex("GuestId")
                         .HasDatabaseName("ix_room_members_guest_id");
+
+                    b.HasIndex("MoodQueryId")
+                        .HasDatabaseName("ix_room_members_mood_query_id");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_room_members_user_id");
@@ -580,6 +602,51 @@ namespace Ithaca.Infrastructure.Migrations
                             t.HasCheckConstraint("ck_room_members_seat", "seat BETWEEN 1 AND 8");
 
                             t.HasCheckConstraint("ck_room_members_user_or_guest", "(user_id IS NULL) <> (guest_id IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Rooms.Vote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeckItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deck_item_id");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("direction");
+
+                    b.Property<Guid>("RoomMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("room_member_id");
+
+                    b.Property<string>("SeenVerdict")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("seen_verdict");
+
+                    b.HasKey("Id")
+                        .HasName("pk_votes");
+
+                    b.HasIndex("RoomMemberId")
+                        .HasDatabaseName("ix_votes_room_member_id");
+
+                    b.HasIndex("DeckItemId", "RoomMemberId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_votes_deck_item_id_room_member_id");
+
+                    b.ToTable("votes", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_votes_seen_verdict", "seen_verdict IS NULL OR direction = 'Up'");
                         });
                 });
 
@@ -787,11 +854,16 @@ namespace Ithaca.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("fk_decks_mood_queries_mood_query_id");
 
+                    b.HasOne("Ithaca.Domain.Rooms.Room", null)
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_decks_rooms_room_id");
+
                     b.HasOne("Ithaca.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
                         .HasConstraintName("fk_decks_users_user_id");
                 });
 
@@ -865,7 +937,6 @@ namespace Ithaca.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
                         .HasConstraintName("fk_mood_queries_users_user_id");
                 });
 
@@ -876,6 +947,12 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasForeignKey("GuestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("fk_room_members_guests_guest_id");
+
+                    b.HasOne("Ithaca.Domain.Moods.MoodQuery", null)
+                        .WithMany()
+                        .HasForeignKey("MoodQueryId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_room_members_mood_queries_mood_query_id");
 
                     b.HasOne("Ithaca.Domain.Rooms.Room", null)
                         .WithMany()
@@ -889,6 +966,23 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("fk_room_members_users_user_id");
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Rooms.Vote", b =>
+                {
+                    b.HasOne("Ithaca.Domain.Decks.DeckItem", null)
+                        .WithMany()
+                        .HasForeignKey("DeckItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_votes_deck_items_deck_item_id");
+
+                    b.HasOne("Ithaca.Domain.Rooms.RoomMember", null)
+                        .WithMany()
+                        .HasForeignKey("RoomMemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_votes_room_members_room_member_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
