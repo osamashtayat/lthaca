@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Ithaca.Api.Errors;
 
 /// <summary>
-/// The one global exception handler. <see cref="DomainException"/> (a broken entity invariant) keeps its code; anything
+/// The one global exception handler. <see cref="DomainException"/> (a broken entity invariant) keeps its code; a request
+/// body over the endpoint's limit (<c>[RequestSizeLimit]</c>) is 413 <c>request.too_large</c>; anything
 /// else is a bug or an infrastructure fault and becomes a 500 <c>server.error</c> with no internals. Expected failures
 /// don't come through here: services return them as Result errors (ResultExtensions).
 /// </summary>
@@ -17,7 +18,13 @@ public sealed partial class ProblemDetailsExceptionHandler(
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(exception);
 
-        var (code, detail) = exception is DomainException e ? (e.Code, e.Message) : (ErrorCodes.ServerError, "An unexpected error occurred.");
+        var (code, detail) = exception switch
+        {
+            DomainException e => (e.Code, e.Message),
+            BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge } =>
+                (ErrorCodes.RequestTooLarge, "The request body is larger than this endpoint accepts."),
+            _ => (ErrorCodes.ServerError, "An unexpected error occurred."),
+        };
         var status = ErrorStatusCodes.For(code);
 
         if (status >= StatusCodes.Status500InternalServerError)

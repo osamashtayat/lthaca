@@ -1,6 +1,7 @@
-# Imports (not built yet)
+# Imports
 
-`ImportJob`: Letterboxd CSV/ZIP import into `UserFilm`.
+`ImportJob`: a Letterboxd export (ZIP or one CSV) merged into `UserFilm` in the background (api-contract.md §13, ADR-0024).
 
-Put this feature's services, DTOs (`…Request` in, `…Dto` out), errors (`ImportsErrors`) and Application-side interfaces here.
-Copy the shape of `../Films/` (the reference slice). See `docs/backend-conventions.md`.
+- Contract (BE-15a): `ImportService` (stub until BE-15), `ImportUpload` (the file as Application sees it; the Api's
+  `CreateImportRequest` holds the `IFormFile`), DTOs, `ImportErrors`, `ImportLimits.MaxUploadBytes`.
+- BE-15: parsing, `ImportOptions` limits, the job, `LetterboxdFilmLink`.

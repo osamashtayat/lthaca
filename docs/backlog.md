@@ -514,7 +514,7 @@ lint, test, build.
 
 ## Import
 
-### BE-15a — Import contract and stubs · `Todo`
+### BE-15a — Import contract and stubs · `Done` (PR #43)
 - **Objective:** make §13 (designed in OPS-12, ADR-0024) executable so FE-14 and FE-15 can mock it.
 - **Deps:** OPS-12. **Modules:** `Application/Imports` (DTOs, `ImportErrors`, stub `ImportService`),
   `Api/Controllers/ImportsController.cs`, `ErrorCodes.cs`, `ErrorStatusCodes.cs`, `src/frontend/src/shared/api/problem.ts`,

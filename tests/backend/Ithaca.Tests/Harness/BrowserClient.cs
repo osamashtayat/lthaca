@@ -15,10 +15,11 @@ internal static class BrowserClient
 {
     private static readonly ConditionalWeakTable<HttpClient, CookieContainer> Cookies = new();
 
-    public static async Task<HttpClient> StartAsync(WebApplicationFactory<Program> factory, CancellationToken ct)
+    /// <param name="baseAddress">The server's address; defaults to the in-memory TestServer's (a Kestrel-hosted factory passes its own).</param>
+    public static async Task<HttpClient> StartAsync(WebApplicationFactory<Program> factory, CancellationToken ct, Uri? baseAddress = null)
     {
         var cookies = new CookieContainer();
-        var client = factory.CreateDefaultClient(new Uri("http://localhost"), new XsrfHandler(), new CookieContainerHandler(cookies));
+        var client = factory.CreateDefaultClient(baseAddress ?? new Uri("http://localhost"), new XsrfHandler(), new CookieContainerHandler(cookies));
         Cookies.Add(client, cookies);
         (await client.GetAsync(new Uri("/api/auth/me", UriKind.Relative), ct)).Dispose();
         return client;
