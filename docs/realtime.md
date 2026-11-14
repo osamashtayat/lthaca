@@ -38,6 +38,8 @@ authorization stays in one place. Group name per room: `RoomEvents.GroupFor(room
 - Services publish through `IRoomEventPublisher.PublishAsync(roomId, RoomEvents.X, payload, ct)` **after** `SaveChangesAsync`,
   with the payload records `RoomMemberEvent` / `RoomEvent` (Application/Realtime). A failed publish must not fail the
   request (clients refetch on reconnect): `SignalRRoomEventPublisher` is the one place that catches and logs it.
+- Built (BE-11): `memberReady` (first answer to the mood step only), `roomStarted`, `voteCast` (`VoteCastEvent`: room and
+  card ids, never a value; not for a retried or rejected vote), `deckExtended` (`DeckExtendedEvent`: first new position).
 - Built (BE-10): `JoinRoom`, `LeaveRoom`; `memberJoined` (a new or returning member, not a repeated join), `memberLeft`,
   `roomClosed` (host close, or the last member leaving).
 

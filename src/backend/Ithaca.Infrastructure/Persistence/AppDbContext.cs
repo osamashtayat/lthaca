@@ -44,6 +44,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<RoomMember> RoomMembers => Set<RoomMember>();
 
+    public DbSet<Vote> Votes => Set<Vote>();
+
     IQueryable<UserReadModel> IAppDbContext.Users =>
         Users.AsNoTracking().Select(u => new UserReadModel { Id = u.Id, Email = u.Email!, DisplayName = u.DisplayName });
 

@@ -7,7 +7,7 @@ namespace Ithaca.Application.Moods;
 
 /// <summary>
 /// Turns what someone picked on the mood screen into a <see cref="MoodQuery"/> (not saved here). A collaborator of the deck
-/// service now and of the room mood step later (BE-11), not a use-case service. The rules (ADR-0022, api-contract.md §5):
+/// service and of the room mood step (BE-11; a guest has no user id), not a use-case service. The rules (ADR-0022, api-contract.md §5):
 /// <list type="bullet">
 /// <item>Chips → genres by <see cref="MoodChips"/>; runtime and language are plain filters. No LLM.</item>
 /// <item>Empty text → no LLM call.</item>
@@ -24,7 +24,7 @@ public sealed class MoodInterpreter(IAppDbContext db, ILlmClient llm, IPromptLib
     /// <summary>Generous for the small JSON reply.</summary>
     private const int MaxOutputTokens = 512;
 
-    public async Task<Result<MoodQuery>> InterpretAsync(Guid userId, MoodInput input, CancellationToken ct)
+    public async Task<Result<MoodQuery>> InterpretAsync(Guid? userId, MoodInput input, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(input);
         var now = time.GetUtcNow();

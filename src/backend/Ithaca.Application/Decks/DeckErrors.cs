@@ -13,5 +13,8 @@ public static class DeckErrors
 
     public static readonly Error AlreadySwiped = Error.Conflict(ErrorCodes.DeckAlreadySwiped, "This card has already been swiped.");
 
+    /// <summary>The one verdict rule's error (<c>Swipe.IsValidVerdict</c>), for solo swipes and room votes.</summary>
+    public static readonly Error VerdictOnlyWithUp = Error.Validation("seenVerdict", "A verdict only goes with an \"up\" swipe.");
+
     public static readonly Error NoYeses = new(ErrorCodes.DeckNoYeses, "Swipe right on at least one film first.");
 }

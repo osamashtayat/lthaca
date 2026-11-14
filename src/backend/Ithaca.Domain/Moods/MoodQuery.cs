@@ -6,8 +6,8 @@ namespace Ithaca.Domain.Moods;
 /// <summary>
 /// A mood request (glossary: <c>MoodQuery</c>): the tapped moods, runtime and language as given, the free text, and the
 /// filters we derived from them (chips by <see cref="MoodChips"/>, text by <c>mood-parse</c>, validated against our genres).
-/// <see cref="TextIgnored"/>: the text wasn't a mood, so only the chips were used (ADR-0022). Owned by a solo deck now; the
-/// room mood step (BE-11) stores one per member.
+/// <see cref="TextIgnored"/>: the text wasn't a mood, so only the chips were used (ADR-0022). Owned by a solo deck, or by a
+/// room member's mood step (BE-11); a guest's has no user.
 /// </summary>
 public sealed class MoodQuery
 {
@@ -21,7 +21,7 @@ public sealed class MoodQuery
     /// <summary>Release years before this aren't a real filter (the first films).</summary>
     public const int EarliestYear = 1870;
 
-    private MoodQuery(Guid userId, DateTimeOffset now)
+    private MoodQuery(Guid? userId, DateTimeOffset now)
     {
         Id = SequentialGuid.NewV7(now);
         UserId = userId;
@@ -35,7 +35,8 @@ public sealed class MoodQuery
 
     public Guid Id { get; private set; }
 
-    public Guid UserId { get; private set; }
+    /// <summary>The person who asked; null for a guest's room mood.</summary>
+    public Guid? UserId { get; private set; }
 
     public Mood[] Moods { get; private set; } = [];
 
@@ -64,12 +65,12 @@ public sealed class MoodQuery
     public DateTimeOffset CreatedAt { get; private set; }
 
     /// <summary>The input as given, normalised: moods distinct, language lowercase, blank text null.</summary>
-    public static MoodQuery Create(Guid userId, IEnumerable<Mood> moods, RuntimeLimit maxRuntime, string? language, string? text, DateTimeOffset now)
+    public static MoodQuery Create(Guid? userId, IEnumerable<Mood> moods, RuntimeLimit maxRuntime, string? language, string? text, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(moods);
         if (userId == Guid.Empty)
         {
-            throw new DomainException(ErrorCodes.Validation, "userId is required.");
+            throw new DomainException(ErrorCodes.Validation, "userId must be a user or null.");
         }
 
         var distinct = moods.Distinct().ToArray();

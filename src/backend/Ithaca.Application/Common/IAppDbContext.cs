@@ -50,5 +50,8 @@ public interface IAppDbContext
     /// <summary>Users and guests in rooms, present or left (glossary: <c>RoomMember</c>).</summary>
     DbSet<RoomMember> RoomMembers { get; }
 
+    /// <summary>Room members' votes on their room's shared deck, one per card and member (glossary: <c>Vote</c>).</summary>
+    DbSet<Vote> Votes { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
