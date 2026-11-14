@@ -5518,9 +5518,9 @@
           "rating": {
             "type": [
               "null",
-              "integer"
+              "number"
             ],
-            "format": "int32"
+            "format": "double"
           }
         }
       },
@@ -5547,9 +5547,9 @@
           "rating": {
             "type": [
               "null",
-              "integer"
+              "number"
             ],
-            "format": "int32"
+            "format": "double"
           },
           "film": {
             "$ref": "#/components/schemas/FilmSummaryDto"

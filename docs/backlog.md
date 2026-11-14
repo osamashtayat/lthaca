@@ -427,7 +427,7 @@ lint, test, build.
 - **Acceptance:** with mocks, each shelf lists, filters and pages; user-only.
 - **Tests:** shelf switch and empty state.
 
-### BE-20 — Half-star ratings: contract and code (ADR-0024) · `Todo`
+### BE-20 — Half-star ratings: contract and code (ADR-0024) · `Done` (PR #46)
 - **Objective:** Ithaca ratings become 0.5–5 in steps of 0.5 everywhere (the BE-05 follow-up), before BE-15.
 - **Deps:** BE-05, OPS-12. **Modules:** `Domain/Library/UserFilm.cs` (`MinRating`/`MaxRating`, `Rating`, `Set`,
   half-star conversion), `Application/Library/LibraryDtos.cs` (`UpdateUserFilmRequest.Rating`, `UserFilmDto.Rating`),

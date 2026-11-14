@@ -285,14 +285,14 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
 
         var swipedFilms = SwipesOf(deckId).Select(x => x.Film.Id);
         var library = await db.UserFilms.AsNoTracking()
-            .Where(u => u.UserId == userId && (u.Liked || u.OnWatchlist || u.Rating != null) && !swipedFilms.Contains(u.FilmId))
+            .Where(u => u.UserId == userId && (u.Liked || u.OnWatchlist || u.RatingHalfStars != null) && !swipedFilms.Contains(u.FilmId))
             .OrderByDescending(u => u.UpdatedAt)
             .Take(LibrarySignalLimit)
             .Join(db.Films, u => u.FilmId, f => f.Id, (u, f) => new
             {
                 u.Liked,
                 u.OnWatchlist,
-                u.Rating,
+                u.RatingHalfStars,
                 f.Genres,
                 f.RuntimeMinutes,
                 Embedding = includeEmbeddings ? f.Embedding : null,
@@ -302,7 +302,7 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
 
         return swiped
             .Select(s => new SignalRow(s.Genres, s.RuntimeMinutes, s.Embedding, s.EmbeddingModel, DeckSignals.OfSwipe(s.Direction, s.SeenVerdict)))
-            .Concat(library.Select(l => new SignalRow(l.Genres, l.RuntimeMinutes, l.Embedding, l.EmbeddingModel, DeckSignals.OfLibrary(l.Liked, l.OnWatchlist, l.Rating))))
+            .Concat(library.Select(l => new SignalRow(l.Genres, l.RuntimeMinutes, l.Embedding, l.EmbeddingModel, DeckSignals.OfLibrary(l.Liked, l.OnWatchlist, UserFilm.ToRating(l.RatingHalfStars)))))
             .Where(s => s.Weight != 0)
             .ToList();
     }

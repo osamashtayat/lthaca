@@ -360,6 +360,9 @@ type LibrarySummaryDto = { liked: number; watchlist: number; seen: number }
 - **Half stars (ADR-0024, BE-20):** `rating` is 0.5, 1, 1.5 … 5 or `null`. Anything else (0, 5.5, 3.25, 7) → 400
   `validation` with `errors.rating`. Stored as an integer count of half stars (1–10); the API never shows that number.
   `sort=rating` is unchanged (highest first, unrated last). Imports write ratings through the same rules (§13).
+  As built (BE-20): `rating` is a JSON number (`decimal?`; OpenAPI `number`); whole numbers stay valid and come back as
+  whole numbers (`4`, not `4.0`). Stored as `user_films.rating_half_stars smallint` (check 1–10); the migration doubled
+  existing ratings. `UserFilm.IsValidRating` is the one rule (request attribute `[HalfStarRating]` and the domain guard).
 - ADR-0019 lands here: referenced films are refreshed by the sync, never purged; FKs to `films` are `ON DELETE RESTRICT`.
 - As built (BE-05): `shelf` defaults to `liked`, `sort` to `recent` (last change first); `title` is A→Z; `rating` is
   highest first, unrated last; every order ends on `tmdbId`. `genre` matches one of the film's genres exactly. An

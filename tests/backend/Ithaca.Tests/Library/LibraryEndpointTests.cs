@@ -17,7 +17,7 @@ public sealed class LibraryEndpointTests(PostgresFixture postgres) : IAsyncLifet
 
     public ValueTask DisposeAsync() => _factory.DisposeAsync();
 
-    private static Task<HttpResponseMessage> PutAsync(HttpClient client, int tmdbId, bool liked = false, bool onWatchlist = false, bool seen = false, int? rating = null) =>
+    private static Task<HttpResponseMessage> PutAsync(HttpClient client, int tmdbId, bool liked = false, bool onWatchlist = false, bool seen = false, decimal? rating = null) =>
         client.PutAsJsonAsync($"/api/library/{tmdbId}", new { liked, onWatchlist, seen, rating }, Ct);
 
     private static async Task<JsonElement> JsonAsync(HttpResponseMessage response) =>
@@ -50,7 +50,7 @@ public sealed class LibraryEndpointTests(PostgresFixture postgres) : IAsyncLifet
         var body = await JsonAsync(put);
         body.GetProperty("liked").GetBoolean().ShouldBeTrue();
         body.GetProperty("seen").GetBoolean().ShouldBeTrue("a rating implies seen (A8)");
-        body.GetProperty("rating").GetInt32().ShouldBe(4);
+        body.GetProperty("rating").GetRawText().ShouldBe("4", "whole numbers stay whole numbers");
 
         using var replaced = await PutAsync(client, 550, onWatchlist: true);
         var after = await JsonAsync(replaced);
@@ -75,16 +75,41 @@ public sealed class LibraryEndpointTests(PostgresFixture postgres) : IAsyncLifet
     }
 
     [Theory]
+    [InlineData(0.5)]
+    [InlineData(1)]
+    [InlineData(3.5)]
+    [InlineData(5)]
+    public async Task Put_HalfStepRating_IsStoredAndReturnedUnchanged_AndImpliesSeen(double value)
+    {
+        var rating = (decimal)value;
+        var client = await BrowserClient.RegisteredAsync(_factory, Ct);
+
+        using var put = await PutAsync(client, 550, rating: rating);
+
+        put.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var body = await JsonAsync(put);
+        body.GetProperty("rating").GetDecimal().ShouldBe(rating);
+        body.GetProperty("seen").GetBoolean().ShouldBeTrue("a rating implies seen (A8)");
+        (await client.GetFromJsonAsync<JsonElement>("/api/library/550", Ct)).GetProperty("rating").GetDecimal().ShouldBe(rating);
+    }
+
+    [Theory]
     [InlineData(0)]
+    [InlineData(-0.5)]
+    [InlineData(3.25)]
+    [InlineData(5.5)]
     [InlineData(6)]
-    public async Task Put_RatingOutOfRange_Is400(int rating)
+    [InlineData(7)]
+    public async Task Put_RatingNotAHalfStepFrom05To5_Is400WithErrorsRating(double value)
     {
         var client = await BrowserClient.RegisteredAsync(_factory, Ct);
 
-        using var response = await PutAsync(client, 550, rating: rating);
+        using var response = await PutAsync(client, 550, rating: (decimal)value);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-        (await JsonAsync(response)).GetProperty("code").GetString().ShouldBe("validation");
+        var problem = await JsonAsync(response);
+        problem.GetProperty("code").GetString().ShouldBe("validation");
+        problem.GetProperty("errors").TryGetProperty("rating", out _).ShouldBeTrue(problem.ToString());
     }
 
     [Fact]
@@ -123,7 +148,7 @@ public sealed class LibraryEndpointTests(PostgresFixture postgres) : IAsyncLifet
         var state = await client.GetFromJsonAsync<JsonElement>("/api/library/27205", Ct);
         state.GetProperty("onWatchlist").GetBoolean().ShouldBeTrue();
         state.GetProperty("liked").GetBoolean().ShouldBeTrue();
-        state.GetProperty("rating").GetInt32().ShouldBe(5);
+        state.GetProperty("rating").GetDecimal().ShouldBe(5m);
 
         for (var i = 0; i < 2; i++)
         {
@@ -189,7 +214,23 @@ public sealed class LibraryEndpointTests(PostgresFixture postgres) : IAsyncLifet
         var page2 = await client.GetFromJsonAsync<JsonElement>("/api/library?shelf=liked&sort=title&page=2&pageSize=2", Ct);
         Ids(page2).ShouldBe([496243]);
         page2.GetProperty("totalCount").GetInt32().ShouldBe(3);
-        page2.GetProperty("items")[0].GetProperty("rating").GetInt32().ShouldBe(5, "the Liked shelf shows the rating");
+        page2.GetProperty("items")[0].GetProperty("rating").GetDecimal().ShouldBe(5m, "the Liked shelf shows the rating");
+    }
+
+    [Fact]
+    public async Task List_SortByRating_OrdersHalfStepsAndPutsUnratedLast()
+    {
+        var client = await BrowserClient.RegisteredAsync(_factory, Ct);
+        (await PutAsync(client, 550, liked: true, rating: 4m)).Dispose();
+        (await PutAsync(client, 27205, liked: true)).Dispose();
+        (await PutAsync(client, 496243, liked: true, rating: 4.5m)).Dispose();
+
+        var page = await client.GetFromJsonAsync<JsonElement>("/api/library?shelf=liked&sort=rating", Ct);
+
+        var items = page.GetProperty("items").EnumerateArray()
+            .Select(i => (i.GetProperty("film").GetProperty("tmdbId").GetInt32(), i.GetProperty("rating").ValueKind == JsonValueKind.Null ? (decimal?)null : i.GetProperty("rating").GetDecimal()))
+            .ToArray();
+        items.ShouldBe([(496243, 4.5m), (550, 4m), (27205, null)], "4.5 above 4, unrated last");
     }
 
     [Theory]

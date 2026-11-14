@@ -3183,14 +3183,14 @@ export interface components {
             liked: boolean;
             onWatchlist: boolean;
             seen: boolean;
-            /** Format: int32 */
+            /** Format: double */
             rating: null | number;
         };
         UserFilmDto: {
             liked: boolean;
             onWatchlist: boolean;
             seen: boolean;
-            /** Format: int32 */
+            /** Format: double */
             rating: null | number;
             film: components["schemas"]["FilmSummaryDto"];
             /** Format: date-time */

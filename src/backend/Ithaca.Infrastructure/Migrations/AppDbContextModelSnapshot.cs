@@ -369,9 +369,9 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("on_watchlist");
 
-                    b.Property<int?>("Rating")
-                        .HasColumnType("integer")
-                        .HasColumnName("rating");
+                    b.Property<short?>("RatingHalfStars")
+                        .HasColumnType("smallint")
+                        .HasColumnName("rating_half_stars");
 
                     b.Property<bool>("Seen")
                         .HasColumnType("boolean")
@@ -392,7 +392,7 @@ namespace Ithaca.Infrastructure.Migrations
 
                     b.ToTable("user_films", null, t =>
                         {
-                            t.HasCheckConstraint("ck_user_films_rating", "rating IS NULL OR rating BETWEEN 1 AND 5");
+                            t.HasCheckConstraint("ck_user_films_rating_half_stars", "rating_half_stars IS NULL OR rating_half_stars BETWEEN 1 AND 10");
                         });
                 });
 
