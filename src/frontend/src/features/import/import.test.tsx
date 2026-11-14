@@ -157,6 +157,7 @@ describe('Import: not found', () => {
     const link = screen.getAllByRole('link', { name: /^Film \d+/ })[0]
     expect(link?.getAttribute('href')).toMatch(/^https:\/\/boxd\.it\//)
     expect(link?.getAttribute('rel')).toContain('noopener')
+    expect(link?.getAttribute('referrerpolicy')).toBe('no-referrer')
     await user.click(screen.getByRole('button', { name: 'Load more' }))
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(40))
     await user.click(screen.getByRole('button', { name: 'Load more' }))

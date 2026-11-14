@@ -7,13 +7,14 @@ const n = (value: number) => value.toLocaleString('en-US')
 
 /** "312 of 1,204 films" while queued or running. */
 export function ImportRunning({ job }: { job: ImportJob }) {
+  const share = job.processedCount / Math.max(job.filmCount, 1)
   return (
-    <TicketCard stubLabel="IMPORTING" stubValue={job.status === 'queued' ? '…' : `${Math.round((job.processedCount / Math.max(job.filmCount, 1)) * 100)}%`}>
+    <TicketCard stubLabel="IMPORTING" stubValue={job.status === 'queued' ? '…' : `${Math.round(share * 100)}%`}>
       <div className="flex flex-col gap-3">
         <h2 className="text-2xl font-extrabold tracking-tight">{job.status === 'queued' ? 'Waiting to start…' : 'Importing your films…'}</h2>
         <progress className="sr-only" max={job.filmCount} value={job.processedCount} aria-label="Import progress" />
         <div aria-hidden="true" className="h-3 overflow-hidden rounded-full border-2 border-ink bg-cream">
-          <div className="h-full bg-pink" style={{ width: `${(job.processedCount / Math.max(job.filmCount, 1)) * 100}%` }} />
+          <div className="h-full bg-pink" style={{ width: `${share * 100}%` }} />
         </div>
         <p className="font-mono text-sm">
           {n(job.processedCount)} of {n(job.filmCount)} films
