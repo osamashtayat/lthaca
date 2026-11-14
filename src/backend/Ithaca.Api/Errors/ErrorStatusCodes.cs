@@ -31,6 +31,7 @@ public static class ErrorStatusCodes
         [ErrorCodes.DeckItemNotFound] = StatusCodes.Status404NotFound,
         [ErrorCodes.DeckAlreadySwiped] = StatusCodes.Status409Conflict,
         [ErrorCodes.DeckNoYeses] = StatusCodes.Status422UnprocessableEntity,
+        [ErrorCodes.TasteNotReady] = StatusCodes.Status422UnprocessableEntity,
         [ErrorCodes.RoomNotFound] = StatusCodes.Status404NotFound,
         [ErrorCodes.RoomNotMember] = StatusCodes.Status403Forbidden,
         [ErrorCodes.RoomNotHost] = StatusCodes.Status403Forbidden,

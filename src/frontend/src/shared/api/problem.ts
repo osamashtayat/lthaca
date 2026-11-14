@@ -21,6 +21,7 @@ export const PROBLEM_MESSAGES = {
   'deck.item_not_found': "That card isn't in this deck anymore. Refresh and keep swiping.",
   'deck.already_swiped': 'You already swiped this one.',
   'deck.no_yeses': 'Swipe right on a few films first, then see your top picks.',
+  'taste.not_ready': 'We need a few films you love first. Like or rate some, or import your Letterboxd.',
   'room.not_found': "We couldn't find that room. Check the code or ask for a new link.",
   'room.not_member': 'Join this room first.',
   'room.not_host': 'Only the host can do that.',

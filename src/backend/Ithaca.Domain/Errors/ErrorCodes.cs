@@ -27,6 +27,9 @@ public static class ErrorCodes
     public const string DeckAlreadySwiped = "deck.already_swiped";
     public const string DeckNoYeses = "deck.no_yeses";
 
+    /// <summary>By taste needs more history: fewer positive signals than the threshold (api-contract.md §12, A16).</summary>
+    public const string TasteNotReady = "taste.not_ready";
+
     public const string RoomNotFound = "room.not_found";
     public const string RoomNotMember = "room.not_member";
     public const string RoomNotHost = "room.not_host";

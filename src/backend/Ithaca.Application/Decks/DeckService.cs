@@ -41,6 +41,11 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
             return AuthErrors.Unauthenticated;
         }
 
+        if (request.Source == DeckSource.Taste)
+        {
+            return ContractStub.NotImplemented; // decks by taste: BE-14 (api-contract.md §12)
+        }
+
         MoodQuery? mood = null;
         switch (request.Source, request.Mood)
         {

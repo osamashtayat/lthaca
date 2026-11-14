@@ -1,7 +1,7 @@
 /** Codes are case-insensitive (`pop-428` = `POP-428`); the URL, the cache keys and the hub use this one spelling. */
 export const normalizeRoomCode = (code: string): string => code.trim().toUpperCase()
 
-export const MODE_LABEL = { justSwipe: 'Just swipe', mood: 'By mood' } as const
+export const MODE_LABEL = { justSwipe: 'Just swipe', mood: 'By mood', taste: 'By taste' } as const
 
 export const MODE_OPTIONS = [
   { value: 'justSwipe', label: MODE_LABEL.justSwipe },

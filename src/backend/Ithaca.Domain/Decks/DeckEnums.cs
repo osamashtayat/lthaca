@@ -15,9 +15,10 @@ public enum SeenVerdict
     NotForMe,
 }
 
-/// <summary>How a solo deck was started. "taste" is added by the taste task (additive).</summary>
+/// <summary>How a solo deck was started. "taste" is in the contract since BE-14a; decks by taste are built by BE-14.</summary>
 public enum DeckSource
 {
     JustSwipe,
     Mood,
+    Taste,
 }

@@ -7,8 +7,8 @@ swipes (incl. mood), rooms and votes, library (My Cinema), film details, browse.
 
 Not repeated here: the error pipeline (docs/backend-conventions.md → Result and errors), real-time events
 (`contracts/realtime-events.json` + docs/realtime.md), domain names (docs/glossary.md), AI rules (docs/ai.md).
-Second-wave features (taste, import, profile, Tonight) get their contract sections in their own backlog task; §13 Import
-was designed with its decision (OPS-12, ADR-0024) and BE-15a makes it executable.
+Second-wave features (taste, import, profile, Tonight) get their contract sections in their own backlog task: §12 Taste
+(BE-14a); §13 Import was designed with its decision (OPS-12, ADR-0024) and BE-15a makes it executable.
 
 Places where the docs, ADRs or design leave a gap are marked **⚠ Open** with the assumption this contract makes.
 They are collected in §11 and in the backlog's open questions; the owner confirms or changes them.
@@ -69,6 +69,7 @@ BE-01 adds all of them at once, so mocks and screens can use them from day one.
 | 422 | `import.nothing_to_import` | a valid export with no rows in the files we read — BE-15a |
 | 422 | `import.too_many_films` | more distinct films than the per-import cap (§13) — BE-15a |
 | 422 | `deck.no_yeses` | top 3 requested before any right swipe |
+| 422 | `taste.not_ready` | a deck (or, for its host, a room) by taste without enough history (§12) — BE-14a |
 | 422 | `mood.unclear` | mood text isn't a mood (unclear or off-topic) and no chips were tapped; nothing created (ADR-0022) |
 | 422 / 502 / 503 | `ai.refused` / `ai.invalid_output` / `ai.unavailable` | mood parsing failed — exist (docs/ai.md) |
 | 501 | `server.not_implemented` | contract stub: the endpoint exists, its backlog task hasn't landed (BE-01) |
@@ -165,7 +166,7 @@ A solo deck belongs to one user. "Just swipe" starts with a varied **sampler** a
 | `GET /api/decks/{deckId}/top` | user | — | 200 `DeckTopDto` | 401, 404, 422 `deck.no_yeses` |
 
 ```ts
-type DeckSource = "justSwipe" | "mood"          // "taste" is added by the taste task (additive)
+type DeckSource = "justSwipe" | "mood" | "taste"   // "taste": §12 (BE-14a), built by BE-14
 type MoodInput  = {
   moods: Mood[];                 // 0–2 tapped chips
   maxRuntime: RuntimeLimit;
@@ -255,7 +256,7 @@ match or best compromise. Codes look like `POP-428` (3 letters, dash, 3 digits),
 | `POST /api/rooms/{code}/close` | host | — | 204 | 401, 403 `room.not_host`, 404 |
 
 ```ts
-type RoomMode   = "justSwipe" | "mood"        // "taste" (group taste) is added by the taste task
+type RoomMode   = "justSwipe" | "mood" | "taste"   // "taste" (group taste): §12 (BE-14a), built by BE-14
 type RoomStatus = "lobby" | "swiping" | "result" | "closed"
 type CreateRoomRequest = { name: string; mode: RoomMode; startsAt: string | null }   // name 1–40 ("Friday Film Club")
 type JoinRoomRequest   = { displayName: string | null }   // required (1–30) when anonymous; ignored for users
@@ -440,7 +441,7 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
 | A8 | Rating implies seen? Liked vs rating? | **Decided:** rating ⇒ seen; liked is a separate flag |
 | A9 | "Watching" shelf and "Keep watching · 42 min left" | **Decided: dropped.** No Watching state, shelf or Tonight row |
 | A10 | Room codes `POP-428` vs the board's share link `ithaca.app/r/pop-428` | Links use the existing route `/rooms/POP-428`; a `/r/:code` short link is optional later |
-| A11 | Group taste ("Blend your histories") with guests who have no history | Second wave, with the taste task |
+| A11 | Group taste ("Blend your histories") with guests who have no history | ⚠ Assumed in §12 (BE-14a): the host must be ready; members without history add no taste but their seen films are still skipped |
 | A12 | The glossary has no names for a solo deck's parent record or a solo swipe (`Vote` is a room member's) | **Proposed by BE-08:** `Deck` (table `decks`) and `Swipe` (table `swipes`), in the glossary; owner to confirm |
 | A13 | Room mood has no `language` (solo mood does); is it stored as a `MoodQuery`? | No language in rooms; stored per member as a `MoodQuery` |
 | A14 | ADR-0019's "unavailable" films (TMDB 404) have no flag in `FilmDto` | Add `isAvailable` additively in BE-05 if screens need it |
@@ -448,6 +449,44 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
 | A16 | How much history makes By taste "ready" without an import (ADR-0024 Q2)? | **Decided:** ≥ 10 films liked, rated ≥ 3.5 or "loved it"; the server decides and §12 (BE-14a) exposes it |
 | A17 | Does a re-import update a rating that came from an earlier import (ADR-0024 Q5)? | **Decided: no.** Any existing rating wins, imported or not; ratings carry no source |
 | A18 | A single uploaded CSV has the same columns whether it is watched, watchlist or likes | Identified by its export file name; anything else is `import.invalid_file` |
+
+## 12. Taste (BE-14a)
+
+"By taste" (solo) and group taste build on the caller's `TasteProfile`: a vector in the film-embedding space made from
+the films they like (BE-14, docs/ai.md). Imported likes and ratings count like any other (ADR-0024 decision 9). The
+server decides readiness; the "Solo — by taste" screen only shows it (FE-13: not ready → the "Import your Letterboxd"
+screen; ready → the board).
+
+| Method & path | Access | Body | Success | Errors |
+|---|---|---|---|---|
+| `GET /api/taste` | user | — | 200 `TasteDto` | 401 |
+| `POST /api/decks` with `source: "taste"` (§5) | user | `CreateDeckRequest`, `mood: null` | 201 `DeckDto` | 400, 401, 422 `taste.not_ready` |
+| `POST /api/rooms` with `mode: "taste"` (§6) | user (the host) | `CreateRoomRequest` | 201 `RoomDto` | 400, 401, 422 `taste.not_ready` |
+
+```ts
+type TasteDto = {
+  ready: boolean;              // signalCount >= signalsNeeded
+  signalCount: number;         // films in My Cinema liked, rated >= 3.5, or "loved it" (A16)
+  signalsNeeded: number;       // 10: a config value BE-14 may tune; the screen shows "3 of 10"-style progress from it
+  loggedCount: number;         // films marked seen or rated ("From 214 films you've logged")
+  topGenres: TasteGenreDto[];  // the taste receipt: up to 3, biggest share first; [] when not ready
+  notForYou: string[];         // up to 3 genres turned down ("NOT FOR YOU: HORROR, HEISTS"); [] when not ready
+}
+type TasteGenreDto = { genre: string; percent: number }   // a catalog genre (as in FilmDto.genres); 1–100
+```
+Rules (BE-14 builds them; until then the three rows answer 501 `server.not_implemented`, other sources and modes work):
+- **Ready** (A16, ADR-0024 Q2): at least `signalsNeeded` films with a positive signal. Guests have no taste (no
+  library, ADR-0012): `GET /api/taste` is user-only.
+- **Receipt:** `percent` is a genre's share among the positive-signal films' genres, rounded; `notForYou` comes from
+  disliked or low-rated films and left swipes. Genres are display data (catalog genres), never sent to AI as TMDB text
+  (ADR-0017).
+- **Deck by taste:** like "Just swipe" (§5: batches, swipes, top 3) but ranked by similarity to the profile; skips films
+  the user has seen. Not ready → 422 `taste.not_ready`, nothing created. `mood` must be null (400 `errors.mood`).
+- **Group taste** ("Blend your histories"): the host must be ready (else 422 `taste.not_ready`, no room). The shared
+  deck blends present members' profiles; members without history (guests included) add no taste, and a film any member
+  has seen is skipped (A11, ⚠ assumed). Readiness in the lobby works as in `justSwipe` rooms (everyone is ready).
+- The board's "Because you loved …" lines under the first cards are not in this contract (no field yet); the first
+  cards are simply the deck's first items.
 
 ## 13. Import (Letterboxd)
 
