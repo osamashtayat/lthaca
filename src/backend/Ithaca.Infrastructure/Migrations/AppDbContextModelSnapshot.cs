@@ -459,6 +459,10 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("text[]")
                         .HasColumnName("moods");
 
+                    b.Property<Guid?>("RoomMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("room_member_id");
+
                     b.Property<string>("Text")
                         .HasMaxLength(280)
                         .HasColumnType("character varying(280)")
@@ -475,10 +479,17 @@ namespace Ithaca.Infrastructure.Migrations
                     b.HasKey("Id")
                         .HasName("pk_mood_queries");
 
+                    b.HasIndex("RoomMemberId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_mood_queries_room_member_id");
+
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_mood_queries_user_id");
 
-                    b.ToTable("mood_queries", (string)null);
+                    b.ToTable("mood_queries", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mood_queries_room_mood_no_text", "room_member_id IS NULL OR text IS NULL");
+                        });
                 });
 
             modelBuilder.Entity("Ithaca.Domain.Rooms.Room", b =>
@@ -581,10 +592,6 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("left_at");
 
-                    b.Property<Guid?>("MoodQueryId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("mood_query_id");
-
                     b.Property<Guid>("RoomId")
                         .HasColumnType("uuid")
                         .HasColumnName("room_id");
@@ -602,9 +609,6 @@ namespace Ithaca.Infrastructure.Migrations
 
                     b.HasIndex("GuestId")
                         .HasDatabaseName("ix_room_members_guest_id");
-
-                    b.HasIndex("MoodQueryId")
-                        .HasDatabaseName("ix_room_members_mood_query_id");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_room_members_user_id");
@@ -958,6 +962,12 @@ namespace Ithaca.Infrastructure.Migrations
 
             modelBuilder.Entity("Ithaca.Domain.Moods.MoodQuery", b =>
                 {
+                    b.HasOne("Ithaca.Domain.Rooms.RoomMember", null)
+                        .WithMany()
+                        .HasForeignKey("RoomMemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_mood_queries_room_members_room_member_id");
+
                     b.HasOne("Ithaca.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -972,12 +982,6 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasForeignKey("GuestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("fk_room_members_guests_guest_id");
-
-                    b.HasOne("Ithaca.Domain.Moods.MoodQuery", null)
-                        .WithMany()
-                        .HasForeignKey("MoodQueryId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_room_members_mood_queries_mood_query_id");
 
                     b.HasOne("Ithaca.Domain.Rooms.Room", null)
                         .WithMany()

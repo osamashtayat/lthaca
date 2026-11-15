@@ -239,6 +239,33 @@ public sealed class RoomSwipingEndpointTests(PostgresFixture postgres) : IAsyncL
     }
 
     [Fact]
+    public async Task MoodStep_KeepsNoText_OneMoodPerMember_AndMoodsGoWithTheRoom()
+    {
+        var (host, guest, code) = await RoomWithGuestAsync("mood");
+        using var _h = host;
+        using var _g = guest;
+        (await PutMoodAsync(guest, code, moods: ["laugh"], text: "something silly with my sister Lina")).Dispose();
+        using (var again = await PutMoodAsync(guest, code, moods: ["cozy"], text: "actually cozy"))
+        {
+            again.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        var roomId = await RoomIdAsync(guest, code);
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var members = db.RoomMembers.Where(m => m.RoomId == roomId).Select(m => m.Id);
+        var moods = await db.MoodQueries.AsNoTracking().Where(q => members.Contains(q.RoomMemberId!.Value)).ToListAsync(Ct);
+        moods.Count.ShouldBe(1, "a second answer replaces the first");
+        moods[0].Text.ShouldBeNull("issue #51: a room mood keeps no text");
+        moods[0].Moods.ShouldBe([Mood.Cozy]);
+        var moodId = moods[0].Id;
+
+        await db.Rooms.Where(r => r.Id == roomId).ExecuteDeleteAsync(Ct);
+
+        (await db.MoodQueries.AnyAsync(q => q.Id == moodId, Ct)).ShouldBeFalse("room → members → moods cascade");
+    }
+
+    [Fact]
     public async Task HardNos_NeverEnterTheDeck_UpToItsLastCard()
     {
         var (host, guest, code) = await RoomWithGuestAsync("mood");

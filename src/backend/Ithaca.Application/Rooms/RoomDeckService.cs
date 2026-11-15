@@ -13,7 +13,8 @@ namespace Ithaca.Application.Rooms;
 /// Room swiping (api-contract.md §6, ADR-0015, ADR-0022; BE-11): the mood step, start, the shared deck, votes and progress.
 /// <list type="bullet">
 /// <item>Mood step (mood rooms, lobby only): the member's mood goes through <see cref="MoodInterpreter"/> with the same rules
-/// as solo (<c>mood.unclear</c>, <c>textIgnored</c>); their hard nos stay private. Answering makes them ready.</item>
+/// as solo (<c>mood.unclear</c>, <c>textIgnored</c>), but the text isn't kept (issue #51); their hard nos stay private.
+/// Answering makes them ready.</item>
 /// <item>Start (host, lobby only): one shared <see cref="Deck"/> for the room, the first batch dealt from the members'
 /// combined moods (<see cref="DeckFilter.ForRoom"/>), topped up by the sampler, every present member's hard nos excluded.</item>
 /// <item>Votes: one per card and member, never changed; the same <c>voteId</c> again is a no-op; they never touch the
@@ -28,6 +29,9 @@ public sealed class RoomDeckService(
 {
     /// <summary>Cards left for a voter at which the next batch is dealt.</summary>
     public const int ExtendWhenLeft = 3;
+
+    /// <summary>Tries at saving a mood step answer when the same member answered at the same moment.</summary>
+    private const int MoodAttempts = 3;
 
     /// <summary>Tries at saving a vote when a concurrent vote dealt the same extension.</summary>
     private const int VoteAttempts = 3;
@@ -57,16 +61,31 @@ public sealed class RoomDeckService(
         }
 
         var mood = interpreted.Value;
-        db.MoodQueries.Add(mood);
+        mood.BelongToRoomMember(memberId); // no text kept (issue #51)
         var member = await db.RoomMembers.SingleAsync(m => m.Id == memberId, ct);
-        var replaced = member.SetMood(mood.Id, request.HardNos ?? []);
-        if (replaced is { } oldId)
+        member.SetHardNos(request.HardNos ?? []);
+        db.MoodQueries.Add(mood);
+        List<MoodQuery> previous;
+        for (var attempt = 1; ; attempt++)
         {
-            db.MoodQueries.RemoveRange(await db.MoodQueries.Where(q => q.Id == oldId).ToListAsync(ct));
+            previous = await db.MoodQueries.Where(q => q.RoomMemberId == memberId).ToListAsync(ct);
+            db.MoodQueries.RemoveRange(previous);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                break;
+            }
+            catch (Exception e) when (WriteConflicts.IsWriteConflict(e) && attempt < MoodAttempts)
+            {
+                // The same member answered at the same moment (one mood each): replace that answer instead.
+                foreach (var stale in previous)
+                {
+                    db.MoodQueries.Entry(stale).State = EntityState.Detached;
+                }
+            }
         }
 
-        await db.SaveChangesAsync(ct);
-        if (replaced is null)
+        if (previous.Count == 0)
         {
             await events.PublishAsync(roomId, RoomEvents.MemberReady, new RoomMemberEvent(roomId, memberId), ct);
         }
@@ -262,7 +281,7 @@ public sealed class RoomDeckService(
         var present = db.RoomMembers.AsNoTracking().Where(m => m.RoomId == roomId && m.LeftAt == null);
         var hardNos = (await present.Select(m => m.HardNos).ToListAsync(ct)).SelectMany(h => h);
         var memberMoods = mode == RoomMode.Mood
-            ? await db.MoodQueries.AsNoTracking().Where(q => present.Any(m => m.MoodQueryId == q.Id)).ToListAsync(ct)
+            ? await db.MoodQueries.AsNoTracking().Where(q => present.Any(m => m.Id == q.RoomMemberId)).ToListAsync(ct)
             : [];
         var filter = DeckFilter.ForRoom(memberMoods, hardNos);
         IReadOnlyList<DeckFilter> filters = filter.IsOnlyHardNos ? [filter] : [filter, filter.OnlyHardNos()];

@@ -87,7 +87,8 @@ in BE-11) → a `MoodQuery` saved with the deck:
 5. The deck's filters are hard limits on every batch (any included genre, no excluded genre, runtime, years, language;
    a film missing a value doesn't pass), and its included genres are a strong signal for adaptation and the top 3.
    `keywords` are stored for later (BE-13) but don't filter yet.
-6. The text is stored with the user's `MoodQuery` and returned only in their own `DeckDto.mood`; it is never logged
+6. The text is stored with the user's solo `MoodQuery` and returned only in their own `DeckDto.mood` (a room mood keeps
+   no text at all, issue #51); it is never logged
    (a slice test checks the logs) and never put in an error message.
 
 ## Embeddings and similarity (ADR-0002, ADR-0013)
