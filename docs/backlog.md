@@ -664,6 +664,11 @@ lint, test, build.
 - **Deps:** OPS-12. **Modules:** `docs/decisions/0024-…`, `docs/api-contract.md` §11, `docs/backlog.md`.
 - **Contract:** A15–A17 become decided (no shape changes). **Scope:** in: docs only. **Tests:** none (docs).
 
+### OPS-15 — Record the owner's email-provider decision (L4) · `Done`
+- **Objective:** record L4 and stop it blocking the password-reset contract.
+- **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L4, BE-18a, BE-18).
+- **Contract:** none. **Scope:** in: docs only. **Tests:** none (docs).
+
 ### BE-17 — Remove the contract-stub plumbing · `Todo`
 - **Objective:** no stubs left. **Deps:** BE-12, BE-14, BE-15, BE-16. **Modules:** `ErrorCodes.cs`,
   `ErrorStatusCodes.cs`, `problem.ts`, stub test.
@@ -760,18 +765,18 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   `textIgnored` with chips or a clear message without.
 - **Tests:** limiter slice tests with `FakeTimeProvider`; budget switch.
 
-### BE-18a — Password reset contract and stubs · `Todo` (needs L4)
-- **Objective:** unblock FE-16. **Deps:** BE-02, L4. **Modules:** `docs/api-contract.md` (§4), DTOs, stubs, contracts.
+### BE-18a — Password reset contract and stubs · `Todo`
+- **Objective:** unblock FE-16. **Deps:** BE-02 (the contract doesn't depend on the provider; L4 is only BE-18's). **Modules:** `docs/api-contract.md` (§4), DTOs, stubs, contracts.
 - **Contract:** writes `POST /api/auth/forgot-password` (always 204, never reveals whether the email exists) and
   `POST /api/auth/reset-password` (token + new password).
 - **Scope:** in: as BE-01. **Acceptance:** both in `openapi.json`, answering 501.
 
 ### BE-18 — Password reset by email · `Todo`
 - **Objective:** users who forget their password can get back in.
-- **Deps:** BE-18a. **Modules:** `Application/Users`, an `IEmailSender` (Application) + provider client
+- **Deps:** BE-18a, the owner's Resend account, sending domain and API key (L4). **Modules:** `Application/Users`, an `IEmailSender` (Application) + provider client
   (Infrastructure), options, templates.
-- **Scope:** in: Identity reset tokens (short expiry, single use), the email via the provider chosen in L4 (SPF/DKIM on the
-  Cloudflare domain), rate-limited (BE-19). Out: marketing email.
+- **Scope:** in: Identity reset tokens (short expiry, single use), the email via Resend (L4; SPF/DKIM on the
+  Cloudflare domain, sent from a subdomain such as `mail.<domain>`), rate-limited (BE-19). Out: marketing email.
 - **Acceptance:** reset works end to end on staging; unknown emails get the same response; tokens expire.
 - **Tests:** stub email sender; token expiry and reuse.
 
@@ -813,7 +818,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 | L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker (db, migrate, api), behind Cloudflare.** Provider still to choose (OPS-06) |
 | L2 | Where the site runs | **Decided (2026-11-13): Cloudflare Pages + a Worker routing `/api` and `/hubs` to the VPS (B1).** |
 | L3 | Monthly AI budget (Anthropic + Voyage) | A hard cap you're comfortable with; BE-19 enforces a daily share of it |
-| L4 | Email provider for password reset | Any transactional provider that supports a custom domain (SPF/DKIM on Cloudflare DNS) |
+| L4 | Email provider for password reset | **Decided (2026-11-15): Resend**, sending from a subdomain (e.g. `no-reply@mail.<domain>`), SPF/DKIM on Cloudflare DNS. Behind `IEmailSender`, so Postmark stays a one-class swap. The owner creates the account and key (user-secrets locally, `.env` on the VPS). Only BE-18 needs it; BE-18a doesn't |
 | L5 | Terms and Privacy texts | Written or approved by you (not legal advice from agents) |
 | L6 | Catalog size at launch | Enough for varied decks, e.g. several thousand films (843 today). Not a prerequisite for the Letterboxd import (ADR-0024 Q4, decided) |
 | L7 | Error tracking: logs only or an error service | Start with logs + uptime alerts; add a service if errors are hard to find |
