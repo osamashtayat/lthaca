@@ -54,7 +54,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<LetterboxdFilmLink> LetterboxdFilmLinks => Set<LetterboxdFilmLink>();
 
     IQueryable<UserReadModel> IAppDbContext.Users =>
-        Users.AsNoTracking().Select(u => new UserReadModel { Id = u.Id, Email = u.Email!, DisplayName = u.DisplayName });
+        Users.AsNoTracking().Select(u => new UserReadModel { Id = u.Id, Email = u.Email!, DisplayName = u.DisplayName, CreatedAt = u.CreatedAt });
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

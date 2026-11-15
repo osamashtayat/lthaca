@@ -682,10 +682,11 @@ type ChangePasswordRequest = { currentPassword: string; newPassword: string } //
 type DeleteAccountRequest  = { password: string }                             // the current password
 ```
 
-**Rules** (BE-16 builds them; until then all four answer 501 `server.not_implemented`):
+**Rules** (BE-16):
 - **Who:** users only; a guest or visitor gets 401 `auth.unauthenticated` (ADR-0023). Guests have no profile.
 - **Display name:** trimmed; blank after trimming → 400 `errors.displayName`. `GET /api/auth/me` returns the new name
-  at once (the client refetches it). Names already shown as a `RoomMember` keep the name they joined with.
+  at once (the client refetches it). A user `RoomMember`'s name is the account's, so rooms show the new name too
+  (owner, 2026-11-15: as BE-10 built it; a guest's name is the one they joined with).
 - **Re-authentication (owner, 2026-11-14):** password change and deletion both need the current password, so a stolen
   session alone can't lock the owner out or erase the account. Wrong → 400 `profile.wrong_password`, nothing changed.
   A wrong password counts toward the sign-in lockout (5 failures, 15 minutes, §4), and while locked out the answer is
@@ -706,6 +707,13 @@ type DeleteAccountRequest  = { password: string }                             //
 - The board's other rows are not in this contract: taste chips come from `GET /api/taste` (§12); "Film history" from the
   latest import (`GET /api/imports?pageSize=1`, §13); "Sign out" is §4; streaming services (P-01), notifications
   (ADR-0014), appearance (a client setting), privacy and group history have no API yet.
+
+**As built (BE-16):** all four actions are live. The security stamp is checked on every user request
+(`SecurityStampValidatorOptions.ValidationInterval = 0`, AuthSetup), so a password change ends the user's other sessions
+at once and a deleted account's sessions answer 401 at once. A wrong password on password change or deletion counts toward
+the sign-in lockout and is saved before anything else happens. Deletion closes the open rooms the user hosts and removes
+the account in one commit (room memberships, votes and everything else by FK cascade), then signs out and publishes
+`roomClosed` / `memberLeft`.
 
 **As built (BE-16a):** the four actions exist with the shapes above and answer 501 `server.not_implemented` until
 BE-16; guests and visitors get 401 `auth.unauthenticated`. `DELETE /api/profile` takes a JSON body (`openapi-fetch`

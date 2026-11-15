@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
+using Ithaca.Application.Users;
 using Ithaca.Domain.Common;
 using Microsoft.AspNetCore.Authentication;
+using Ithaca.Infrastructure.Persistence;
 using Ithaca.Infrastructure.Persistence.Configurations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -10,9 +12,12 @@ using Npgsql;
 
 namespace Ithaca.Infrastructure.Identity;
 
-/// <summary><see cref="ISessionManager"/> on ASP.NET Core Identity. Sessions are persistent cookies (lifetime: AuthSetup).</summary>
+/// <summary>
+/// <see cref="ISessionManager"/> on ASP.NET Core Identity. Sessions are persistent cookies (lifetime: AuthSetup). Identity's
+/// store and the services share the one scoped <see cref="AppDbContext"/>, which is what lets a deletion be staged.
+/// </summary>
 internal sealed class IdentitySessionManager(
-    UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn, TimeProvider time) : ISessionManager
+    UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn, AppDbContext db, TimeProvider time) : ISessionManager
 {
     public async Task<Result<Guid>> RegisterAsync(string email, string password, string displayName, CancellationToken ct)
     {
@@ -96,6 +101,72 @@ internal sealed class IdentitySessionManager(
     {
         await signIn.SignOutAsync();
         signIn.Context.User = new ClaimsPrincipal(new ClaimsIdentity());
+    }
+
+    public async Task<bool> SetDisplayNameAsync(Guid userId, string displayName, CancellationToken ct)
+    {
+        var user = await users.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return false;
+        }
+
+        user.DisplayName = displayName;
+        return (await users.UpdateAsync(user)).Succeeded;
+    }
+
+    public async Task<bool> CheckPasswordAsync(Guid userId, string password, CancellationToken ct)
+    {
+        var user = await users.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            HashAnyway(password);
+            return false;
+        }
+
+        // Same lockout as sign-in (ADR-0023): a failure counts, and while locked out the answer is the same false.
+        var result = await signIn.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
+        if (result.IsLockedOut)
+        {
+            HashAnyway(password);
+        }
+
+        return result.Succeeded;
+    }
+
+    public async Task<Result> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken ct)
+    {
+        var user = await users.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return AuthErrors.Unauthenticated;
+        }
+
+        // One update: the new hash and a new security stamp, which ends every other session (stamp checked per request, AuthSetup).
+        var changed = await users.ChangePasswordAsync(user, currentPassword, newPassword);
+        if (!changed.Succeeded)
+        {
+            return changed.Errors.Any(e => e.Code is nameof(IdentityErrorDescriber.PasswordMismatch))
+                ? ProfileErrors.WrongPassword
+                : Error.Validation("newPassword", changed.Errors.FirstOrDefault()?.Description ?? "That password can't be used.");
+        }
+
+        // This session carries the old stamp: issue a fresh cookie so the caller stays signed in.
+        await signIn.SignInAsync(user, isPersistent: true);
+        await UseUserPrincipalAsync(user);
+        return Result.Success();
+    }
+
+    public async Task<bool> StageAccountDeletionAsync(Guid userId, CancellationToken ct)
+    {
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == userId, ct);
+        if (user is null)
+        {
+            return false;
+        }
+
+        db.Users.Remove(user);
+        return true;
     }
 
     /// <summary>The cookie is written for the response; this request's principal switches too (antiforgery binds to it).</summary>

@@ -23,4 +23,26 @@ public interface ISessionManager
 
     /// <summary>Clears the session cookie (user or guest). Idempotent.</summary>
     Task SignOutAsync();
+
+    /// <summary>Sets a user's display name (already trimmed and checked). False when the account is gone.</summary>
+    Task<bool> SetDisplayNameAsync(Guid userId, string displayName, CancellationToken ct);
+
+    /// <summary>
+    /// Re-authentication (api-contract.md §14): checks a signed-in user's password with the sign-in lockout, so a wrong one
+    /// counts toward it. False when wrong, locked out or the account is gone, never saying which. A failure is saved at once,
+    /// so call this before staging other changes.
+    /// </summary>
+    Task<bool> CheckPasswordAsync(Guid userId, string password, CancellationToken ct);
+
+    /// <summary>
+    /// Sets the user's new password (after <see cref="CheckPasswordAsync"/>). The security stamp changes, so the user's other
+    /// sessions end; this one is re-issued and stays signed in. <c>profile.wrong_password</c> or a <c>validation</c> error on failure.
+    /// </summary>
+    Task<Result> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken ct);
+
+    /// <summary>
+    /// Marks the account deleted in the shared unit of work: the caller's next <see cref="IAppDbContext.SaveChangesAsync"/>
+    /// removes it, and with it (FK cascade) everything it owns. False when the account is already gone.
+    /// </summary>
+    Task<bool> StageAccountDeletionAsync(Guid userId, CancellationToken ct);
 }

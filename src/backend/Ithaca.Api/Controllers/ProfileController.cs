@@ -1,6 +1,5 @@
 using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
-using Ithaca.Api.OpenApi;
 using Ithaca.Application.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +19,6 @@ public sealed class ProfileController(ProfileService profile) : ControllerBase
     [HttpGet]
     [ProducesResponseType<ProfileDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
-    [ContractStub]
     public async Task<ActionResult<ProfileDto>> Get(CancellationToken ct) =>
         this.ToActionResult(await profile.GetAsync(ct));
 
@@ -28,7 +26,6 @@ public sealed class ProfileController(ProfileService profile) : ControllerBase
     [ProducesResponseType<ProfileDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
-    [ContractStub]
     public async Task<ActionResult<ProfileDto>> Update(UpdateProfileRequest request, CancellationToken ct) =>
         this.ToActionResult(await profile.UpdateAsync(request, ct));
 
@@ -37,7 +34,6 @@ public sealed class ProfileController(ProfileService profile) : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
-    [ContractStub]
     public async Task<ActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken ct) =>
         this.ToActionResult(await profile.ChangePasswordAsync(request, ct));
 
@@ -46,7 +42,6 @@ public sealed class ProfileController(ProfileService profile) : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
-    [ContractStub]
     public async Task<ActionResult> DeleteAccount([FromBody] DeleteAccountRequest request, CancellationToken ct) =>
         this.ToActionResult(await profile.DeleteAccountAsync(request, ct));
 }
