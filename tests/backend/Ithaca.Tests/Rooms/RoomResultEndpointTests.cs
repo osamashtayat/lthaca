@@ -262,6 +262,30 @@ public sealed class RoomResultEndpointTests(PostgresFixture postgres) : IAsyncLi
     }
 
     [Fact]
+    public async Task DeletingAnAccount_DecidesTheRoomItLeft_WhenEveryoneStillThereAgrees()
+    {
+        var room = await StartedRoomAsync(guests: 1);
+        using var _ = room;
+        using var leaver = await BrowserClient.RegisteredAsync(_factory, Ct, "Lee");
+        (await leaver.PostAsJsonAsync($"/api/rooms/{room.Code}/join", new { displayName = (string?)null }, Ct)).EnsureSuccessStatusCode();
+        var card = (await DeckAsync(room.Members[0].Client, room.Code))[0];
+        await VoteOkAsync(room.Members[0].Client, room.Code, card.Id, "right");
+        await VoteOkAsync(room.Members[1].Client, room.Code, card.Id, "right");
+        _events.Of(room.Id, RoomEvents.RoomMatched).ShouldBeEmpty();
+
+        using var delete = new HttpRequestMessage(HttpMethod.Delete, new Uri("/api/profile", UriKind.Relative))
+        {
+            Content = JsonContent.Create(new { password = "correct horse" }),
+        };
+        (await leaver.SendAsync(delete, Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var result = await ResultAsync(room.Members[0].Client, room.Code);
+        result.GetProperty("kind").GetString().ShouldBe("match");
+        result.GetProperty("memberCount").GetInt32().ShouldBe(2);
+        _events.Of(room.Id, RoomEvents.RoomMatched).Count.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task HardNos_NeverReachTheResult_EvenForTheMostPopularFilm()
     {
         var host = await BrowserClient.RegisteredAsync(_factory, Ct, "Ada");

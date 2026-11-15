@@ -601,7 +601,7 @@ lint, test, build.
   imports and their lists go with the account by FK cascade, ADR-0024 / BE-15).
 - **Scope:** in: as BE-01, for §14. **Acceptance:** §14 in `openapi.json`, answering 501. **Tests:** stub slice test.
 
-### BE-16 — Profile · `Todo`
+### BE-16 — Profile · `Done` (PR #57)
 - **Objective:** implement §14. **Deps:** BE-16a. **Modules:** `Application/Users`, `AuthController` or `ProfileController`.
 - **Contract:** §14. **Scope / Acceptance / Tests:** per §14.
 
