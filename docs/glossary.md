@@ -24,6 +24,6 @@ Use these names exactly in code (types, tables, routes, UI copy where it fits). 
 Other words used in docs and UI:
 - **Deck** — the swipeable stack. **Sampler** — the varied first cards of "Just swipe" before a `TasteProfile` exists.
 - **Just swipe / By mood / By taste** — the three ways to start a deck. **Solo / Group** — alone or in a `Room`.
-- **Match** — every member said yes to the same film. **Best compromise** — the highest-scoring film when there's no match.
+- **Match** — every (present) member said yes to the same film. **Best compromise** — the highest-scoring films (up to three) when there's no match: the room's result once everyone finished or the host finishes (`RoomResultRules`).
 - **Hard no** — a member's explicit exclusion; must never appear in the group's deck or result. What each one rules out: `HardNoRules` (api-contract.md §6, as built BE-11).
 - **My Cinema** — the Library screen. **Tonight** — the home screen.
