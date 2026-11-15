@@ -16,7 +16,7 @@ namespace Ithaca.Api.Controllers;
 [ApiController]
 [Route("api/rooms")]
 [Tags("Rooms")]
-public sealed class RoomsController(RoomService rooms, RoomDeckService swiping) : ControllerBase
+public sealed class RoomsController(RoomService rooms, RoomDeckService swiping, RoomResultService results) : ControllerBase
 {
     [HttpPost]
     [Authorize(Policy = AuthPolicies.User)]
@@ -109,9 +109,8 @@ public sealed class RoomsController(RoomService rooms, RoomDeckService swiping) 
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    [ContractStub]
     public async Task<ActionResult<RoomResultDto>> Finish(string code, CancellationToken ct) =>
-        this.ToActionResult(await rooms.FinishAsync(code, ct));
+        this.ToActionResult(await results.FinishAsync(code, ct));
 
     [HttpGet("{code}/result")]
     [ProducesResponseType<RoomResultDto>(StatusCodes.Status200OK)]
@@ -119,9 +118,8 @@ public sealed class RoomsController(RoomService rooms, RoomDeckService swiping) 
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    [ContractStub]
     public async Task<ActionResult<RoomResultDto>> Result(string code, CancellationToken ct) =>
-        this.ToActionResult(await rooms.GetResultAsync(code, ct));
+        this.ToActionResult(await results.GetResultAsync(code, ct));
 
     [HttpPost("{code}/leave")]
     [IssueXsrfToken]

@@ -309,7 +309,7 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 - **Hub:** `JoinRoom(code)` / `LeaveRoom(code)` on `/hubs/rooms`, membership checked by a service (ADR-0012); clients
   then refetch through the endpoints above. Events: `contracts/realtime-events.json`.
 
-**As built (BE-10):** create, preview, join, get, leave and close are live; finish and result stay 501 until BE-12.
+**As built (BE-10):** create, preview, join, get, leave and close are live (finish and result: BE-12 below).
 - **Codes** are drawn at random (`AAA-100`…`ZZZ-999`), unique, stored upper case; any case and surrounding spaces are
   accepted. A malformed code is `room.not_found`. Closed rooms keep their code and stay previewable (`status: "closed"`).
 - **Check order** for member and host endpoints: `room.not_found` (404), then `auth.unauthenticated` (401), then
@@ -362,6 +362,24 @@ Rules (all in services; see docs/realtime.md for when each event is published):
   stays 501 until BE-14.
 - **Mood retention** (owner, issue #51): a room mood keeps no free text (only chips, runtime and the filters derived
   from it, plus `textIgnored`) and belongs to its member: deleting the member, guest or room deletes it.
+
+**As built (BE-12):** finish and result are live (owner's decisions of 2026-11-15 below; rules in `RoomResultRules`).
+- **Who counts:** only present members. A match needs every present member's `right` on one card (several at once: the
+  earliest in the deck). Votes of members who left count nowhere; `memberCount` and each pick's `yes` / `seen` /
+  `noCount` are frozen at the members present when the room was decided, so the result doesn't change when people leave.
+- **When:** after every vote (match, or every present member voted on every card: compromise) and after a member leaves
+  (the rest may now agree or be done), each checked after that request's own commit so simultaneous last votes can't miss
+  the match; the room's concurrency token makes the result unique (exactly one `roomMatched`; ADR-0026). The result
+  counts only the votes the decision saw. A retried vote (known `voteId`) checks again. The room becomes
+  `result`; votes then answer 409 `room.invalid_state` (a retried `voteId` still 204).
+- **Compromise:** only cards at least one present member swiped right on, ranked by `right`, then fewer `left`, then
+  TMDB popularity (unknown last), then deck position; the top 3. `up` (seen it) is neither yes nor no. When nobody said
+  yes to anything, `picks` is empty and `roomMatched` carries `tmdbId: null`.
+- **Finish** (host): while `swiping` decides now (the match if there is one, else the compromise); on a decided room it
+  returns the same result again (200); in the `lobby` or once `closed` 409 `room.invalid_state`.
+- **Result** (member): the stored result, also after the room was closed; 409 `room.no_result` before it is decided.
+- `yes` lists members in the order they voted. Hard nos can't reach the result because they never reach the deck (they
+  are set in the lobby, before the deck is dealt), so the result doesn't filter them again.
 
 ## 7. Library — My Cinema (UserFilm, ADR-0019)
 

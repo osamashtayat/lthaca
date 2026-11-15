@@ -441,15 +441,16 @@ public sealed class RoomSwipingEndpointTests(PostgresFixture postgres) : IAsyncL
             var deck = await DeckAsync(host, code);
             var item = deck.Single(i => i.GetProperty("position").GetInt32() == run + 1).GetProperty("id").GetGuid();
 
-            // Each member: three tries with one voteId (a flaky network retrying) and two with fresh ids, all at once.
+            // Each member: three tries with one voteId (a flaky network retrying) and two with fresh ids, all at once. "up"
+            // rather than "right", so the room never matches (BE-12) and swiping goes on for all runs.
             var calls = members.SelectMany(member =>
             {
                 var voteId = Guid.NewGuid();
                 return new[]
                 {
-                    VoteAsync(member, code, item, "right", voteId: voteId),
-                    VoteAsync(member, code, item, "right", voteId: voteId),
-                    VoteAsync(member, code, item, "right", voteId: voteId),
+                    VoteAsync(member, code, item, "up", voteId: voteId),
+                    VoteAsync(member, code, item, "up", voteId: voteId),
+                    VoteAsync(member, code, item, "up", voteId: voteId),
                     VoteAsync(member, code, item, "left"),
                     VoteAsync(member, code, item, "left"),
                 };
@@ -541,7 +542,7 @@ public sealed class RoomSwipingEndpointTests(PostgresFixture postgres) : IAsyncL
         (await response.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("code").GetString();
 
     /// <summary>Records every published event instead of sending it.</summary>
-    private sealed class RecordingPublisher : IRoomEventPublisher
+    internal sealed class RecordingPublisher : IRoomEventPublisher
     {
         private readonly ConcurrentQueue<(Guid RoomId, string Name, object Payload)> _published = new();
 

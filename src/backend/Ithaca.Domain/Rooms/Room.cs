@@ -50,6 +50,23 @@ public sealed class Room
 
     public DateTimeOffset? ClosedAt { get; private set; }
 
+    /// <summary>Set once the room is decided (BE-12); kept when the room is closed afterwards.</summary>
+    public RoomResultKind? ResultKind { get; private set; }
+
+    public DateTimeOffset? DecidedAt { get; private set; }
+
+    /// <summary>The picked deck items, best first: one for a match, up to <see cref="RoomResultRules.MaxCompromisePicks"/> for a compromise.</summary>
+    public Guid[] ResultPicks { get; private set; } = [];
+
+    /// <summary>The members present when the room was decided: whose votes the result shows, so it doesn't change when people leave.</summary>
+    public Guid[] ResultMembers { get; private set; } = [];
+
+    /// <summary>
+    /// The votes on the picks that the decision saw. The result shows only these, so a vote that was in flight when the
+    /// room was decided (committed just after) can't change it.
+    /// </summary>
+    public Guid[] ResultVotes { get; private set; } = [];
+
     /// <summary>New members may join in the lobby and while swiping ("late arrivals can still hop in"), not once finished or closed.</summary>
     public bool AcceptsJoins => AcceptsJoinsIn(Status);
 
@@ -86,6 +103,40 @@ public sealed class Room
         }
 
         Status = RoomStatus.Swiping;
+        return true;
+    }
+
+    /// <summary>
+    /// Records the room's result and ends swiping. False unless the room was swiping (nothing changed): a room is decided
+    /// once.
+    /// </summary>
+    public bool Decide(RoomVerdict verdict, IReadOnlyCollection<Guid> memberIds, IEnumerable<Guid> voteIds, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(verdict);
+        ArgumentNullException.ThrowIfNull(memberIds);
+        ArgumentNullException.ThrowIfNull(voteIds);
+        var valid = verdict.Kind switch
+        {
+            RoomResultKind.Match => verdict.Picks.Count == 1,
+            RoomResultKind.Compromise => verdict.Picks.Count <= RoomResultRules.MaxCompromisePicks,
+            _ => false,
+        };
+        if (!valid || memberIds.Count == 0)
+        {
+            throw new DomainException(ErrorCodes.Validation, "A match has one pick, a compromise at most three, and someone decided.");
+        }
+
+        if (Status != RoomStatus.Swiping)
+        {
+            return false;
+        }
+
+        Status = RoomStatus.Result;
+        ResultKind = verdict.Kind;
+        DecidedAt = now;
+        ResultPicks = [.. verdict.Picks];
+        ResultMembers = [.. memberIds];
+        ResultVotes = [.. voteIds];
         return true;
     }
 

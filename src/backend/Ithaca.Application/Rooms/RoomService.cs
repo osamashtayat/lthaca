@@ -9,14 +9,13 @@ namespace Ithaca.Application.Rooms;
 
 /// <summary>
 /// Group rooms (api-contract.md §6, ADR-0012). BE-10: create, preview, join, get, leave, close. The mood step, start, deck,
-/// votes and progress are <see cref="RoomDeckService"/>'s (BE-11); the result is BE-12's (contract stubs until then). Codes like
+/// votes and progress are <see cref="RoomDeckService"/>'s (BE-11); finish and the result are <see cref="RoomResultService"/>'s (BE-12). Codes like
 /// <c>POP-428</c> are case-insensitive. At most <see cref="Room.MaxMembers"/> present members, enforced by their seats.
 /// The host is the longest-present member, so hosting passes on when the host leaves; the last one out closes the room.
 /// Events are published after the commit; a failed publish never fails the request (<see cref="IRoomEventPublisher"/>).
 /// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822", Justification = ContractStub.Justification)] // BE-12 stubs below
 public sealed class RoomService(
-    IAppDbContext db, ICurrentActor current, RoomAccess access, RoomReader reader, ISessionManager sessions, IRoomEventPublisher events, TimeProvider time)
+    IAppDbContext db, ICurrentActor current, RoomAccess access, RoomReader reader, ISessionManager sessions, RoomReferee referee, IRoomEventPublisher events, TimeProvider time)
 {
     /// <summary>Tries at creating a room when a concurrent request drew the same code.</summary>
     private const int CreateAttempts = 3;
@@ -169,13 +168,9 @@ public sealed class RoomService(
         return membership.IsSuccess ? await reader.RoomDtoAsync(membership.Value.RoomId, membership.Value.MemberId, ct) : membership.Error;
     }
 
-    /// <summary>Host ends swiping early: the result is the best compromise unless there is already a match.</summary>
-    public Task<Result<RoomResultDto>> FinishAsync(string code, CancellationToken ct) => ContractStub.Of<RoomResultDto>();
-
-    public Task<Result<RoomResultDto>> GetResultAsync(string code, CancellationToken ct) => ContractStub.Of<RoomResultDto>();
-
     /// <summary>
-    /// The caller leaves (the host too: the next longest-present member hosts). The last one out closes the room. A guest's
+    /// The caller leaves (the host too: the next longest-present member hosts). The last one out closes the room; otherwise
+    /// <see cref="RoomReferee"/> checks whether the members left now have a result. A guest's
     /// session ends with it (owner's rule, BE-10): coming back means joining as a new guest.
     /// </summary>
     public async Task<Result> LeaveAsync(string code, CancellationToken ct)
@@ -215,6 +210,11 @@ public sealed class RoomService(
         if (closes)
         {
             await events.PublishAsync(roomId, RoomEvents.RoomClosed, new RoomEvent(roomId), ct);
+        }
+        else
+        {
+            // Without the one who left, the rest may now agree or be done (owner, 2026-11-15; BE-12).
+            await referee.DecideIfDueAsync(roomId, ct);
         }
 
         return Result.Success();

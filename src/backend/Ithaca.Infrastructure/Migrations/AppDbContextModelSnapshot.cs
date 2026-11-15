@@ -693,6 +693,10 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
                     b.Property<string>("Mode")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -704,6 +708,26 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
                         .HasColumnName("name");
+
+                    b.Property<string>("ResultKind")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("result_kind");
+
+                    b.PrimitiveCollection<Guid[]>("ResultMembers")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("result_members");
+
+                    b.PrimitiveCollection<Guid[]>("ResultPicks")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("result_picks");
+
+                    b.PrimitiveCollection<Guid[]>("ResultVotes")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("result_votes");
 
                     b.Property<DateTimeOffset?>("StartsAt")
                         .HasColumnType("timestamp with time zone")
