@@ -639,8 +639,9 @@ paging (`page` 1–10 000, `pageSize` 1–100). `ImportStatus` and `ImportNotFou
 - **Job:** `ImportJobRunner` polls every `Imports:PollInterval` (2 s) and processes batches of `Imports:BatchSize` (50)
   back to back, oldest import first. TMDB calls are paced (`TmdbRequestDelay`, 100 ms) and tried `TmdbAttempts` (3)
   times with doubling back-off from `TmdbRetryDelay` (1 s). An older import's not-found list is emptied when the newer
-  job **starts** (not at upload). A write conflict (the user or the sync wrote the same row meanwhile) saves nothing and
-  the batch is retried; any other error fails the job: earlier batches stay, its pending items are dropped, its
+  job **starts** (not at upload). Imports run one at a time, oldest first across users (single instance, ADR-0016), so
+  a large import delays the next. A write conflict (the user or the sync wrote the same row meanwhile) saves nothing and
+  the batch is retried, up to `ImportJob.MaxConflictRetries` (5) times in a row, then the job fails; any other error fails the job: earlier batches stay, its pending items are dropped, its
   not-found rows so far stay as its list.
 
 ## 14. Profile (BE-16a)

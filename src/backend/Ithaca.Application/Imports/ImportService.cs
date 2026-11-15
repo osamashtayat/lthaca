@@ -153,6 +153,7 @@ public sealed class ImportService(
             return new ImportBatchResult(ImportBatchOutcome.Idle, null);
         }
 
+        var conflictRetries = job.ConflictRetries; // read now: a batch that records progress resets it in memory before saving
         try
         {
             return new ImportBatchResult(await ProcessBatchAsync(job, ct), job.Id);
@@ -160,7 +161,7 @@ public sealed class ImportService(
         catch (Exception e) when (WriteConflicts.IsWriteConflict(e))
         {
             // Bulk statement: the conflicting tracked changes are abandoned. A conflict that keeps coming back fails the job.
-            var retries = job.ConflictRetries + 1;
+            var retries = conflictRetries + 1;
             if (retries >= ImportJob.MaxConflictRetries)
             {
                 await FailAsync(job.Id, ct);
