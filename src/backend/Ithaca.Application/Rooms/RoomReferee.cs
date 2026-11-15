@@ -20,12 +20,14 @@ public sealed class RoomReferee(IAppDbContext db, RoomReader reader, IRoomEventP
     /// <summary>A conflict means another request decided or closed the room, so the second read always ends it.</summary>
     private const int Attempts = 2;
 
-    /// <summary>
-    /// Decides the room when a result is due (a match, or every present member finished the deck), or, with
-    /// <paramref name="finish"/>, in any case. Only a swiping room is decided. Publishes <c>roomMatched</c> after its commit.
-    /// True when this call decided the room.
-    /// </summary>
-    public async Task<bool> DecideAsync(Guid roomId, bool finish, CancellationToken ct)
+    /// <summary>Decides a swiping room when a result is due: a match, or every present member finished the deck.</summary>
+    public Task<bool> DecideIfDueAsync(Guid roomId, CancellationToken ct) => DecideAsync(roomId, finish: false, ct);
+
+    /// <summary>The host's finish: decides a swiping room now (the match if there is one, else the best compromise).</summary>
+    public Task<bool> DecideNowAsync(Guid roomId, CancellationToken ct) => DecideAsync(roomId, finish: true, ct);
+
+    /// <summary>Only a swiping room is decided. Publishes <c>roomMatched</c> after its commit. True when this call decided the room.</summary>
+    private async Task<bool> DecideAsync(Guid roomId, bool finish, CancellationToken ct)
     {
         RoomVerdict verdict;
         for (var attempt = 1; ; attempt++)
@@ -50,7 +52,12 @@ public sealed class RoomReferee(IAppDbContext db, RoomReader reader, IRoomEventP
             }
 
             verdict = due;
-            room.Decide(verdict, members, time.GetUtcNow());
+            var picks = verdict.Picks;
+            var seen = await db.Votes.AsNoTracking()
+                .Where(v => picks.Contains(v.DeckItemId) && members.Contains(v.RoomMemberId))
+                .Select(v => v.Id)
+                .ToListAsync(ct);
+            room.Decide(verdict, members, seen, time.GetUtcNow());
             try
             {
                 await db.SaveChangesAsync(ct);

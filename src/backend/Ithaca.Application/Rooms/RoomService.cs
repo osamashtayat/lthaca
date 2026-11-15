@@ -214,7 +214,7 @@ public sealed class RoomService(
         else
         {
             // Without the one who left, the rest may now agree or be done (owner, 2026-11-15; BE-12).
-            await referee.DecideAsync(roomId, finish: false, ct);
+            await referee.DecideIfDueAsync(roomId, ct);
         }
 
         return Result.Success();

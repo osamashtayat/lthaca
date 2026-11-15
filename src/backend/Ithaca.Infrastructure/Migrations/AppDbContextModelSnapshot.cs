@@ -543,6 +543,11 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("uuid[]")
                         .HasColumnName("result_picks");
 
+                    b.PrimitiveCollection<Guid[]>("ResultVotes")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("result_votes");
+
                     b.Property<DateTimeOffset?>("StartsAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("starts_at");

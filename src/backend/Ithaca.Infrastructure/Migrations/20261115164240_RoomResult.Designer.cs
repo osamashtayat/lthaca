@@ -13,7 +13,7 @@ using Pgvector;
 namespace Ithaca.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261115163403_RoomResult")]
+    [Migration("20261115164240_RoomResult")]
     partial class RoomResult
     {
         /// <inheritdoc />
@@ -545,6 +545,11 @@ namespace Ithaca.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("uuid[]")
                         .HasColumnName("result_picks");
+
+                    b.PrimitiveCollection<Guid[]>("ResultVotes")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("result_votes");
 
                     b.Property<DateTimeOffset?>("StartsAt")
                         .HasColumnType("timestamp with time zone")

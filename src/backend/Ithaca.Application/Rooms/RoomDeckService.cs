@@ -176,6 +176,12 @@ public sealed class RoomDeckService(
 
         if (await RetriedAsync(request, memberId, ct) is { } retried)
         {
+            if (retried.IsSuccess)
+            {
+                // The vote is stored, but the request that stored it may have failed before deciding the room.
+                await referee.DecideIfDueAsync(roomId, ct);
+            }
+
             return retried;
         }
 
@@ -234,7 +240,7 @@ public sealed class RoomDeckService(
             await events.PublishAsync(roomId, RoomEvents.DeckExtended, new DeckExtendedEvent(roomId, extension.Min(i => i.Position)), ct);
         }
 
-        await referee.DecideAsync(roomId, finish: false, ct); // after the commit, so concurrent last votes are seen (BE-12)
+        await referee.DecideIfDueAsync(roomId, ct); // after the commit, so concurrent last votes are seen (BE-12, ADR-0026)
         return Result.Success();
     }
 

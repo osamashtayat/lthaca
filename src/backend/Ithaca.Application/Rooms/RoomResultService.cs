@@ -9,7 +9,7 @@ namespace Ithaca.Application.Rooms;
 /// <summary>
 /// A room's result (api-contract.md §6, BE-12): the host's <c>finish</c> and reading the result. Votes and leaving decide a
 /// room on their own through <see cref="RoomReferee"/>. The picks name who said yes and who has seen it, and only count
-/// the noes (A7), among the members present when the room was decided.
+/// the noes (A7), counting only the votes the decision saw (<see cref="Room.ResultVotes"/>).
 /// </summary>
 public sealed class RoomResultService(IAppDbContext db, RoomAccess access, RoomReferee referee)
 {
@@ -28,7 +28,7 @@ public sealed class RoomResultService(IAppDbContext db, RoomAccess access, RoomR
         var roomId = host.Value.RoomId;
         if (await StatusAsync(roomId, ct) == RoomStatus.Swiping)
         {
-            await referee.DecideAsync(roomId, finish: true, ct);
+            await referee.DecideNowAsync(roomId, ct);
         }
 
         // Decided here, by a concurrent vote, or earlier; a room closed meanwhile (or in the lobby) has nothing to show.
@@ -57,7 +57,7 @@ public sealed class RoomResultService(IAppDbContext db, RoomAccess access, RoomR
     {
         var room = await db.Rooms.AsNoTracking()
             .Where(r => r.Id == roomId)
-            .Select(r => new { r.ResultKind, r.DecidedAt, r.ResultPicks, r.ResultMembers })
+            .Select(r => new { r.ResultKind, r.DecidedAt, r.ResultPicks, r.ResultMembers, r.ResultVotes })
             .SingleAsync(ct);
         if (room is not { ResultKind: { } kind, DecidedAt: { } decidedAt })
         {
@@ -66,6 +66,7 @@ public sealed class RoomResultService(IAppDbContext db, RoomAccess access, RoomR
 
         var picks = room.ResultPicks;
         var members = room.ResultMembers;
+        var counted = room.ResultVotes;
         var filmOf = await db.DeckItems.AsNoTracking()
             .Where(i => picks.Contains(i.Id))
             .Join(db.Films, i => i.FilmId, f => f.Id, (i, f) => new { i.Id, f.TmdbId })
@@ -73,7 +74,7 @@ public sealed class RoomResultService(IAppDbContext db, RoomAccess access, RoomR
         var tmdbIds = filmOf.Values.ToList();
         var films = await db.Films.AsNoTracking().Where(f => tmdbIds.Contains(f.TmdbId)).Select(FilmProjections.Summary).ToDictionaryAsync(f => f.TmdbId, ct);
         var votes = await db.Votes.AsNoTracking()
-            .Where(v => picks.Contains(v.DeckItemId) && members.Contains(v.RoomMemberId))
+            .Where(v => counted.Contains(v.Id))
             .OrderBy(v => v.CreatedAt).ThenBy(v => v.Id)
             .Select(v => new { v.DeckItemId, v.RoomMemberId, v.Direction })
             .ToListAsync(ct);

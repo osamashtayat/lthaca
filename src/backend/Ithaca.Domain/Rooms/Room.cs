@@ -61,6 +61,12 @@ public sealed class Room
     /// <summary>The members present when the room was decided: whose votes the result shows, so it doesn't change when people leave.</summary>
     public Guid[] ResultMembers { get; private set; } = [];
 
+    /// <summary>
+    /// The votes on the picks that the decision saw. The result shows only these, so a vote that was in flight when the
+    /// room was decided (committed just after) can't change it.
+    /// </summary>
+    public Guid[] ResultVotes { get; private set; } = [];
+
     /// <summary>New members may join in the lobby and while swiping ("late arrivals can still hop in"), not once finished or closed.</summary>
     public bool AcceptsJoins => AcceptsJoinsIn(Status);
 
@@ -104,10 +110,11 @@ public sealed class Room
     /// Records the room's result and ends swiping. False unless the room was swiping (nothing changed): a room is decided
     /// once.
     /// </summary>
-    public bool Decide(RoomVerdict verdict, IReadOnlyCollection<Guid> memberIds, DateTimeOffset now)
+    public bool Decide(RoomVerdict verdict, IReadOnlyCollection<Guid> memberIds, IEnumerable<Guid> voteIds, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(verdict);
         ArgumentNullException.ThrowIfNull(memberIds);
+        ArgumentNullException.ThrowIfNull(voteIds);
         var valid = verdict.Kind switch
         {
             RoomResultKind.Match => verdict.Picks.Count == 1,
@@ -129,6 +136,7 @@ public sealed class Room
         DecidedAt = now;
         ResultPicks = [.. verdict.Picks];
         ResultMembers = [.. memberIds];
+        ResultVotes = [.. voteIds];
         return true;
     }
 

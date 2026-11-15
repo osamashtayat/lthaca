@@ -5,6 +5,7 @@ using Ithaca.Application.Ai;
 using Ithaca.Application.Realtime;
 using Ithaca.Domain.Decks;
 using Ithaca.Domain.Films;
+using Ithaca.Domain.Rooms;
 using Ithaca.Infrastructure.Persistence;
 using Ithaca.Tests.Harness;
 using Ithaca.Tests.Moods;
@@ -109,6 +110,55 @@ public sealed class RoomResultEndpointTests(PostgresFixture postgres) : IAsyncLi
         (await host.Client.PostAsync(new Uri($"/api/rooms/{room.Code}/close", UriKind.Relative), null, Ct)).Dispose();
         (await ResultAsync(guest.Client, room.Code)).GetRawText().ShouldBe(result.GetRawText(), "the result outlives closing");
         await (await PostAsync(host.Client, $"/api/rooms/{room.Code}/finish")).ShouldBeProblem(HttpStatusCode.Conflict, "room.invalid_state");
+    }
+
+    [Fact]
+    public async Task Result_IgnoresAVoteCommittedAfterTheDecision()
+    {
+        var room = await StartedRoomAsync(guests: 2);
+        using var _ = room;
+        var card = (await DeckAsync(room.Members[0].Client, room.Code))[0];
+        await VoteOkAsync(room.Members[0].Client, room.Code, card.Id, "right");
+        await VoteOkAsync(room.Members[1].Client, room.Code, card.Id, "right");
+        (await PostAsync(room.Members[0].Client, $"/api/rooms/{room.Code}/finish")).Dispose();
+        var before = await ResultAsync(room.Members[0].Client, room.Code);
+
+        // A vote that passed its "still swiping" check before the finish but commits after it.
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Votes.Add(Vote.Create(Guid.NewGuid(), card.Id, room.Members[2].Id, SwipeDirection.Left, null, DateTimeOffset.UtcNow));
+            await db.SaveChangesAsync(Ct);
+        }
+
+        var after = await ResultAsync(room.Members[1].Client, room.Code);
+        after.GetRawText().ShouldBe(before.GetRawText());
+        after.GetProperty("picks")[0].GetProperty("noCount").GetInt32().ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task RetriedLastVote_DecidesTheRoom_WhenTheFirstTryStoredItButDidNotDecide()
+    {
+        var room = await StartedRoomAsync(guests: 1);
+        using var _ = room;
+        var card = (await DeckAsync(room.Members[0].Client, room.Code))[0];
+        await VoteOkAsync(room.Members[0].Client, room.Code, card.Id, "right");
+        var voteId = Guid.NewGuid();
+
+        // The first try stored the guest's vote and then failed before deciding (simulated: written straight to the database).
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Votes.Add(Vote.Create(voteId, card.Id, room.Members[1].Id, SwipeDirection.Right, null, DateTimeOffset.UtcNow));
+            await db.SaveChangesAsync(Ct);
+        }
+
+        using var retry = await room.Members[1].Client.PostAsJsonAsync(
+            $"/api/rooms/{room.Code}/votes", new { voteId, deckItemId = card.Id, direction = "right", seenVerdict = (string?)null }, Ct);
+
+        retry.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await ResultAsync(room.Members[0].Client, room.Code)).GetProperty("kind").GetString().ShouldBe("match");
+        _events.Of(room.Id, RoomEvents.RoomMatched).Count.ShouldBe(1);
     }
 
     [Fact]

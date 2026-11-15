@@ -37,6 +37,13 @@ namespace Ithaca.Infrastructure.Migrations
                 type: "uuid[]",
                 nullable: false,
                 defaultValue: new Guid[0]);
+
+            migrationBuilder.AddColumn<Guid[]>(
+                name: "result_votes",
+                table: "rooms",
+                type: "uuid[]",
+                nullable: false,
+                defaultValue: new Guid[0]);
         }
 
         /// <inheritdoc />
@@ -56,6 +63,10 @@ namespace Ithaca.Infrastructure.Migrations
 
             migrationBuilder.DropColumn(
                 name: "result_picks",
+                table: "rooms");
+
+            migrationBuilder.DropColumn(
+                name: "result_votes",
                 table: "rooms");
         }
     }

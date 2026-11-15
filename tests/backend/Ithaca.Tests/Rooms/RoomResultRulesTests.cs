@@ -90,16 +90,18 @@ public sealed class RoomResultRulesTests
         var members = new[] { Guid.NewGuid(), Guid.NewGuid() };
         var verdict = new RoomVerdict(RoomResultKind.Match, [Id(1)]);
 
-        room.Decide(verdict, members, Now).ShouldBeFalse("still in the lobby");
+        room.Decide(verdict, members, [], Now).ShouldBeFalse("still in the lobby");
         room.Start();
-        room.Decide(verdict, members, Now).ShouldBeTrue();
-        room.Decide(new RoomVerdict(RoomResultKind.Compromise, []), members, Now).ShouldBeFalse("a room is decided once");
+        Guid[] votes = [Guid.NewGuid()];
+        room.Decide(verdict, members, votes, Now).ShouldBeTrue();
+        room.Decide(new RoomVerdict(RoomResultKind.Compromise, []), members, [], Now).ShouldBeFalse("a room is decided once");
         room.Close(Now);
 
         room.Status.ShouldBe(RoomStatus.Closed);
         room.ResultKind.ShouldBe(RoomResultKind.Match);
         room.ResultPicks.ShouldBe([Id(1)]);
         room.ResultMembers.ShouldBe(members);
+        room.ResultVotes.ShouldBe(votes);
         room.DecidedAt.ShouldBe(Now);
     }
 
@@ -110,9 +112,9 @@ public sealed class RoomResultRulesTests
         room.Start();
         Guid[] members = [Guid.NewGuid()];
 
-        Should.Throw<DomainException>(() => room.Decide(new RoomVerdict(RoomResultKind.Match, []), members, Now));
-        Should.Throw<DomainException>(() => room.Decide(new RoomVerdict(RoomResultKind.Compromise, [Id(1), Id(2), Id(3), Id(4)]), members, Now));
-        Should.Throw<DomainException>(() => room.Decide(new RoomVerdict(RoomResultKind.Match, [Id(1)]), [], Now));
+        Should.Throw<DomainException>(() => room.Decide(new RoomVerdict(RoomResultKind.Match, []), members, [], Now));
+        Should.Throw<DomainException>(() => room.Decide(new RoomVerdict(RoomResultKind.Compromise, [Id(1), Id(2), Id(3), Id(4)]), members, [], Now));
+        Should.Throw<DomainException>(() => room.Decide(new RoomVerdict(RoomResultKind.Match, [Id(1)]), [], [], Now));
     }
 
     /// <summary>Records compare their list by reference; compare kind and picks instead.</summary>

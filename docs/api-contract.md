@@ -369,7 +369,8 @@ Rules (all in services; see docs/realtime.md for when each event is published):
   `noCount` are frozen at the members present when the room was decided, so the result doesn't change when people leave.
 - **When:** after every vote (match, or every present member voted on every card: compromise) and after a member leaves
   (the rest may now agree or be done), each checked after that request's own commit so simultaneous last votes can't miss
-  the match; the room's concurrency token makes the result unique (exactly one `roomMatched`). The room becomes
+  the match; the room's concurrency token makes the result unique (exactly one `roomMatched`; ADR-0026). The result
+  counts only the votes the decision saw. A retried vote (known `voteId`) checks again. The room becomes
   `result`; votes then answer 409 `room.invalid_state` (a retried `voteId` still 204).
 - **Compromise:** only cards at least one present member swiped right on, ranked by `right`, then fewer `left`, then
   TMDB popularity (unknown last), then deck position; the top 3. `up` (seen it) is neither yes nor no. When nobody said
