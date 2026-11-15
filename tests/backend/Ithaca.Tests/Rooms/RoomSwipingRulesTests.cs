@@ -11,7 +11,7 @@ public sealed class RoomSwipingRulesTests
 {
     private static readonly DateTimeOffset Now = new(2026, 11, 14, 20, 0, 0, TimeSpan.Zero);
 
-    private static MoodQuery Mood(string[] include, string[] exclude, int? runtime = null, int? from = null, int? to = null)
+    private static MoodQuery Filters(string[] include, string[] exclude, int? runtime = null, int? from = null, int? to = null)
     {
         var mood = MoodQuery.Create(null, [], RuntimeLimit.Any, null, null, Now);
         mood.SetFilters(include, exclude, runtime, from, to, [], textIgnored: false);
@@ -22,7 +22,7 @@ public sealed class RoomSwipingRulesTests
     public void ForRoom_UnitesGenres_DropsExclusionsSomeoneAskedFor_AndTakesTheShortestRuntime()
     {
         var filter = DeckFilter.ForRoom(
-            [Mood(["Comedy"], ["Horror", "War"], runtime: 120), Mood(["Horror", "Thriller"], ["Romance"], runtime: 89), Mood([], [])],
+            [Filters(["Comedy"], ["Horror", "War"], runtime: 120), Filters(["Horror", "Thriller"], ["Romance"], runtime: 89), Filters([], [])],
             []);
 
         filter.IncludeGenres.ShouldBe(["Comedy", "Horror", "Thriller"]);
@@ -34,10 +34,10 @@ public sealed class RoomSwipingRulesTests
     [Fact]
     public void ForRoom_YearsApplyOnlyWhenEveryoneSetThem_ThenTheWidest()
     {
-        DeckFilter.ForRoom([Mood([], [], from: 1990, to: 1999), Mood([], [], from: 1980, to: 2005)], []).ShouldSatisfyAllConditions(
+        DeckFilter.ForRoom([Filters([], [], from: 1990, to: 1999), Filters([], [], from: 1980, to: 2005)], []).ShouldSatisfyAllConditions(
             f => f.MinReleaseYear.ShouldBe(1980),
             f => f.MaxReleaseYear.ShouldBe(2005));
-        var partly = DeckFilter.ForRoom([Mood([], [], from: 1990, to: 1999), Mood([], [])], []);
+        var partly = DeckFilter.ForRoom([Filters([], [], from: 1990, to: 1999), Filters([], [])], []);
         (partly.MinReleaseYear, partly.MaxReleaseYear).ShouldBe((null, null));
     }
 
@@ -48,7 +48,7 @@ public sealed class RoomSwipingRulesTests
 
         filter.IsOnlyHardNos.ShouldBeTrue();
         filter.HardNos.TmdbGenres.ShouldBe(["Horror"]);
-        var withMood = DeckFilter.ForRoom([Mood(["Comedy"], [])], [HardNo.Subtitles]);
+        var withMood = DeckFilter.ForRoom([Filters(["Comedy"], [])], [HardNo.Subtitles]);
         withMood.IsOnlyHardNos.ShouldBeFalse();
         withMood.OnlyHardNos().ShouldSatisfyAllConditions(
             f => f.IsOnlyHardNos.ShouldBeTrue(),
@@ -89,15 +89,31 @@ public sealed class RoomSwipingRulesTests
     }
 
     [Fact]
-    public void SetMood_ReturnsTheReplacedMood_AndKeepsHardNosDistinct()
+    public void SetHardNos_KeepsThemDistinct_AndReplaces()
     {
         var member = RoomMember.ForGuest(Guid.NewGuid(), Guid.NewGuid(), seat: 2, Now);
-        var first = Guid.NewGuid();
 
-        member.SetMood(first, [HardNo.Gore, HardNo.Gore]).ShouldBeNull();
-        member.SetMood(Guid.NewGuid(), [HardNo.Horror]).ShouldBe(first);
+        member.SetHardNos([HardNo.Gore, HardNo.Gore]);
+        member.HardNos.ShouldBe([HardNo.Gore]);
+        member.SetHardNos([HardNo.Horror]);
 
         member.HardNos.ShouldBe([HardNo.Horror]);
+    }
+
+    [Fact]
+    public void BelongToRoomMember_DropsTheText_AndKeepsTheFilters()
+    {
+        var mood = MoodQuery.Create(null, [Mood.Laugh], RuntimeLimit.UpTo2h, null, "something silly with my sister Lina", Now);
+        mood.SetFilters(["Comedy"], ["Horror"], 120, null, null, ["silly"], textIgnored: false);
+        var memberId = Guid.NewGuid();
+
+        mood.BelongToRoomMember(memberId);
+
+        (mood.RoomMemberId, mood.Text).ShouldBe((memberId, null));
+        mood.IncludeGenres.ShouldBe(["Comedy"]);
+        mood.Keywords.ShouldBe(["silly"]);
+        mood.MaxRuntimeMinutes.ShouldBe(120);
+        Should.Throw<DomainException>(() => mood.BelongToRoomMember(Guid.Empty));
     }
 
     [Fact]

@@ -46,7 +46,7 @@ public sealed class Deck
     public DeckSource Source { get; private set; }
 
     /// <summary>The <c>MoodQuery</c> a solo deck by mood was built from; set exactly when a solo deck's <see cref="Source"/> is
-    /// mood. A room's moods are its members' (<c>RoomMember.MoodQueryId</c>), so a room deck has none.</summary>
+    /// mood. A room's moods are its members' (<c>MoodQuery.RoomMemberId</c>), so a room deck has none.</summary>
     public Guid? MoodQueryId { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; }

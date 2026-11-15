@@ -45,34 +45,23 @@ public sealed class RoomMember
 
     public bool IsPresent => LeftAt is null;
 
-    /// <summary>The member's answer to a mood room's mood step (BE-11); null until they give one. Private to the member.</summary>
-    public Guid? MoodQueryId { get; private set; }
-
-    /// <summary>The member's private hard nos (glossary: Hard no): never shown to the group, never in the deck.</summary>
+    /// <summary>
+    /// The member's private hard nos (glossary: Hard no): never shown to the group, never in the deck. Their mood step answer
+    /// is a <c>MoodQuery</c> that points at this member (<c>MoodQuery.RoomMemberId</c>).
+    /// </summary>
     public HardNo[] HardNos { get; private set; } = [];
 
-    /// <summary>
-    /// The mood step: their mood (replacing an earlier one) and hard nos. Returns the replaced mood query's id, or null when
-    /// this is their first answer.
-    /// </summary>
-    public Guid? SetMood(Guid moodQueryId, IEnumerable<HardNo> hardNos)
+    /// <summary>The mood step's hard nos, replacing earlier ones.</summary>
+    public void SetHardNos(IEnumerable<HardNo> hardNos)
     {
         ArgumentNullException.ThrowIfNull(hardNos);
-        if (moodQueryId == Guid.Empty)
-        {
-            throw new DomainException(ErrorCodes.Validation, "moodQueryId is required.");
-        }
-
         var distinct = hardNos.Distinct().ToArray();
         if (distinct.Any(h => !Enum.IsDefined(h)))
         {
             throw new DomainException(ErrorCodes.Validation, "Unknown hard no.", "hardNos");
         }
 
-        var replaced = MoodQueryId;
-        MoodQueryId = moodQueryId;
         HardNos = distinct;
-        return replaced;
     }
 
     public static RoomMember ForUser(Guid roomId, Guid userId, int seat, DateTimeOffset now) =>
