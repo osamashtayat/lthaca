@@ -357,7 +357,7 @@ lint, test, build.
 - **Tests:** slice tests; hard-no exclusion; concurrent votes on one item (≥ 20 runs).
 - **Docs:** api-contract.md §6.
 
-### BE-12 — Room result: match and best compromise · `Todo`
+### BE-12 — Room result: match and best compromise · `In progress`
 - **Objective:** the server decides the match or the best compromise.
 - **Deps:** BE-11. **Modules:** `Application/Rooms`, `Domain/Rooms`.
 - **Contract:** §6 (finish, result); event `roomMatched`.
