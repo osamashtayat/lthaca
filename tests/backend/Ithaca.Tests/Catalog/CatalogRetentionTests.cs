@@ -183,7 +183,7 @@ public sealed class CatalogRetentionTests(PostgresFixture postgres)
     }
 
     private static CatalogSyncService Sync(AsyncServiceScope scope, AppDbContext db, ITmdbClient tmdb) =>
-        new(db, tmdb, scope.ServiceProvider.GetRequiredService<WikidataEnricher>(), scope.ServiceProvider.GetRequiredService<FilmEmbedder>(),
+        new(db, tmdb, new CatalogFilmWriter(db), scope.ServiceProvider.GetRequiredService<WikidataEnricher>(), scope.ServiceProvider.GetRequiredService<FilmEmbedder>(),
             Options.Create(new CatalogSyncOptions { Pages = 1, MaxAgeDays = 180 }), TimeProvider.System);
 
     private static async Task AddStaleFilmsAsync(AppDbContext db, params int[] tmdbIds)
@@ -232,5 +232,8 @@ public sealed class CatalogRetentionTests(PostgresFixture postgres)
 
         public Task<Result<IReadOnlyList<TmdbVideo>>> GetTrailersAsync(int tmdbId, CancellationToken ct) =>
             Task.FromResult<Result<IReadOnlyList<TmdbVideo>>>(Array.Empty<TmdbVideo>());
+
+        public Task<Result<IReadOnlyList<TmdbSearchResult>>> SearchFilmsAsync(string title, int? year, CancellationToken ct) =>
+            Task.FromResult<Result<IReadOnlyList<TmdbSearchResult>>>(Array.Empty<TmdbSearchResult>());
     }
 }

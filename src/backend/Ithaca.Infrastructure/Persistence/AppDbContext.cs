@@ -2,6 +2,7 @@ using Ithaca.Application.Common;
 using Ithaca.Application.Users;
 using Ithaca.Domain.Decks;
 using Ithaca.Domain.Films;
+using Ithaca.Domain.Imports;
 using Ithaca.Domain.Library;
 using Ithaca.Domain.Moods;
 using Ithaca.Domain.Rooms;
@@ -45,6 +46,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<RoomMember> RoomMembers => Set<RoomMember>();
 
     public DbSet<Vote> Votes => Set<Vote>();
+
+    public DbSet<ImportJob> ImportJobs => Set<ImportJob>();
+
+    public DbSet<ImportItem> ImportItems => Set<ImportItem>();
+
+    public DbSet<LetterboxdFilmLink> LetterboxdFilmLinks => Set<LetterboxdFilmLink>();
 
     IQueryable<UserReadModel> IAppDbContext.Users =>
         Users.AsNoTracking().Select(u => new UserReadModel { Id = u.Id, Email = u.Email!, DisplayName = u.DisplayName });
