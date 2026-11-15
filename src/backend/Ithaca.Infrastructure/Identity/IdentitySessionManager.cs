@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
-using Ithaca.Application.Users;
 using Ithaca.Domain.Common;
 using Microsoft.AspNetCore.Authentication;
 using Ithaca.Infrastructure.Persistence;
@@ -112,7 +111,10 @@ internal sealed class IdentitySessionManager(
         }
 
         user.DisplayName = displayName;
-        return (await users.UpdateAsync(user)).Succeeded;
+        var updated = await users.UpdateAsync(user);
+        return updated.Succeeded
+            ? true
+            : throw new InvalidOperationException($"Updating the display name failed: {string.Join(", ", updated.Errors.Select(e => e.Code))}");
     }
 
     public async Task<bool> CheckPasswordAsync(Guid userId, string password, CancellationToken ct)
@@ -134,7 +136,7 @@ internal sealed class IdentitySessionManager(
         return result.Succeeded;
     }
 
-    public async Task<Result> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken ct)
+    public async Task<Result> ChangePasswordAsync(Guid userId, string newPassword, CancellationToken ct)
     {
         var user = await users.FindByIdAsync(userId.ToString());
         if (user is null)
@@ -142,13 +144,22 @@ internal sealed class IdentitySessionManager(
             return AuthErrors.Unauthenticated;
         }
 
-        // One update: the new hash and a new security stamp, which ends every other session (stamp checked per request, AuthSetup).
-        var changed = await users.ChangePasswordAsync(user, currentPassword, newPassword);
+        foreach (var validator in users.PasswordValidators)
+        {
+            var valid = await validator.ValidateAsync(users, user, newPassword);
+            if (!valid.Succeeded)
+            {
+                return Error.Validation("newPassword", valid.Errors.FirstOrDefault()?.Description ?? "That password can't be used.");
+            }
+        }
+
+        // The caller checked the current password (CheckPasswordAsync). One update: the new hash and a new security stamp,
+        // which ends every other session (the stamp is checked on every request, AuthSetup).
+        user.PasswordHash = users.PasswordHasher.HashPassword(user, newPassword);
+        var changed = await users.UpdateSecurityStampAsync(user);
         if (!changed.Succeeded)
         {
-            return changed.Errors.Any(e => e.Code is nameof(IdentityErrorDescriber.PasswordMismatch))
-                ? ProfileErrors.WrongPassword
-                : Error.Validation("newPassword", changed.Errors.FirstOrDefault()?.Description ?? "That password can't be used.");
+            throw new InvalidOperationException($"Changing the password failed: {string.Join(", ", changed.Errors.Select(e => e.Code))}");
         }
 
         // This session carries the old stamp: issue a fresh cookie so the caller stays signed in.

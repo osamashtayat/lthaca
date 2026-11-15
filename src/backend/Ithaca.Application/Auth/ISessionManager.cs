@@ -24,7 +24,7 @@ public interface ISessionManager
     /// <summary>Clears the session cookie (user or guest). Idempotent.</summary>
     Task SignOutAsync();
 
-    /// <summary>Sets a user's display name (already trimmed and checked). False when the account is gone.</summary>
+    /// <summary>Sets a user's display name (already trimmed and checked). False only when the account is gone.</summary>
     Task<bool> SetDisplayNameAsync(Guid userId, string displayName, CancellationToken ct);
 
     /// <summary>
@@ -36,9 +36,9 @@ public interface ISessionManager
 
     /// <summary>
     /// Sets the user's new password (after <see cref="CheckPasswordAsync"/>). The security stamp changes, so the user's other
-    /// sessions end; this one is re-issued and stays signed in. <c>profile.wrong_password</c> or a <c>validation</c> error on failure.
+    /// sessions end; this one is re-issued and stays signed in. A <c>validation</c> error on <c>newPassword</c> on failure.
     /// </summary>
-    Task<Result> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken ct);
+    Task<Result> ChangePasswordAsync(Guid userId, string newPassword, CancellationToken ct);
 
     /// <summary>
     /// Marks the account deleted in the shared unit of work: the caller's next <see cref="IAppDbContext.SaveChangesAsync"/>

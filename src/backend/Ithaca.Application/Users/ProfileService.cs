@@ -13,7 +13,13 @@ namespace Ithaca.Application.Users;
 /// deletion re-authenticate with the current password, which counts toward the sign-in lockout.
 /// </summary>
 public sealed class ProfileService(
-    IAppDbContext db, ICurrentActor current, ISessionManager sessions, IRoomEventPublisher events, TimeProvider time)
+    IAppDbContext db,
+    ICurrentActor current,
+    ISessionManager sessions,
+    RoomAccess access,
+    RoomReferee referee,
+    IRoomEventPublisher events,
+    TimeProvider time)
 {
     /// <summary>Tries at deleting when a concurrent start changed a room the user hosts (rooms carry a concurrency token).</summary>
     private const int WriteAttempts = 3;
@@ -34,7 +40,7 @@ public sealed class ProfileService(
         return profile is null ? AuthErrors.Unauthenticated : profile;
     }
 
-    /// <summary>Sets the display name (trimmed); room member names already shown keep theirs.</summary>
+    /// <summary>Sets the display name (trimmed). A user member's name in rooms is the account's, so it changes there too.</summary>
     public async Task<Result<ProfileDto>> UpdateAsync(UpdateProfileRequest request, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -66,13 +72,14 @@ public sealed class ProfileService(
             return ProfileErrors.WrongPassword;
         }
 
-        return await sessions.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword, ct);
+        return await sessions.ChangePasswordAsync(userId, request.NewPassword, ct);
     }
 
     /// <summary>
     /// Checks the password, closes the open rooms the user hosts, deletes the account and everything that belongs to it
     /// (FK cascade: library, decks, moods, imports, room memberships and their votes) in one commit, signs the caller out,
-    /// then announces <c>roomClosed</c> / <c>memberLeft</c> in the open rooms they were in.
+    /// then announces <c>roomClosed</c> / <c>memberLeft</c> in the open rooms they were in and lets the referee decide the
+    /// rooms they left.
     /// </summary>
     public async Task<Result> DeleteAccountAsync(DeleteAccountRequest request, CancellationToken ct)
     {
@@ -101,10 +108,7 @@ public sealed class ProfileService(
         var left = new List<RoomMemberEvent>();
         foreach (var membership in memberships)
         {
-            var hostId = await RoomAccess.InHostOrder(db.RoomMembers.AsNoTracking().Where(m => m.RoomId == membership.RoomId && m.LeftAt == null))
-                .Select(m => m.Id)
-                .FirstAsync(ct);
-            if (hostId == membership.MemberId)
+            if (await access.HostIdAsync(membership.RoomId, ct) == membership.MemberId)
             {
                 hosted.Add(membership.RoomId);
             }
@@ -156,6 +160,9 @@ public sealed class ProfileService(
         foreach (var member in left)
         {
             await events.PublishAsync(member.RoomId, RoomEvents.MemberLeft, member, ct);
+
+            // As when a member leaves (RoomService.LeaveAsync): without them, the rest may now agree or be done (BE-12).
+            await referee.DecideIfDueAsync(member.RoomId, ct);
         }
 
         return Result.Success();
