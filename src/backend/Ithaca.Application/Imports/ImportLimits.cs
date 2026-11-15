@@ -2,7 +2,7 @@ namespace Ithaca.Application.Imports;
 
 /// <summary>
 /// Import limits that must be compile-time constants (§13). The upload cap feeds <c>[RequestSizeLimit]</c>, so it can't
-/// come from configuration; the other limits live in <c>ImportOptions</c> (BE-15).
+/// come from configuration; the other limits live in <see cref="ImportOptions"/>.
 /// </summary>
 public static class ImportLimits
 {

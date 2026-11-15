@@ -530,7 +530,7 @@ lint, test, build.
   401; `ErrorStatusCodesTests` green.
 - **Tests:** stub slice test (incl. a multipart POST with the XSRF header); mapping tests.
 
-### BE-15 — Letterboxd import (ImportJob) · `Todo`
+### BE-15 — Letterboxd import (ImportJob) · `Done` (PR #53)
 - **Objective:** a user's Letterboxd export becomes `UserFilm`s, safely, with films we lack added from TMDB (ADR-0024).
 - **Deps:** BE-15a, BE-20 (half-star ratings), BE-05. **Modules:** `Domain/Imports` (`ImportJob`, `ImportItem`,
   `LetterboxdFilmLink`), `Application/Imports` (`ImportService`, parser, `ImportOptions`), `Application/Catalog` (the

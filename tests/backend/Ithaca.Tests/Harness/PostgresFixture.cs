@@ -1,3 +1,4 @@
+using Npgsql;
 using Testcontainers.PostgreSql;
 
 namespace Ithaca.Tests.Harness;
@@ -13,6 +14,20 @@ public sealed class PostgresFixture : IAsyncLifetime
     public string ConnectionString => _container.GetConnectionString();
 
     public ValueTask InitializeAsync() => new(_container.StartAsync());
+
+    /// <summary>
+    /// A new, empty database on the same server, for tests whose assertions depend on what else is in the catalog (e.g.
+    /// which films an import adds). <see cref="IthacaApiFactory"/> migrates it like the shared one.
+    /// </summary>
+    public async Task<string> CreateDatabaseAsync(CancellationToken ct)
+    {
+        var name = $"t_{Guid.NewGuid():N}";
+        await using var connection = new NpgsqlConnection(ConnectionString);
+        await connection.OpenAsync(ct);
+        await using var create = new NpgsqlCommand($"CREATE DATABASE \"{name}\"", connection);
+        await create.ExecuteNonQueryAsync(ct);
+        return new NpgsqlConnectionStringBuilder(ConnectionString) { Database = name }.ConnectionString;
+    }
 
     public ValueTask DisposeAsync() => _container.DisposeAsync();
 }

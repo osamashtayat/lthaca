@@ -2,6 +2,7 @@ using Anthropic;
 using Ithaca.Application.Ai;
 using Ithaca.Application.Catalog;
 using Ithaca.Application.Common;
+using Ithaca.Application.Imports;
 using Ithaca.Application.Tmdb;
 using Ithaca.Application.Wikidata;
 using Ithaca.Infrastructure.Ai;
@@ -45,6 +46,8 @@ public static class DependencyInjection
         // CatalogSyncOptions lives with its consumer (Application) but is bound here: AddApplication takes no configuration.
         services.AddValidatedOptions<CatalogSyncOptions>(configuration);
         services.AddHostedService<CatalogSyncJob>();
+        services.AddValidatedOptions<ImportOptions>(configuration);
+        services.AddHostedService<ImportJobRunner>();
         return services;
     }
 

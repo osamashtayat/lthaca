@@ -629,8 +629,7 @@ action converts it with one Api helper (`request.ToImportUpload()`, no other log
 `ImportService.CreateAsync(ImportUpload upload, …)`; `ImportUpload(Stream Content, string FileName, long Length)` lives
 in `Application/Imports`.
 
-**As built (BE-15a):** all four actions exist with the shapes above and answer 501 `server.not_implemented` until
-BE-15; guests and visitors get 401 `auth.unauthenticated`. The upload is `multipart/form-data` with the field `file`
+**As built (BE-15a):** all four actions exist with the shapes above; guests and visitors get 401 `auth.unauthenticated`. The upload is `multipart/form-data` with the field `file`
 (binary); a request without it is 400 `validation` with `errors.file` (the generated schema doesn't mark the field
 required, so the TypeScript type shows it optional: always send it). The upload is antiforgery-checked like every
 unsafe request (`X-XSRF-TOKEN`). `[RequestSizeLimit(ImportLimits.MaxUploadBytes)]` (25 MB) makes the server refuse a
@@ -638,6 +637,30 @@ larger body; `[ReadFormFirst]` reads the form before model binding (which would 
 `ProblemDetailsExceptionHandler` answers 413 `request.too_large` (tested on real Kestrel). A client that sends the whole
 body before reading the answer may see the connection close instead; browsers read the early 413. List queries use the shared
 paging (`page` 1–10 000, `pageSize` 1–100). `ImportStatus` and `ImportNotFoundReason` are in `Domain/Imports`.
+
+**As built (BE-15):** the rules above, with these details the design left open:
+- **Upload:** the file is read in memory (`[RequestFormLimits]` keeps the whole form in memory, never a temp file) and
+  dropped before the response; only the parsed films are stored (`import_items`). A recognised header has the columns
+  `Name` and `Letterboxd URI` (plus `Rating` in `ratings.csv`); column names are exact, file names of a single CSV are
+  matched case-insensitively, ZIP entries by exact path (a file inside an extra folder isn't read). The ratio limit is
+  checked on the four files read, counting the bytes actually decompressed. Besides the skips listed above, a row is
+  skipped when its name has a control character (a line break included) or is longer than a film title (300); a
+  `ratings.csv` row with an empty `Rating` is skipped; a Letterboxd URI over 300 characters is dropped (the film is then
+  identified by title + year). One active import per user is enforced by the partial unique index
+  `ux_import_jobs_user_active`, so racing uploads get exactly one 201.
+- **Matching:** the catalog step needs a year (a year-less row goes straight to TMDB). When the year-filtered TMDB
+  search has no result within the year rule, a second search without the filter is made (a film TMDB files under the
+  neighbouring year). URI → TMDB-id matches are kept in `letterboxd_film_links` (no foreign key: the film may be purged
+  later and is then added again by id).
+- **Counts:** `ratingsKept` counts films where the file's rating **differs** from the kept one (a re-import of the same
+  ratings reports 0). A film added from TMDB counts in `addedToCatalogCount` once, even if two rows matched it.
+- **Job:** `ImportJobRunner` polls every `Imports:PollInterval` (2 s) and processes batches of `Imports:BatchSize` (50)
+  back to back, oldest import first. TMDB calls are paced (`TmdbRequestDelay`, 100 ms) and tried `TmdbAttempts` (3)
+  times with doubling back-off from `TmdbRetryDelay` (1 s). An older import's not-found list is emptied when the newer
+  job **starts** (not at upload). Imports run one at a time, oldest first across users (single instance, ADR-0016), so
+  a large import delays the next. A write conflict (the user or the sync wrote the same row meanwhile) saves nothing and
+  the batch is retried, up to `ImportJob.MaxConflictRetries` (5) times in a row, then the job fails; any other error fails the job: earlier batches stay, its pending items are dropped, its
+  not-found rows so far stay as its list.
 
 ## 14. Profile (BE-16a)
 

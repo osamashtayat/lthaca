@@ -36,9 +36,6 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
     public static TheoryData<string, string, string?> Stubs => new()
     {
         { "GET", "/api/taste", null },
-        { "GET", "/api/imports", null },
-        { "GET", $"/api/imports/{Op}", null },
-        { "GET", $"/api/imports/{Op}/not-found?page=1&pageSize=20", null },
         { "GET", "/api/profile", null },
         { "PUT", "/api/profile", """{"displayName":"Lina"}""" },
         { "PUT", "/api/profile/password", """{"currentPassword":"correct horse","newPassword":"battery staple"}""" },

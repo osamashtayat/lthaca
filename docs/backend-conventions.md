@@ -68,6 +68,18 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
 - Register with `services.AddValidatedOptions<T>(configuration)` (binds, validates DataAnnotations, fails at startup).
 - Defaults in `appsettings.json`; secrets only via env vars / user-secrets; every key in `.env.example` with a placeholder.
 
+## File uploads (BE-15)
+- The one upload so far is the Letterboxd import (api-contract.md §13). Copy it: the `IFormFile` request record lives
+  next to its controller (Api), the action converts it with one helper into an Application record (`ImportUpload`:
+  stream, name, length) and calls one service method.
+- Limits: `[RequestSizeLimit]` from a constant + `[ReadFormFirst]` (413 `request.too_large` as ProblemDetails);
+  `[RequestFormLimits(MemoryBufferThreshold = …)]` at the same size so the form is buffered in memory, never to a temp
+  file. Everything else is checked by the service while reading: type by content (signature/header, never extension or
+  `Content-Type`), archive entry count, decompressed bytes counted as they are read (never trust archive headers), row
+  caps. Limits that may change are an options class (`ImportOptions`).
+- **Never store an upload.** Parse it in memory, keep only the fields the feature needs, and let the stream go before
+  the response. Never log its content (titles reveal what someone watches).
+
 ## Logging
 - JSON console logs. Use `[LoggerMessage]` source-generated methods. Never log user free text, mood text, emails or keys.
 
