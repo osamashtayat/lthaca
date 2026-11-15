@@ -36,4 +36,8 @@ public static class FilmProjections
     public static readonly Expression<Func<Film, FilmDto>> Dto = f => new FilmDto(
         f.TmdbId, f.Title, f.ReleaseYear, f.Overview, f.PosterPath, f.RuntimeMinutes, f.Genres,
         f.BackdropPath, f.VoteAverage, f.VoteCount, f.OriginalLanguage);
+
+    /// <summary>The <c>Film</c> → <see cref="FilmSummaryDto"/> projection (room results, BE-12).</summary>
+    public static readonly Expression<Func<Film, FilmSummaryDto>> Summary = f => new FilmSummaryDto(
+        f.TmdbId, f.Title, f.ReleaseYear, f.PosterPath, f.RuntimeMinutes, f.Genres, f.VoteAverage);
 }

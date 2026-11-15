@@ -16,3 +16,13 @@ public enum RoomStatus
     Result,
     Closed,
 }
+
+/// <summary>How a room's result was reached (glossary: Match, Best compromise).</summary>
+public enum RoomResultKind
+{
+    /// <summary>Every present member swiped right on the same film.</summary>
+    Match,
+
+    /// <summary>No match: the highest-ranked films (<see cref="RoomResultRules"/>).</summary>
+    Compromise,
+}

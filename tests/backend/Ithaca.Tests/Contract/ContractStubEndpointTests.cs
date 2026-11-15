@@ -14,7 +14,6 @@ namespace Ithaca.Tests.Contract;
 public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsyncLifetime
 {
     private const string Deck = "/api/decks/0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b";
-    private const string Room = "/api/rooms/POP-428";
     private const string Item = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5c";
     private const string Op = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5d";
 
@@ -36,8 +35,6 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
     /// <summary>Method, path, and a valid JSON body (so model validation passes and the stub answers).</summary>
     public static TheoryData<string, string, string?> Stubs => new()
     {
-        { "POST", $"{Room}/finish", null },
-        { "GET", $"{Room}/result", null },
         { "GET", "/api/taste", null },
         { "GET", "/api/imports", null },
         { "GET", $"/api/imports/{Op}", null },

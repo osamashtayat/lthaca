@@ -514,7 +514,7 @@ public sealed class RoomSwipingEndpointTests(PostgresFixture postgres) : IAsyncL
         (await response.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("code").GetString();
 
     /// <summary>Records every published event instead of sending it.</summary>
-    private sealed class RecordingPublisher : IRoomEventPublisher
+    internal sealed class RecordingPublisher : IRoomEventPublisher
     {
         private readonly ConcurrentQueue<(Guid RoomId, string Name, object Payload)> _published = new();
 

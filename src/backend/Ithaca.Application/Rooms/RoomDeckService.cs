@@ -20,10 +20,11 @@ namespace Ithaca.Application.Rooms;
 /// library (A5). When the voter is <see cref="ExtendWhenLeft"/> cards from the end, the next batch is dealt, up to
 /// <see cref="Deck.RoomMaxItems"/>.</item>
 /// </list>
-/// Events after the commit: <c>memberReady</c>, <c>roomStarted</c>, <c>voteCast</c> (no values), <c>deckExtended</c>.
+/// Events after the commit: <c>memberReady</c>, <c>roomStarted</c>, <c>voteCast</c> (no values), <c>deckExtended</c>. After a
+/// vote's commit <see cref="RoomReferee"/> decides the room when a match or the end of the deck is reached (BE-12).
 /// </summary>
 public sealed class RoomDeckService(
-    IAppDbContext db, RoomAccess access, RoomReader reader, MoodInterpreter moods, DeckDealer dealer, DeckItemReader cards, IRoomEventPublisher events, TimeProvider time)
+    IAppDbContext db, RoomAccess access, RoomReader reader, MoodInterpreter moods, DeckDealer dealer, DeckItemReader cards, RoomReferee referee, IRoomEventPublisher events, TimeProvider time)
 {
     /// <summary>Cards left for a voter at which the next batch is dealt.</summary>
     public const int ExtendWhenLeft = 3;
@@ -214,6 +215,7 @@ public sealed class RoomDeckService(
             await events.PublishAsync(roomId, RoomEvents.DeckExtended, new DeckExtendedEvent(roomId, extension.Min(i => i.Position)), ct);
         }
 
+        await referee.DecideAsync(roomId, finish: false, ct); // after the commit, so concurrent last votes are seen (BE-12)
         return Result.Success();
     }
 
