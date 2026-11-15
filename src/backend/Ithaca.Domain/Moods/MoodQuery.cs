@@ -35,7 +35,7 @@ public sealed class MoodQuery
 
     public Guid Id { get; private set; }
 
-    /// <summary>The person who asked; null for a guest's room mood.</summary>
+    /// <summary>The person who asked; null for a guest's room mood (still null after the guest signs up: it goes with the member).</summary>
     public Guid? UserId { get; private set; }
 
     public Mood[] Moods { get; private set; } = [];

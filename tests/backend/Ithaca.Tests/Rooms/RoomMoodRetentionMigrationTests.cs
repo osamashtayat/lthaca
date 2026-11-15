@@ -9,7 +9,7 @@ namespace Ithaca.Tests.Rooms;
 
 /// <summary>
 /// Issue #51: the <c>RoomMoodRetention</c> migration moves each room mood's link onto the mood, clears its text, deletes
-/// orphaned guest room moods, and leaves solo moods alone. Runs on its own database in the shared container.
+/// orphaned room moods (a guest's or a user's), and leaves solo moods (those with a deck) alone. Runs on its own database in the shared container.
 /// </summary>
 [Collection(DatabaseCollectionDefinition.Name)]
 public sealed class RoomMoodRetentionMigrationTests(PostgresFixture postgres)
@@ -20,6 +20,7 @@ public sealed class RoomMoodRetentionMigrationTests(PostgresFixture postgres)
     private const string RoomMood = "00000000-0000-0000-0000-0000000000b1";
     private const string Orphan = "00000000-0000-0000-0000-0000000000b2";
     private const string Solo = "00000000-0000-0000-0000-0000000000b3";
+    private const string UserOrphan = "00000000-0000-0000-0000-0000000000b4";
     private const string Member = "00000000-0000-0000-0000-0000000000c1";
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -45,7 +46,10 @@ public sealed class RoomMoodRetentionMigrationTests(PostgresFixture postgres)
                   max_runtime_minutes, min_release_year, max_release_year, keywords, text_ignored, created_at) VALUES
                   ('{{RoomMood}}', NULL, '{Laugh}', 'Any', NULL, 'a guest''s private words', '{Comedy}', '{}', NULL, NULL, NULL, '{}', false, now()),
                   ('{{Orphan}}', NULL, '{}', 'Any', NULL, 'left behind', '{}', '{}', NULL, NULL, NULL, '{}', false, now()),
-                  ('{{Solo}}', '00000000-0000-0000-0000-0000000000d1', '{}', 'Any', NULL, 'my own deck', '{}', '{}', NULL, NULL, NULL, '{}', false, now());
+                  ('{{Solo}}', '00000000-0000-0000-0000-0000000000d1', '{}', 'Any', NULL, 'my own deck', '{}', '{}', NULL, NULL, NULL, '{}', false, now()),
+                  ('{{UserOrphan}}', '00000000-0000-0000-0000-0000000000d1', '{}', 'Any', NULL, 'a user''s old room words', '{}', '{}', NULL, NULL, NULL, '{}', false, now());
+                INSERT INTO decks (id, user_id, room_id, source, mood_query_id, created_at) VALUES
+                  ('00000000-0000-0000-0000-0000000000a9', '00000000-0000-0000-0000-0000000000d1', NULL, 'Mood', '{{Solo}}', now());
                 INSERT INTO room_members (id, room_id, user_id, guest_id, seat, joined_at, left_at, hard_nos, mood_query_id) VALUES
                   ('{{Member}}', '00000000-0000-0000-0000-0000000000e1', NULL, '00000000-0000-0000-0000-0000000000f1', 1, now(), NULL, '{}', '{{RoomMood}}');
                 """);
@@ -53,7 +57,7 @@ public sealed class RoomMoodRetentionMigrationTests(PostgresFixture postgres)
             await migrator.MigrateAsync(Target, Ct);
 
             var rows = await RowsAsync(connectionString);
-            rows.Keys.Order().ShouldBe(new[] { RoomMood, Solo }.Order(), "the orphaned guest mood is gone");
+            rows.Keys.Order().ShouldBe(new[] { RoomMood, Solo }.Order(), "orphaned room moods (a guest's and a user's) are gone");
             rows[RoomMood].ShouldBe((Member, null), "linked to its member, text cleared");
             rows[Solo].ShouldBe((null, "my own deck"), "solo moods keep their text");
 

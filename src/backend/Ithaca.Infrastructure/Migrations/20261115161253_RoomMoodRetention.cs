@@ -12,7 +12,8 @@ namespace Ithaca.Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             // Issue #51: a room mood now points at its member (deleted with them) and keeps no text. Move the link, clear the
-            // text, drop guest room moods nobody points at any more (solo moods always have a user), then the old column.
+            // text, drop room moods nobody points at any more (a guest's or a user's: a solo mood is always saved with the deck
+            // that points at it, and decks are never deleted on their own), then the old column.
             migrationBuilder.AddColumn<Guid>(
                 name: "room_member_id",
                 table: "mood_queries",
@@ -22,7 +23,8 @@ namespace Ithaca.Infrastructure.Migrations
             migrationBuilder.Sql("""
                 UPDATE mood_queries q SET room_member_id = m.id, text = NULL
                 FROM room_members m WHERE m.mood_query_id = q.id;
-                DELETE FROM mood_queries WHERE room_member_id IS NULL AND user_id IS NULL;
+                DELETE FROM mood_queries q
+                WHERE q.room_member_id IS NULL AND NOT EXISTS (SELECT 1 FROM decks d WHERE d.mood_query_id = q.id);
                 """);
 
             migrationBuilder.DropForeignKey(
