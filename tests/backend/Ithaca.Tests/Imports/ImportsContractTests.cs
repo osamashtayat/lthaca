@@ -17,8 +17,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Ithaca.Tests.Imports;
 
 /// <summary>
-/// BE-15a: the import contract (api-contract.md §13) before its logic. Multipart uploads go through the XSRF check like
-/// any unsafe request; the four actions are user-only and answer 501 until BE-15; an oversized body is 413
+/// BE-15a: the import contract (api-contract.md §13): multipart uploads go through the XSRF check like any unsafe request;
+/// the four actions are user-only; an oversized body is 413
 /// <c>request.too_large</c> on real Kestrel (the in-memory TestServer doesn't enforce body limits).
 /// </summary>
 [Collection(DatabaseCollectionDefinition.Name)]
@@ -30,20 +30,34 @@ public sealed class ImportsContractTests(PostgresFixture postgres) : IAsyncLifet
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    public async ValueTask InitializeAsync() => _factory = await IthacaApiFactory.StartAsync(postgres.ConnectionString);
+    public async ValueTask InitializeAsync() => _factory = await IthacaApiFactory.StartAsync(postgres.ConnectionString, ImportTestKit.Settings);
 
     public ValueTask DisposeAsync() => _factory.DisposeAsync();
 
     [Fact]
-    public async Task Upload_MultipartWithXsrfHeader_ReachesTheStub()
+    public async Task Upload_MultipartWithXsrfHeader_IsQueued()
     {
         using var user = await BrowserClient.RegisteredAsync(_factory, Ct);
         using var form = Form(Encoding.UTF8.GetBytes(Watched), "watched.csv");
 
         using var response = await user.PostAsync(new Uri("/api/imports", UriKind.Relative), form, Ct);
 
-        response.StatusCode.ShouldBe(HttpStatusCode.NotImplemented, await response.Content.ReadAsStringAsync(Ct));
-        (await CodeAsync(response)).ShouldBe("server.not_implemented");
+        response.StatusCode.ShouldBe(HttpStatusCode.Created, await response.Content.ReadAsStringAsync(Ct));
+        (await response.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("status").GetString().ShouldBe("queued");
+    }
+
+    /// <summary>Above ASP.NET Core's default 64 KB form buffer: the upload is still read (in memory, never a temp file).</summary>
+    [Fact]
+    public async Task Upload_LargerThanTheDefaultFormBuffer_IsRead()
+    {
+        using var user = await BrowserClient.RegisteredAsync(_factory, Ct);
+        var rows = string.Concat(Enumerable.Range(1, 3_000).Select(i => $"2024-01-01,Film {i},2001,https://boxd.it/f{i}\n"));
+        using var form = Form(Encoding.UTF8.GetBytes("Date,Name,Year,Letterboxd URI\n" + rows), "watched.csv");
+
+        using var response = await user.PostAsync(new Uri("/api/imports", UriKind.Relative), form, Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Created, await response.Content.ReadAsStringAsync(Ct));
+        (await response.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("filmCount").GetInt32().ShouldBe(3_000);
     }
 
     [Fact]

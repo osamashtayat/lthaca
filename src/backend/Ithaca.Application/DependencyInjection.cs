@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<FilmQueryService>();
         services.AddScoped<CatalogSyncService>();
+        services.AddScoped<CatalogFilmWriter>(); // collaborator of CatalogSyncService and ImportFilmMatcher, not a use-case service
         services.AddScoped<WikidataEnricher>(); // collaborator of CatalogSyncService only, not a use-case service
         services.AddScoped<FilmEmbedder>(); // collaborator of CatalogSyncService only, not a use-case service
         services.AddScoped<FilmTrailerService>();
@@ -42,6 +43,8 @@ public static class DependencyInjection
         services.AddScoped<LibraryService>();
         services.AddScoped<TasteService>();
         services.AddScoped<ProfileService>();
+        services.AddScoped<LetterboxdExportReader>(); // collaborator of ImportService only, not a use-case service
+        services.AddScoped<ImportFilmMatcher>(); // collaborator of ImportService only, not a use-case service
         services.AddScoped<ImportService>();
         return services;
     }

@@ -2,6 +2,7 @@ using Ithaca.Application.Users;
 using Ithaca.Domain.Decks;
 using Ithaca.Domain.Moods;
 using Ithaca.Domain.Films;
+using Ithaca.Domain.Imports;
 using Ithaca.Domain.Library;
 using Ithaca.Domain.Rooms;
 using Ithaca.Domain.Users;
@@ -52,6 +53,15 @@ public interface IAppDbContext
 
     /// <summary>Room members' votes on their room's shared deck, one per card and member (glossary: <c>Vote</c>).</summary>
     DbSet<Vote> Votes { get; }
+
+    /// <summary>Letterboxd imports (glossary: <c>ImportJob</c>), at most one queued or running per user.</summary>
+    DbSet<ImportJob> ImportJobs { get; }
+
+    /// <summary>An import's parsed films: pending, or the not-found list of the user's latest import (ADR-0024).</summary>
+    DbSet<ImportItem> ImportItems { get; }
+
+    /// <summary>Letterboxd URI → TMDB id matches remembered from earlier imports (ids only).</summary>
+    DbSet<LetterboxdFilmLink> LetterboxdFilmLinks { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

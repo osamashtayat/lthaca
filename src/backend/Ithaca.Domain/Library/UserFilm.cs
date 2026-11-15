@@ -1,4 +1,5 @@
 using Ithaca.Domain.Errors;
+using Ithaca.Domain.Imports;
 
 namespace Ithaca.Domain.Library;
 
@@ -103,6 +104,37 @@ public sealed class UserFilm
         OnWatchlist = onWatchlist;
         UpdatedAt = now;
         return true;
+    }
+
+    /// <summary>
+    /// Merges an import's rows for this film (api-contract.md §13 job rule 3, ADR-0024 decision 6): only turns flags on,
+    /// never off; writes the rating only when there is none (any existing rating wins, A17); a rating implies seen (A8).
+    /// <see cref="UpdatedAt"/> moves only when something changed. Returns what changed (<c>NewFilm</c> is the caller's).
+    /// </summary>
+    public ImportChanges MergeImport(bool seen, bool liked, bool onWatchlist, short? ratingHalfStars, DateTimeOffset now)
+    {
+        if (ratingHalfStars is { } h && h is < MinHalfStars or > MaxHalfStars)
+        {
+            throw new DomainException(ErrorCodes.Validation, RatingRule, "rating");
+        }
+
+        var rated = ratingHalfStars is not null && RatingHalfStars is null;
+        var ratingKept = ratingHalfStars is not null && RatingHalfStars is { } existing && existing != ratingHalfStars;
+        var seenSet = !Seen && (seen || ratingHalfStars is not null);
+        var likedSet = !Liked && liked;
+        var watchlistSet = !OnWatchlist && onWatchlist;
+
+        Seen = Seen || seenSet;
+        Liked = Liked || likedSet;
+        OnWatchlist = OnWatchlist || watchlistSet;
+        RatingHalfStars = rated ? ratingHalfStars : RatingHalfStars;
+        var changes = new ImportChanges(0, seenSet ? 1 : 0, rated ? 1 : 0, likedSet ? 1 : 0, watchlistSet ? 1 : 0, ratingKept ? 1 : 0);
+        if (changes.Any)
+        {
+            UpdatedAt = now;
+        }
+
+        return changes;
     }
 
     /// <summary>

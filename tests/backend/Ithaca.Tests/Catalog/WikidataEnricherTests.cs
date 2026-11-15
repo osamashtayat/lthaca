@@ -52,7 +52,7 @@ public sealed class WikidataEnricherTests(PostgresFixture postgres)
         var db = await ClearedDbAsync(scope);
         var tmdb = new SentinelTmdb();
         var sync = new CatalogSyncService(
-            db, tmdb, scope.ServiceProvider.GetRequiredService<WikidataEnricher>(),
+            db, tmdb, new CatalogFilmWriter(db), scope.ServiceProvider.GetRequiredService<WikidataEnricher>(),
             scope.ServiceProvider.GetRequiredService<FilmEmbedder>(),
             Options.Create(new CatalogSyncOptions { Pages = 1 }), TimeProvider.System);
 
@@ -146,6 +146,9 @@ public sealed class WikidataEnricherTests(PostgresFixture postgres)
 
         public Task<Result<IReadOnlyList<TmdbVideo>>> GetTrailersAsync(int tmdbId, CancellationToken ct) =>
             Task.FromResult<Result<IReadOnlyList<TmdbVideo>>>(Array.Empty<TmdbVideo>());
+
+        public Task<Result<IReadOnlyList<TmdbSearchResult>>> SearchFilmsAsync(string title, int? year, CancellationToken ct) =>
+            Task.FromResult<Result<IReadOnlyList<TmdbSearchResult>>>(Array.Empty<TmdbSearchResult>());
     }
 
     /// <summary>The Fake client's answers, failing once for the batch holding one id, recording every id asked for.</summary>

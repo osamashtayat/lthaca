@@ -42,7 +42,7 @@ public sealed class CatalogSyncServiceTests(PostgresFixture postgres)
         db.Films.Add(Film.Create(434343, "Stale But Kept", DateTimeOffset.UtcNow.AddDays(-200)));
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         var service = new CatalogSyncService(
-            db, new FailingTmdb(), scope.ServiceProvider.GetRequiredService<WikidataEnricher>(),
+            db, new FailingTmdb(), new CatalogFilmWriter(db), scope.ServiceProvider.GetRequiredService<WikidataEnricher>(),
             scope.ServiceProvider.GetRequiredService<FilmEmbedder>(), Options.Create(new CatalogSyncOptions()), TimeProvider.System);
 
         var result = await service.RunAsync(TestContext.Current.CancellationToken);
@@ -61,5 +61,8 @@ public sealed class CatalogSyncServiceTests(PostgresFixture postgres)
 
         public Task<Result<IReadOnlyList<TmdbVideo>>> GetTrailersAsync(int tmdbId, CancellationToken ct) =>
             Task.FromResult<Result<IReadOnlyList<TmdbVideo>>>(TmdbErrors.Unavailable);
+
+        public Task<Result<IReadOnlyList<TmdbSearchResult>>> SearchFilmsAsync(string title, int? year, CancellationToken ct) =>
+            Task.FromResult<Result<IReadOnlyList<TmdbSearchResult>>>(TmdbErrors.Unavailable);
     }
 }
