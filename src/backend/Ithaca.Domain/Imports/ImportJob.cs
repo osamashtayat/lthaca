@@ -1,5 +1,6 @@
 using Ithaca.Domain.Common;
 using Ithaca.Domain.Errors;
+using Ithaca.Domain.Library;
 
 namespace Ithaca.Domain.Imports;
 
@@ -63,6 +64,12 @@ public sealed class ImportJob
 
     public int RatingsKept { get; private set; }
 
+    /// <summary>Batches in a row that hit a write conflict and saved nothing; the job fails at <see cref="MaxConflictRetries"/>.</summary>
+    public int ConflictRetries { get; private set; }
+
+    /// <summary>A conflict that keeps coming back isn't a race: fail instead of blocking every later import.</summary>
+    public const int MaxConflictRetries = 5;
+
     public bool IsActive => Status is ImportStatus.Queued or ImportStatus.Running;
 
     public static ImportJob Create(Guid userId, int filmCount, DateTimeOffset now)
@@ -108,6 +115,7 @@ public sealed class ImportJob
         LikedSet += changes.Liked;
         WatchlistSet += changes.Watchlist;
         RatingsKept += changes.RatingKept;
+        ConflictRetries = 0;
     }
 
     /// <summary>Every film processed (not-found rows included).</summary>
@@ -116,18 +124,4 @@ public sealed class ImportJob
         Status = ImportStatus.Completed;
         FinishedAt = now;
     }
-}
-
-/// <summary>
-/// What merging one or more files' rows changed in My Cinema, as counts (§13 <c>ImportChangesDto</c>). For one film each
-/// field is 0 or 1; the job adds them up.
-/// </summary>
-public readonly record struct ImportChanges(int NewFilm, int Seen, int Rated, int Liked, int Watchlist, int RatingKept)
-{
-    public static ImportChanges operator +(ImportChanges a, ImportChanges b) =>
-        new(a.NewFilm + b.NewFilm, a.Seen + b.Seen, a.Rated + b.Rated, a.Liked + b.Liked, a.Watchlist + b.Watchlist, a.RatingKept + b.RatingKept);
-
-    public static ImportChanges Add(ImportChanges a, ImportChanges b) => a + b;
-
-    public bool Any => NewFilm + Seen + Rated + Liked + Watchlist > 0;
 }

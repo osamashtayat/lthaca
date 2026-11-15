@@ -147,10 +147,18 @@ internal sealed class ScriptedTmdb : ITmdbClient
     public Task<Result<IReadOnlyList<TmdbFilmSummary>>> GetCatalogPageAsync(int page, CancellationToken ct) =>
         Task.FromResult<Result<IReadOnlyList<TmdbFilmSummary>>>(Array.Empty<TmdbFilmSummary>());
 
-    public Task<Result<TmdbFilmDetails?>> GetFilmDetailsAsync(int tmdbId, CancellationToken ct)
+    /// <summary>Runs before each details answer, e.g. to write to the database meanwhile (a racing sync).</summary>
+    public Func<int, Task>? OnDetails { get; set; }
+
+    public async Task<Result<TmdbFilmDetails?>> GetFilmDetailsAsync(int tmdbId, CancellationToken ct)
     {
         DetailsCalls++;
-        return Task.FromResult(Result<TmdbFilmDetails?>.Success(Films.FirstOrDefault(f => f.Result.TmdbId == tmdbId).Details));
+        if (OnDetails is not null)
+        {
+            await OnDetails(tmdbId);
+        }
+
+        return Result<TmdbFilmDetails?>.Success(Films.FirstOrDefault(f => f.Result.TmdbId == tmdbId).Details);
     }
 
     public Task<Result<IReadOnlyList<TmdbVideo>>> GetTrailersAsync(int tmdbId, CancellationToken ct) =>

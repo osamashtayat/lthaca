@@ -72,7 +72,12 @@ public sealed class ImportService(
         catch (Exception e) when (WriteConflicts.IsWriteConflict(e))
         {
             // The only unique key a new job can hit is the one-active-import index: a concurrent upload won it.
-            return await HasActiveImportAsync(userId, ct) ? ImportErrors.AlreadyRunning : throw new InvalidOperationException("Saving the import failed.", e);
+            if (!await HasActiveImportAsync(userId, ct))
+            {
+                throw;
+            }
+
+            return ImportErrors.AlreadyRunning;
         }
 
         return ToDtoCompiled(job);
@@ -134,7 +139,7 @@ public sealed class ImportService(
     /// user's older not-found lists); then up to <see cref="ImportOptions.BatchSize"/> pending items are matched, merged and
     /// saved with the progress; matched items are deleted, not-found ones kept as the list. No pending item left →
     /// <c>completed</c>. A write conflict (the user or the sync wrote the same row meanwhile) saves nothing and is retried
-    /// on the next call; any other unexpected error marks the job <c>failed</c>, keeping what earlier batches wrote.
+    /// on the next call (after <see cref="ImportJob.MaxConflictRetries"/> in a row the job fails); any other unexpected error marks the job <c>failed</c>, keeping what earlier batches wrote.
     /// </summary>
     public async Task<ImportBatchResult> ProcessNextBatchAsync(CancellationToken ct)
     {
@@ -154,6 +159,15 @@ public sealed class ImportService(
         }
         catch (Exception e) when (WriteConflicts.IsWriteConflict(e))
         {
+            // Bulk statement: the conflicting tracked changes are abandoned. A conflict that keeps coming back fails the job.
+            var retries = job.ConflictRetries + 1;
+            if (retries >= ImportJob.MaxConflictRetries)
+            {
+                await FailAsync(job.Id, ct);
+                return new ImportBatchResult(ImportBatchOutcome.Failed, job.Id);
+            }
+
+            await db.ImportJobs.Where(j => j.Id == job.Id).ExecuteUpdateAsync(s => s.SetProperty(j => j.ConflictRetries, retries), ct);
             return new ImportBatchResult(ImportBatchOutcome.Retry, job.Id);
         }
         catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
@@ -231,10 +245,11 @@ public sealed class ImportService(
     /// <summary>Bulk statements, so the abandoned tracked changes of the failed batch aren't saved with it.</summary>
     private async Task FailAsync(Guid jobId, CancellationToken ct)
     {
+        // Status first: if the delete then fails, the job still reads as failed (not completed) and isn't picked again.
         var now = time.GetUtcNow();
-        await db.ImportItems.Where(i => i.ImportJobId == jobId && i.NotFoundReason == null).ExecuteDeleteAsync(ct);
         await db.ImportJobs.Where(j => j.Id == jobId)
             .ExecuteUpdateAsync(s => s.SetProperty(j => j.Status, ImportStatus.Failed).SetProperty(j => j.FinishedAt, now), ct);
+        await db.ImportItems.Where(i => i.ImportJobId == jobId && i.NotFoundReason == null).ExecuteDeleteAsync(ct);
     }
 
     private Task<bool> HasActiveImportAsync(Guid userId, CancellationToken ct) =>

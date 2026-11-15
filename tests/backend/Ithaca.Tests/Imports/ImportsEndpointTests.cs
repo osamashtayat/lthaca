@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Ithaca.Application.Imports;
 using Ithaca.Application.Tmdb;
+using Ithaca.Domain.Films;
 using Ithaca.Domain.Imports;
 using Ithaca.Infrastructure.Identity;
 using Ithaca.Infrastructure.Persistence;
@@ -315,6 +316,64 @@ public sealed class ImportsEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Job_WriteConflict_SavesNothingAndIsRetried()
+    {
+        await using var app = await StartAsync();
+        var raced = false;
+        app.Tmdb.OnDetails = async id =>
+        {
+            if (id == 10549 && !raced) // batch 2 is adding The Glasshouse Affair when "the sync" adds it too
+            {
+                raced = true;
+                await AddFilmAsync(app, 900002, "The Glasshouse Affair", 2024);
+            }
+        };
+        using var user = await BrowserClient.RegisteredAsync(app.Factory, Ct);
+        using var created = await ImportTestKit.UploadAsync(user, ImportTestKit.FixtureZip(), "export.zip", Ct);
+
+        (await ImportTestKit.DrainAsync(app.Factory, Ct)).ShouldBe([
+            ImportBatchOutcome.Progressed, ImportBatchOutcome.Retry, ImportBatchOutcome.Progressed,
+            ImportBatchOutcome.Progressed, ImportBatchOutcome.Progressed, ImportBatchOutcome.Completed]);
+
+        var job = await GetJobAsync(user, created.Headers.Location!);
+        Counts(job).ShouldBe((10, 10, 8, 4, 2), "the Glasshouse Affair came from the sync, not the import");
+        Changes(job).ShouldBe((8, 7, 3, 2, 2, 0));
+        (await LibraryAsync(user, 900002)).ShouldBe((false, false, true, null));
+    }
+
+    [Fact]
+    public async Task Job_ConflictThatKeepsComingBack_FailsAndUnblocksTheNextImport()
+    {
+        await using var app = await StartAsync();
+        app.Tmdb.OnDetails = async id =>
+        {
+            if (id == 10549)
+            {
+                await AddFilmAsync(app, 900002, "The Glasshouse Affair", 2024);
+            }
+        };
+        using var user = await BrowserClient.RegisteredAsync(app.Factory, Ct);
+        using var created = await ImportTestKit.UploadAsync(user, ImportTestKit.FixtureZip(), "export.zip", Ct);
+        var outcomes = new List<ImportBatchOutcome>();
+        for (var round = 0; round < 6; round++)
+        {
+            await using (var db = app.Db())
+            {
+                await db.Films.Where(f => f.TmdbId == 900002).ExecuteDeleteAsync(Ct); // so every round adds it again
+            }
+
+            await using var scope = app.Factory.Services.CreateAsyncScope();
+            outcomes.Add((await scope.ServiceProvider.GetRequiredService<ImportService>().ProcessNextBatchAsync(Ct)).Outcome);
+        }
+
+        outcomes.ShouldBe([ImportBatchOutcome.Progressed, .. Enumerable.Repeat(ImportBatchOutcome.Retry, ImportJob.MaxConflictRetries - 1), ImportBatchOutcome.Failed]);
+        (await GetJobAsync(user, created.Headers.Location!)).GetProperty("status").GetString().ShouldBe("failed");
+
+        app.Tmdb.OnDetails = null;
+        await ImportAndDrainAsync(app, user, ImportTestKit.FixtureZip()); // not blocked
+    }
+
+    [Fact]
     public async Task Runner_ProcessesQueuedImportsInTheBackground()
     {
         await using var app = await StartAsync(new() { ["Imports:JobEnabled"] = "true", ["Imports:PollInterval"] = "00:00:00.1" });
@@ -352,6 +411,18 @@ public sealed class ImportsEndpointTests(PostgresFixture postgres)
         (await db.ImportJobs.AnyAsync(j => j.Id == Guid.Parse(job.GetProperty("id").GetString()!), Ct)).ShouldBeFalse();
         (await db.ImportItems.CountAsync(Ct)).ShouldBe(0);
         (await db.LetterboxdFilmLinks.CountAsync(Ct)).ShouldBe(8, "links hold ids only and aren't anyone's data");
+    }
+
+    private static async Task AddFilmAsync(App app, int tmdbId, string title, int year)
+    {
+        await using var db = app.Db();
+        if (!await db.Films.AnyAsync(f => f.TmdbId == tmdbId, Ct))
+        {
+            var film = Film.Create(tmdbId, title, DateTimeOffset.UtcNow);
+            film.UpdateDetails(title, year, null, null, null, ["Drama"], 1, null, null, null, "en", DateTimeOffset.UtcNow);
+            db.Films.Add(film);
+            await db.SaveChangesAsync(Ct);
+        }
     }
 
     private async Task<App> StartAsync(Dictionary<string, string>? settings = null) =>

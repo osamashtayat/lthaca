@@ -357,183 +357,6 @@ namespace Ithaca.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Ithaca.Domain.Imports.ImportItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("ImportJobId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("import_job_id");
-
-                    b.Property<string>("LetterboxdUri")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("letterboxd_uri");
-
-                    b.Property<bool>("Liked")
-                        .HasColumnType("boolean")
-                        .HasColumnName("liked");
-
-                    b.Property<string>("NotFoundReason")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("not_found_reason");
-
-                    b.Property<bool>("OnWatchlist")
-                        .HasColumnType("boolean")
-                        .HasColumnName("on_watchlist");
-
-                    b.Property<int>("Position")
-                        .HasColumnType("integer")
-                        .HasColumnName("position");
-
-                    b.Property<short?>("RatingHalfStars")
-                        .HasColumnType("smallint")
-                        .HasColumnName("rating_half_stars");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("title");
-
-                    b.Property<bool>("Watched")
-                        .HasColumnType("boolean")
-                        .HasColumnName("watched");
-
-                    b.Property<int?>("Year")
-                        .HasColumnType("integer")
-                        .HasColumnName("year");
-
-                    b.HasKey("Id")
-                        .HasName("pk_import_items");
-
-                    b.HasIndex("ImportJobId", "Position")
-                        .IsUnique()
-                        .HasDatabaseName("ux_import_items_job_position");
-
-                    b.ToTable("import_items", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_import_items_rating_half_stars", "rating_half_stars IS NULL OR rating_half_stars BETWEEN 1 AND 10");
-                        });
-                });
-
-            modelBuilder.Entity("Ithaca.Domain.Imports.ImportJob", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<int>("AddedToCatalogCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("added_to_catalog_count");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("FilmCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("film_count");
-
-                    b.Property<DateTimeOffset?>("FinishedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("finished_at");
-
-                    b.Property<int>("LikedSet")
-                        .HasColumnType("integer")
-                        .HasColumnName("liked_set");
-
-                    b.Property<int>("MatchedCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("matched_count");
-
-                    b.Property<int>("NewFilms")
-                        .HasColumnType("integer")
-                        .HasColumnName("new_films");
-
-                    b.Property<int>("NotFoundCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("not_found_count");
-
-                    b.Property<bool>("NotFoundListKept")
-                        .HasColumnType("boolean")
-                        .HasColumnName("not_found_list_kept");
-
-                    b.Property<int>("ProcessedCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("processed_count");
-
-                    b.Property<int>("RatedSet")
-                        .HasColumnType("integer")
-                        .HasColumnName("rated_set");
-
-                    b.Property<int>("RatingsKept")
-                        .HasColumnType("integer")
-                        .HasColumnName("ratings_kept");
-
-                    b.Property<int>("SeenSet")
-                        .HasColumnType("integer")
-                        .HasColumnName("seen_set");
-
-                    b.Property<DateTimeOffset?>("StartedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("started_at");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("status");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.Property<int>("WatchlistSet")
-                        .HasColumnType("integer")
-                        .HasColumnName("watchlist_set");
-
-                    b.HasKey("Id")
-                        .HasName("pk_import_jobs");
-
-                    b.HasIndex("UserId")
-                        .IsUnique()
-                        .HasDatabaseName("ux_import_jobs_user_active")
-                        .HasFilter("status IN ('Queued', 'Running')");
-
-                    b.HasIndex("Status", "CreatedAt")
-                        .HasDatabaseName("ix_import_jobs_status_created_at");
-
-                    b.HasIndex("UserId", "CreatedAt")
-                        .HasDatabaseName("ix_import_jobs_user_id_created_at");
-
-                    b.ToTable("import_jobs", (string)null);
-                });
-
-            modelBuilder.Entity("Ithaca.Domain.Imports.LetterboxdFilmLink", b =>
-                {
-                    b.Property<string>("LetterboxdUri")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("letterboxd_uri");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("TmdbId")
-                        .HasColumnType("integer")
-                        .HasColumnName("tmdb_id");
-
-                    b.HasKey("LetterboxdUri")
-                        .HasName("pk_letterboxd_film_links");
-
-                    b.ToTable("letterboxd_film_links", (string)null);
-                });
-
             modelBuilder.Entity("Ithaca.Domain.Library.UserFilm", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -636,6 +459,10 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("text[]")
                         .HasColumnName("moods");
 
+                    b.Property<Guid?>("RoomMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("room_member_id");
+
                     b.Property<string>("Text")
                         .HasMaxLength(280)
                         .HasColumnType("character varying(280)")
@@ -652,10 +479,17 @@ namespace Ithaca.Infrastructure.Migrations
                     b.HasKey("Id")
                         .HasName("pk_mood_queries");
 
+                    b.HasIndex("RoomMemberId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_mood_queries_room_member_id");
+
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_mood_queries_user_id");
 
-                    b.ToTable("mood_queries", (string)null);
+                    b.ToTable("mood_queries", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mood_queries_room_mood_no_text", "room_member_id IS NULL OR text IS NULL");
+                        });
                 });
 
             modelBuilder.Entity("Ithaca.Domain.Rooms.Room", b =>
@@ -739,10 +573,6 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("left_at");
 
-                    b.Property<Guid?>("MoodQueryId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("mood_query_id");
-
                     b.Property<Guid>("RoomId")
                         .HasColumnType("uuid")
                         .HasColumnName("room_id");
@@ -760,9 +590,6 @@ namespace Ithaca.Infrastructure.Migrations
 
                     b.HasIndex("GuestId")
                         .HasDatabaseName("ix_room_members_guest_id");
-
-                    b.HasIndex("MoodQueryId")
-                        .HasDatabaseName("ix_room_members_mood_query_id");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_room_members_user_id");
@@ -1097,26 +924,6 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasConstraintName("fk_film_trailers_films_film_id");
                 });
 
-            modelBuilder.Entity("Ithaca.Domain.Imports.ImportItem", b =>
-                {
-                    b.HasOne("Ithaca.Domain.Imports.ImportJob", null)
-                        .WithMany()
-                        .HasForeignKey("ImportJobId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_import_items_import_jobs_import_job_id");
-                });
-
-            modelBuilder.Entity("Ithaca.Domain.Imports.ImportJob", b =>
-                {
-                    b.HasOne("Ithaca.Infrastructure.Identity.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_import_jobs_users_user_id");
-                });
-
             modelBuilder.Entity("Ithaca.Domain.Library.UserFilm", b =>
                 {
                     b.HasOne("Ithaca.Domain.Films.Film", null)
@@ -1136,6 +943,12 @@ namespace Ithaca.Infrastructure.Migrations
 
             modelBuilder.Entity("Ithaca.Domain.Moods.MoodQuery", b =>
                 {
+                    b.HasOne("Ithaca.Domain.Rooms.RoomMember", null)
+                        .WithMany()
+                        .HasForeignKey("RoomMemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_mood_queries_room_members_room_member_id");
+
                     b.HasOne("Ithaca.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -1150,12 +963,6 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasForeignKey("GuestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("fk_room_members_guests_guest_id");
-
-                    b.HasOne("Ithaca.Domain.Moods.MoodQuery", null)
-                        .WithMany()
-                        .HasForeignKey("MoodQueryId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_room_members_mood_queries_mood_query_id");
 
                     b.HasOne("Ithaca.Domain.Rooms.Room", null)
                         .WithMany()
