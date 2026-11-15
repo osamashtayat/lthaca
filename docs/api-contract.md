@@ -359,7 +359,9 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 - **Progress:** present members, host first, with how many cards each voted on; `deckSize` 0 in the lobby.
 - **Races:** rooms carry an optimistic concurrency token (Postgres `xmin`), so a start racing a close or the last member
   leaving can't reopen the room: the close wins and the start answers 409 `room.invalid_state`. Start on a `taste` room
-  stays 501 until BE-14. Known gap: guests' room moods (with their text) are never deleted (issue #51).
+  stays 501 until BE-14.
+- **Mood retention** (owner, issue #51): a room mood keeps no free text (only chips, runtime and the filters derived
+  from it, plus `textIgnored`) and belongs to its member: deleting the member, guest or room deletes it.
 
 ## 7. Library — My Cinema (UserFilm, ADR-0019)
 

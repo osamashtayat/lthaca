@@ -7,7 +7,7 @@ namespace Ithaca.Domain.Moods;
 /// A mood request (glossary: <c>MoodQuery</c>): the tapped moods, runtime and language as given, the free text, and the
 /// filters we derived from them (chips by <see cref="MoodChips"/>, text by <c>mood-parse</c>, validated against our genres).
 /// <see cref="TextIgnored"/>: the text wasn't a mood, so only the chips were used (ADR-0022). Owned by a solo deck, or by a
-/// room member's mood step (BE-11); a guest's has no user.
+/// room member's mood step (<see cref="RoomMemberId"/>; a guest's has no user), which keeps no text (issue #51).
 /// </summary>
 public sealed class MoodQuery
 {
@@ -45,7 +45,10 @@ public sealed class MoodQuery
     /// <summary>ISO 639-1 (lowercase), or null for any language.</summary>
     public string? Language { get; private set; }
 
-    /// <summary>The person's own words, kept for their own deck only; never logged, never put in a message (ADR-0022).</summary>
+    /// <summary>
+    /// The person's own words, kept for their own solo deck only (shown back on it); never logged, never put in a message
+    /// (ADR-0022). Always null for a room mood: once interpreted, nothing reads it again (owner, issue #51).
+    /// </summary>
     public string? Text { get; private set; }
 
     public string[] IncludeGenres { get; private set; } = [];
@@ -63,6 +66,9 @@ public sealed class MoodQuery
     public bool TextIgnored { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; }
+
+    /// <summary>The room member whose mood step this is; null for a solo deck's mood. Deleted with the member.</summary>
+    public Guid? RoomMemberId { get; private set; }
 
     /// <summary>The input as given, normalised: moods distinct, language lowercase, blank text null.</summary>
     public static MoodQuery Create(Guid? userId, IEnumerable<Mood> moods, RuntimeLimit maxRuntime, string? language, string? text, DateTimeOffset now)
@@ -119,6 +125,21 @@ public sealed class MoodQuery
             .Take(MaxKeywords)
             .ToArray();
         TextIgnored = textIgnored;
+    }
+
+    /// <summary>
+    /// Makes this a room member's mood step answer, after interpretation: it belongs to the member (and goes with them) and
+    /// drops the text, since only the derived filters are ever used again (owner, issue #51).
+    /// </summary>
+    public void BelongToRoomMember(Guid roomMemberId)
+    {
+        if (roomMemberId == Guid.Empty)
+        {
+            throw new DomainException(ErrorCodes.Validation, "roomMemberId is required.");
+        }
+
+        RoomMemberId = roomMemberId;
+        Text = null;
     }
 
     private int? PlausibleYear(int? year) => year is { } y && y >= EarliestYear && y <= CreatedAt.Year + 1 ? y : null;

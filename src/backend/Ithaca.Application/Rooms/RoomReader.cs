@@ -16,10 +16,10 @@ public sealed class RoomReader(IAppDbContext db)
     /// The readiness rule: in a just-swipe room everyone is ready; in a mood room a member is ready once they answered the
     /// mood step; group taste is BE-14's (nobody ready yet).
     /// </summary>
-    public static bool IsReady(RoomMode mode, Guid? moodQueryId) => mode switch
+    public static bool IsReady(RoomMode mode, bool answeredMood) => mode switch
     {
         RoomMode.JustSwipe => true,
-        RoomMode.Mood => moodQueryId is not null,
+        RoomMode.Mood => answeredMood,
         _ => false,
     };
 
@@ -32,13 +32,14 @@ public sealed class RoomReader(IAppDbContext db)
     {
         var users = db.Users;
         var guests = db.Guests.AsNoTracking();
+        var moods = db.MoodQueries.AsNoTracking();
         var rows = await RoomAccess.InHostOrder(db.RoomMembers.AsNoTracking().Where(m => m.RoomId == roomId && m.LeftAt == null))
             .Select(m => new
             {
                 m.Id,
                 IsUser = m.UserId != null,
                 m.JoinedAt,
-                m.MoodQueryId,
+                AnsweredMood = moods.Any(q => q.RoomMemberId == m.Id),
                 Name = m.UserId != null
                     ? users.Where(u => u.Id == m.UserId).Select(u => u.DisplayName).FirstOrDefault()
                     : guests.Where(g => g.Id == m.GuestId).Select(g => g.DisplayName).FirstOrDefault(),
@@ -47,7 +48,7 @@ public sealed class RoomReader(IAppDbContext db)
 
         return rows
             .Select((m, i) => new RoomMemberDto(
-                m.Id, m.Name ?? "", m.IsUser ? PrincipalKind.User : PrincipalKind.Guest, IsHost: i == 0, IsReady(mode, m.MoodQueryId), m.JoinedAt))
+                m.Id, m.Name ?? "", m.IsUser ? PrincipalKind.User : PrincipalKind.Guest, IsHost: i == 0, IsReady(mode, m.AnsweredMood), m.JoinedAt))
             .ToList();
     }
 
