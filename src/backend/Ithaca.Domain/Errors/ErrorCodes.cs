@@ -11,6 +11,9 @@ public static class ErrorCodes
     public const string Conflict = "conflict";
     public const string ServerError = "server.error";
 
+    /// <summary>Readiness: the database can't be reached (ADR-0028). Only <c>GET /api/health/ready</c> returns it.</summary>
+    public const string HealthDatabaseUnavailable = "health.database_unavailable";
+
     public const string AuthAntiforgeryFailed = "auth.antiforgery_failed";
     public const string AuthUnauthenticated = "auth.unauthenticated";
     public const string AuthInvalidCredentials = "auth.invalid_credentials";
