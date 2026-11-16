@@ -21,8 +21,11 @@ public sealed partial class AiBudget(ILlmClient llm, IOptions<AiOptions> options
     private decimal _spentUsd;
     private bool _reachedLogged;
 
-    /// <summary>The LLM call, unless today's share of the budget is spent.</summary>
-    public async Task<Result<LlmResponse>> CompleteAsync(LlmRequest request, CancellationToken ct)
+    /// <summary>
+    /// The LLM call, unless today's share of the budget is spent; no answer within <paramref name="timeout"/> is
+    /// <see cref="AiErrors.Unavailable"/> (someone is waiting on the page).
+    /// </summary>
+    public async Task<Result<LlmResponse>> CompleteAsync(LlmRequest request, TimeSpan timeout, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (IsReached())
@@ -30,7 +33,18 @@ public sealed partial class AiBudget(ILlmClient llm, IOptions<AiOptions> options
             return AiErrors.BudgetReached;
         }
 
-        var reply = await llm.CompleteAsync(request, ct);
+        using var timer = new CancellationTokenSource(timeout, time);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timer.Token);
+        Result<LlmResponse> reply;
+        try
+        {
+            reply = await llm.CompleteAsync(request, linked.Token);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return AiErrors.TimedOut;
+        }
+
         if (reply.IsSuccess && reply.Value.Usage is { } usage)
         {
             Spend(Cost(reply.Value.Model, usage));
@@ -39,8 +53,8 @@ public sealed partial class AiBudget(ILlmClient llm, IOptions<AiOptions> options
         return reply;
     }
 
-    /// <summary>Whether today's (UTC) share is spent.</summary>
-    public bool IsReached()
+    /// <summary>Whether today's (UTC) share is spent. Internal: callers just call <see cref="CompleteAsync"/>.</summary>
+    internal bool IsReached()
     {
         lock (_gate)
         {
@@ -61,7 +75,7 @@ public sealed partial class AiBudget(ILlmClient llm, IOptions<AiOptions> options
     }
 
     /// <summary>Today's share of the monthly budget.</summary>
-    public decimal DailyLimitUsd()
+    internal decimal DailyLimitUsd()
     {
         lock (_gate)
         {

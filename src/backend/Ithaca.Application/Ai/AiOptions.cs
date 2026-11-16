@@ -85,12 +85,12 @@ public sealed class AiOptions : IConfigSection
     }
 }
 
-/// <summary>A model's list price in US dollars per million tokens (an <c>Ai:Prices</c> entry).</summary>
+/// <summary>A model's list price in US dollars per million tokens (an <c>Ai:Prices</c> entry; 0–1000, checked at startup).</summary>
 public sealed class ModelPrice
 {
-    [Range(0, 1_000)]
     public decimal InputPerMillionTokens { get; init; }
 
-    [Range(0, 1_000)]
     public decimal OutputPerMillionTokens { get; init; }
+
+    public bool IsValid => InputPerMillionTokens is >= 0 and <= 1_000 && OutputPerMillionTokens is >= 0 and <= 1_000;
 }

@@ -4,8 +4,9 @@ using Ithaca.Application.Common;
 namespace Ithaca.Api.RateLimiting;
 
 /// <summary>
-/// <c>RateLimits</c> section (BE-19): one rule per policy in <see cref="RateLimitPolicies"/>. Each person (signed-in user or
-/// guest) gets their own count; anyone without a session is counted by IP address. Limits live here, not in code.
+/// <c>RateLimits</c> section (BE-19): one rule per policy in <see cref="RateLimitPolicies"/>. Auth and room join count by IP;
+/// the others per person (user or guest), or by IP without a session. Limits live here, not in code. Rules are checked at
+/// startup by <see cref="RateLimitSetup"/> (DataAnnotations don't reach nested objects).
 /// </summary>
 public sealed class RateLimitOptions : IConfigSection
 {
@@ -54,10 +55,10 @@ public sealed class RateLimitOptions : IConfigSection
 /// <summary>At most <see cref="PermitLimit"/> requests per <see cref="Window"/>, counted from a partition's first request.</summary>
 public sealed class RateLimitRule
 {
-    [Range(1, 100_000)]
+    /// <summary>1–100 000.</summary>
     public int PermitLimit { get; init; }
 
-    [Range(typeof(TimeSpan), "00:00:01", "7.00:00:00")]
+    /// <summary>1 second to 7 days.</summary>
     public TimeSpan Window { get; init; }
 }
 

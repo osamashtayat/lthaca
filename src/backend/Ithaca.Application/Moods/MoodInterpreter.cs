@@ -92,21 +92,10 @@ public sealed partial class MoodInterpreter(IAppDbContext db, AiBudget llm, IPro
         return query;
     }
 
-    /// <summary>The model's reading of the text, or why there is none (an AI error or a timeout as <c>ai.unavailable</c>).</summary>
+    /// <summary>The model's reading of the text, or why there is none.</summary>
     private async Task<Result<MoodParseOutput>> ParseAsync(RenderedPrompt prompt, string text, CancellationToken ct)
     {
-        using var timeout = new CancellationTokenSource(Timeout, time);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
-        Result<LlmResponse> reply;
-        try
-        {
-            reply = await llm.CompleteAsync(new LlmRequest(prompt, text, MaxOutputTokens), linked.Token);
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            return AiErrors.Unavailable;
-        }
-
+        var reply = await llm.CompleteAsync(new LlmRequest(prompt, text, MaxOutputTokens), Timeout, ct);
         return reply.IsSuccess ? StructuredOutput.Parse<MoodParseOutput>(reply.Value) : reply.Error;
     }
 

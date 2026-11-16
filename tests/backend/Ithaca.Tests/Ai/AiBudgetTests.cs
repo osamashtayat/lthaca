@@ -50,9 +50,9 @@ public sealed class AiBudgetTests
         var llm = new CountingLlm { Model = "cheap", Usage = new LlmUsage(4_000_000, 1_000_000) }; // $0.40 + $0.50 = $0.90
         var budget = Budget(llm, time);
 
-        (await budget.CompleteAsync(Request(), Ct)).IsSuccess.ShouldBeTrue();
-        (await budget.CompleteAsync(Request(), Ct)).IsSuccess.ShouldBeTrue("$0.90 spent of $1.00");
-        var third = await budget.CompleteAsync(Request(), Ct);
+        (await budget.CompleteAsync(Request(), TimeSpan.FromSeconds(15), Ct)).IsSuccess.ShouldBeTrue();
+        (await budget.CompleteAsync(Request(), TimeSpan.FromSeconds(15), Ct)).IsSuccess.ShouldBeTrue("$0.90 spent of $1.00");
+        var third = await budget.CompleteAsync(Request(), TimeSpan.FromSeconds(15), Ct);
 
         third.IsSuccess.ShouldBeFalse("$1.80 spent");
         third.Error.ShouldBe(AiErrors.BudgetReached);
@@ -60,7 +60,7 @@ public sealed class AiBudgetTests
         llm.Calls.ShouldBe(2);
 
         time.SetUtcNow(new DateTimeOffset(2026, 11, 17, 0, 0, 0, TimeSpan.Zero));
-        (await budget.CompleteAsync(Request(), Ct)).IsSuccess.ShouldBeTrue("a new UTC day starts a new count");
+        (await budget.CompleteAsync(Request(), TimeSpan.FromSeconds(15), Ct)).IsSuccess.ShouldBeTrue("a new UTC day starts a new count");
         llm.Calls.ShouldBe(3);
     }
 
@@ -70,7 +70,7 @@ public sealed class AiBudgetTests
         var llm = new CountingLlm { Model = "some-fallback-model", Usage = new LlmUsage(250_000, 0) }; // $1.00 at "dear"
         var budget = Budget(llm, November());
 
-        await budget.CompleteAsync(Request(), Ct);
+        await budget.CompleteAsync(Request(), TimeSpan.FromSeconds(15), Ct);
 
         budget.IsReached().ShouldBeTrue();
     }
@@ -81,9 +81,9 @@ public sealed class AiBudgetTests
         var llm = new CountingLlm { Model = "dear", Usage = null };
         var budget = Budget(llm, November());
 
-        await budget.CompleteAsync(Request(), Ct);
+        await budget.CompleteAsync(Request(), TimeSpan.FromSeconds(15), Ct);
         llm.Failure = AiErrors.Unavailable;
-        await budget.CompleteAsync(Request(), Ct);
+        await budget.CompleteAsync(Request(), TimeSpan.FromSeconds(15), Ct);
 
         budget.IsReached().ShouldBeFalse();
         llm.Calls.ShouldBe(2);
@@ -95,7 +95,7 @@ public sealed class AiBudgetTests
         var llm = new CountingLlm();
         var budget = Budget(llm, November(), monthly: 0m);
 
-        (await budget.CompleteAsync(Request(), Ct)).Error.ShouldBe(AiErrors.BudgetReached);
+        (await budget.CompleteAsync(Request(), TimeSpan.FromSeconds(15), Ct)).Error.ShouldBe(AiErrors.BudgetReached);
         llm.Calls.ShouldBe(0);
     }
 

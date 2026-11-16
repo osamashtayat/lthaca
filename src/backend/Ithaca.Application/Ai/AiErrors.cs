@@ -11,6 +11,9 @@ public static class AiErrors
     /// <summary>Today's share of the AI budget is spent (<see cref="AiBudget"/>); callers treat it like any AI failure.</summary>
     public static readonly Error BudgetReached = new(ErrorCodes.AiUnavailable, "The daily AI budget is used up.");
 
+    /// <summary>No answer within the caller's timeout (<see cref="AiBudget.CompleteAsync"/>).</summary>
+    public static readonly Error TimedOut = new(ErrorCodes.AiUnavailable, "The AI provider didn't answer in time.");
+
     public static readonly Error Refused = new(ErrorCodes.AiRefused, "The AI provider declined this request.");
 
     public static Error InvalidOutput(PromptId prompt, string reason) =>

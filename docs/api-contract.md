@@ -80,9 +80,11 @@ BE-01 adds all of them at once, so mocks and screens can use them from day one.
 | 503 | `tmdb.unavailable` | trailer lookup failed and nothing is cached — exists |
 
 **As built (BE-19): rate limits.** Over a limit the request is refused before any service runs: 429 `rate.limited`,
-ProblemDetails as usual plus `Retry-After: <seconds>` (time left in the window, at least 1). Each signed-in user or guest
-counts on their own (their session's id); a request without a session counts by client IP (`X-Forwarded-For` is read only
-from a trusted proxy, `RateLimits:TrustedProxyNetworks`). A window opens with a person's first request and holds the
+ProblemDetails as usual plus `Retry-After: <seconds>` (time left in the window, at least 1). `auth` and `room-join` count
+by client IP always (a guest cookie is cheap to drop or renew, so it buys no new count); the other policies count per
+signed-in user or guest (their session's id), or by IP without a session. Since accounts and guests are only made
+through those IP-limited calls, both per-person and per-IP limits hold. `X-Forwarded-For` is read only from a trusted
+proxy (`RateLimits:TrustedProxyNetworks`, private ranges by default; behind Cloudflare: issue #74, OPS-07). A window opens with a person's first request and holds the
 limit until it ends; refused requests don't count, every other answer does (also a 4xx). Defaults (`RateLimits` in
 `appsettings.json`):
 

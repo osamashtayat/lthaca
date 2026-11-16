@@ -20,7 +20,7 @@ namespace Ithaca.Application.Ai;
 /// (<see cref="AiBudget"/>).</item>
 /// </list>
 /// </summary>
-public sealed partial class PickAdvisor(IAppDbContext db, AiBudget llm, IPromptLibrary prompts, TimeProvider time, ILogger<PickAdvisor> logger)
+public sealed partial class PickAdvisor(IAppDbContext db, AiBudget llm, IPromptLibrary prompts, ILogger<PickAdvisor> logger)
 {
     /// <summary>A pick page waits for this at most; afterwards it shows the picks without reasons.</summary>
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(20);
@@ -86,14 +86,8 @@ public sealed partial class PickAdvisor(IAppDbContext db, AiBudget llm, IPromptL
         where T : class
     {
         var prompt = await prompts.RenderAsync(id, variables, ct);
-        using var timeout = new CancellationTokenSource(Timeout, time);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
-        Result<LlmResponse> reply;
-        try
-        {
-            reply = await llm.CompleteAsync(new LlmRequest(prompt, JsonSerializer.Serialize(input, Json), MaxOutputTokens), linked.Token);
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        var reply = await llm.CompleteAsync(new LlmRequest(prompt, JsonSerializer.Serialize(input, Json), MaxOutputTokens), Timeout, ct);
+        if (reply.Error == AiErrors.TimedOut)
         {
             LogTimedOut(logger, id, Timeout.TotalSeconds);
             return null;

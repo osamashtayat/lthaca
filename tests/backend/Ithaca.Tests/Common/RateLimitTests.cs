@@ -141,6 +141,37 @@ public sealed class RateLimitTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task RoomJoin_CountsByIp_SoFreshGuestsShareOneCount()
+    {
+        await using var app = Limited(("RateLimits:RoomJoin:PermitLimit", "2"), ("RateLimits:RoomJoin:Window", "00:10:00"));
+        var host = await BrowserClient.RegisteredAsync(app, Ct);
+        using var created = await host.PostAsJsonAsync(new Uri("/api/rooms", UriKind.Relative), new { name = "Friday", mode = "justSwipe", startsAt = (string?)null }, Ct);
+        var code = (await created.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("code").GetString();
+        var join = new Uri($"/api/rooms/{code}/join", UriKind.Relative);
+
+        for (var i = 0; i < 2; i++)
+        {
+            var guest = await BrowserClient.StartAsync(app, Ct);
+            using var joined = await guest.PostAsJsonAsync(join, new { displayName = $"Guest {i}" }, Ct);
+            joined.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        var another = await BrowserClient.StartAsync(app, Ct);
+        using var refused = await another.PostAsJsonAsync(join, new { displayName = "Guest 3" }, Ct);
+        await AssertRateLimitedAsync(refused, retryAfterSeconds: 600);
+    }
+
+    [Fact]
+    public async Task ARuleWithoutALimit_FailsAtStartup()
+    {
+        await using var app = Limited(("RateLimits:Auth:PermitLimit", "0"));
+
+        var error = Should.Throw<Exception>(() => app.Services.GetRequiredService<IServiceProvider>());
+
+        error.ToString().ShouldContain("every rule needs PermitLimit");
+    }
+
+    [Fact]
     public async Task WithLimitsOff_NothingIsLimited()
     {
         await using var app = _base.WithWebHostBuilder(b => b
