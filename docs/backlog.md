@@ -249,6 +249,21 @@ lint, test, build.
 - **Tests:** gesture → direction (pure), swipe idempotency, flow with MSW.
 - **Docs:** none (routes decided, A4).
 
+### FE-22 — The story on the swipe card · `Done` (PR #73)
+- **Objective:** people decide from the story, so the swipe card shows it, as the "Solo — the deck" board does (poster,
+  tear line, facts, title, synopsis). Owner request, 2026-11-16.
+- **Deps:** FE-05, FE-11. **Modules:** `src/features/deck/` (`SwipeCard`, a film-story sheet), `src/mocks/` if a fixture
+  lacks an overview.
+- **Contract:** none: `DeckItemDto.film.overview` (§3) already carries TMDB's overview (display only, ADR-0017).
+- **Scope:** in: the card's lower panel (facts line incl. "★ score", title, overview clamped to a few lines); a "More"
+  button (≥ 44px, never starts a drag) that opens a `Sheet` with the full overview and the facts, without leaving the
+  deck; solo and group decks (both use `SwipeCard`); no text when a film has no overview. Out: overviews in list DTOs,
+  AI-shortened text (ADR-0017), taglines.
+- **Acceptance:** at 375px with mocks and against the real API: every card shows the start of the story, "More" shows
+  all of it, swipes by touch, mouse and keyboard still work, the card's height doesn't jump with the text length.
+- **Tests:** card renders the overview and none when null; "More" opens and closes the sheet; a press on "More" doesn't
+  swipe.
+
 ## Mood
 
 ### BE-09a — Mood-guard contract and stubs (ADR-0022) · `Done` (PR #9)

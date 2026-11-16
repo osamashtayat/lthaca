@@ -99,6 +99,19 @@ describe('solo deck', () => {
     expect(mockDeckDto(deck.id)?.swipeCount).toBe(0)
   })
 
+  it('"More" shows the story without swiping or leaving the deck', async () => {
+    const deck = createMockDeck()
+    const user = userEvent.setup()
+    renderAt(`/deck/${deck.id}`)
+    const first = await title()
+    await user.click(screen.getByRole('button', { name: `More: the story of ${first}` }))
+    expect(await screen.findByRole('dialog', { name: first ?? '' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(await title()).toBe(first)
+    expect(mockDeckDto(deck.id)?.swipeCount).toBe(0)
+    expect(screen.getByTestId('where').textContent).toBe(`/deck/${deck.id}`)
+  })
+
   it('a failed swipe toasts and the card comes back', async () => {
     const deck = createMockDeck()
     server.use(failDeckSwipe())
