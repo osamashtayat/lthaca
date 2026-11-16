@@ -780,7 +780,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Acceptance:** reset works end to end on staging; unknown emails get the same response; tokens expire.
 - **Tests:** stub email sender; token expiry and reuse.
 
-### FE-16 — Forgot / reset password screens · `Todo`
+### FE-16 — Forgot / reset password screens · `Done` (PR #65)
 - **Objective:** the screens for BE-18. **Deps:** BE-18a, FE-03. **Modules:** `src/features/auth/`, `src/mocks/`.
 - **Scope:** in: "Forgot password?" on `/sign-in`, `/reset-password?token=…`. **Acceptance:** with mocks, both flows and
   their errors.
