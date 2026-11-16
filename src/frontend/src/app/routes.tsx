@@ -3,6 +3,7 @@ import { AppShell } from '@/app/layout/AppShell'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { PrivacyPage } from '@/app/pages/PrivacyPage'
 import { TermsPage } from '@/app/pages/TermsPage'
+import { RouteErrorPage } from '@/app/pages/RouteErrorPage'
 import { ForgotPasswordPage, RequireUser, ResetPasswordPage, SignInPage } from '@/features/auth'
 import { DeckPage, DeckStartPage, DeckTopPage } from '@/features/deck'
 import { MoodPage } from '@/features/mood'
@@ -22,6 +23,8 @@ import { RoomPage, RoomResultPage, RoomsPage, RoomSwipePage } from '@/features/r
 export const routes: RouteObject[] = [
   {
     element: <AppShell />,
+    // A render or loader error anywhere below shows the crash screen instead of React Router's default (ADR-0028).
+    errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <TonightPage /> },
       // User-only screens (api-contract: decks, library, profile need a signed-in User). Add new ones inside this group.
@@ -55,6 +58,7 @@ export const routes: RouteObject[] = [
         ? [
             { path: '/dev/status', lazy: async () => ({ Component: (await import('@/app/dev/DevStatusPage')).DevStatusPage }) },
             { path: '/dev/ui', lazy: async () => ({ Component: (await import('@/app/dev/UiGalleryPage')).UiGalleryPage }) },
+            { path: '/dev/crash', lazy: async () => ({ Component: (await import('@/app/dev/CrashTestPage')).CrashTestPage }) },
           ]
         : []),
       { path: '*', element: <NotFoundPage /> },

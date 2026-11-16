@@ -870,7 +870,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Tests:** options and scrubbing (a captured event has no cookies, body or email); readiness ok and unavailable;
   error-code mapping.
 
-### FE-21 — Sentry in the SPA and a crash screen (ADR-0028) · `Todo`
+### FE-21 — Sentry in the SPA and a crash screen (ADR-0028) · `Done` (PR #77)
 - **Objective:** errors on users' phones reach Sentry, and a crash shows a friendly screen instead of a blank page.
 - **Deps:** OPS-17. **Modules:** `src/main.tsx` or `src/app/` (Sentry init, error boundary, router error element),
   `src/shared/` (the init, so `@sentry/react` is only imported there), `.env.example`, `docs/frontend-conventions.md`.
