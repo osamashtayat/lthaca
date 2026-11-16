@@ -768,6 +768,11 @@ Everything here is needed (or flagged optional) before real users get the link. 
 decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so far: the domain is registered at
 **Cloudflare** and Cloudflare will sit in front of the site.
 
+### OPS-19 — Record the Terms and Privacy texts (L5) · `Done`
+- **Objective:** record the owner's short Terms and Privacy texts (L5), so FE-17 can start.
+- **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L5, its texts, FE-17).
+- **Contract:** none. **Scope:** in: docs only. **Tests:** none (docs).
+
 ### OPS-05 — Launch plan in the backlog · `Done`
 - **Objective:** list what going live needs so it is planned, not discovered at the end.
 - **Deps:** OPS-01. **Modules:** `docs/backlog.md`. **Contract:** none.
@@ -916,11 +921,11 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Scope:** in: "Forgot password?" on `/sign-in`, `/reset-password?token=…`. **Acceptance:** with mocks, both flows and
   their errors.
 
-### FE-17 — Terms, Privacy and account deletion · `Todo` (needs L5)
+### FE-17 — Terms, Privacy and account deletion · `Todo` (L5 texts below; owner fills the [placeholders] before launch)
 - **Objective:** the legal pages the Welcome board links to, and a way to delete an account.
 - **Deps:** L5 (the texts), BE-16 (delete account), FE-15. **Modules:** `src/app/pages/`, routes, footer, `/profile`.
-- **Scope:** in: `/terms`, `/privacy` (owner-provided text; mention TMDB, Wikidata, Anthropic, Voyage, the email
-  provider and Sentry (EU, ADR-0028) as processors where relevant), footer links, "Delete account" in profile with confirmation. Out: cookie
+- **Scope:** in: `/terms`, `/privacy` with the L5 texts exactly as written under "L5 texts" below (kept short on purpose:
+  providers are described, not named; the [placeholders] stay visible until the owner fills them), footer links, "Delete account" in profile with confirmation. Out: cookie
   banner (only essential cookies are used; revisit if analytics are added, L8).
 - **Acceptance:** pages reachable from Welcome and the footer; deletion removes the account and signs out.
 
@@ -950,11 +955,42 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 | L2 | Where the site runs | **Decided (2026-11-13): Cloudflare Pages + a Worker routing `/api` and `/hubs` to the VPS (B1).** |
 | L3 | Monthly AI budget (Anthropic + Voyage) | **Decided (2026-11-16): $25 per month.** BE-19 enforces a daily share of it (and falls back to the mood chips when it's reached or the AI fails); OPS-10 sets each provider's dashboard limit at or below it |
 | L4 | Email provider for password reset | **Decided (2026-11-15): Resend**, sending from a subdomain (e.g. `no-reply@mail.<domain>`), SPF/DKIM on Cloudflare DNS. Behind `IEmailSender`, so Postmark stays a one-class swap. The owner creates the account and key (user-secrets locally, `.env` on the VPS). Only BE-18 needs it; BE-18a doesn't |
-| L5 | Terms and Privacy texts | Written or approved by you (not legal advice from agents) |
+| L5 | Terms and Privacy texts | **Decided (2026-11-16): the short texts under "L5 texts" below**, drafted by an agent and kept by the owner (not legal advice). The owner fills [name or company], [email], [country] and [date] before launch |
 | L6 | Catalog size at launch | Enough for varied decks, e.g. several thousand films (843 today). Not a prerequisite for the Letterboxd import (ADR-0024 Q4, decided) |
 | L7 | Error tracking: logs only or an error service | **Decided (2026-11-16): Sentry** (EU region, org `osama-vz`, projects `ithaca-server` and `ithaca-frontend`) for errors, logs, traces, cron check-ins and masked error replays; users reported by internal id only; an uptime monitor on `/api/health/ready` (OPS-09). Alerts by email. ADR-0028 |
 | L8 | Analytics at launch? | None at launch (no cookie banner needed); decide later |
 | P-02 | Google / Apple sign-in at launch? | Not required for launch; email works |
+
+### L5 texts
+
+Short on purpose (owner, 2026-11-16): providers are described, not named. Keep a list of them (AI: Anthropic, Voyage;
+email: Resend; errors: Sentry, EU) ready for anyone who asks. The TMDB sentence is required by TMDB's terms (ADR-0017).
+
+**Terms of Use** · *Last updated: [date]*
+
+1. **What Ithaca is.** A free site that helps you pick a film, alone or with friends. Run by [your name or company].
+2. **Accounts.** Solo decks need an account. Keep your password safe. You can delete your account anytime in Profile.
+3. **Rooms.** Anyone with a room link can join as a guest. Share links only with people you want in.
+4. **Be decent.** Don't misuse the site: no spam, scraping, attacks, or flooding it with requests.
+5. **Film info.** Film data and images come from TMDB. This product uses the TMDB API but is not endorsed or certified
+   by TMDB. Recommendations are suggestions, nothing more.
+6. **No guarantees.** We provide Ithaca "as is" and may change or stop it at any time.
+7. **Changes.** We may update these terms. If you keep using Ithaca, you accept the new version.
+8. **Contact.** [email]
+
+**Privacy Policy** · *Last updated: [date]*
+
+1. **What we keep.** Your email, display name, and what you do in the app: swipes, ratings, your watchlist, imports.
+   Guests only give a display name.
+2. **Why.** To run your account, build your decks and room results, and send password-reset emails. Nothing else.
+3. **No selling, no ads.** We don't sell your data or show ads. We use only the cookies needed to keep you signed in.
+4. **Services we use.** These help us run Ithaca, and each gets only what it needs:
+   - an AI provider for mood text and pick reasons, with no account details attached;
+   - an email provider for password resets;
+   - an error-tracking service that sees an internal id, never your name or email.
+5. **Deleting.** Delete your account in Profile and your data goes with it. A guest's data goes when they leave the room.
+6. **Where.** Our servers are in [country].
+7. **Contact.** Questions or requests: [email]
 
 ---
 
