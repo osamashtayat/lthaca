@@ -219,15 +219,16 @@ type DeckDto = {
 }
 type SwipeRequest = { swipeId: string; deckItemId: string; direction: SwipeDirection; seenVerdict: SeenVerdict | null }
 type DeckTopDto = { swipeCount: number; yesCount: number; picks: TopPickDto[] }   // 1–3 picks, best first
-type TopPickDto = { film: FilmDto; reason: string | null }                          // reason: BE-13, null until then
+type TopPickDto = { film: FilmDto; reason: string | null }                          // reason: the AI's one-liner (BE-13), null when none
 ```
 Rules (server-side; the UI never decides them):
 - `seenVerdict` only with `up` (else 400 `errors.seenVerdict`).
 - **Library effects** of a swipe: `up` → `seen = true`; `up` + `loved` → also `liked = true`. `right` and `left` don't
   touch the library: a right swipe is a deck "yes", not a watchlist add (A2, decided). Saving to the watchlist is a
   separate button on the card (`PUT`/`DELETE /api/library/{tmdbId}/watchlist`, §7).
-- The top 3 is chosen from the deck's right swipes only. Until BE-13 (Wikidata-based ranking/explanations) it is
-  ordered by our own data (genre fit with the mood/swipes, then TMDB popularity) with `reason = null`.
+- The top 3 is chosen from the deck's right swipes only. Our own order (genre fit with the mood/swipes, then TMDB
+  popularity) comes first; the AI then ranks the best of them from Wikidata facts and our own data and adds a reason
+  (BE-13, as built below). No reason is ever an error: `reason` is simply `null`.
 - Mood chips map to our genres/filters on the server; free `text` goes through `mood-parse.v2`. `language` and
   `maxRuntime` are plain filters, not LLM input.
 - **Unclear, off-topic or injected text (ADR-0022):** empty text makes no LLM call. Text the model labels `unclear` or
@@ -312,6 +313,7 @@ type RoomPickDto = {
   yesCount: number; noCount: number;
   yes: string[];    // memberIds who swiped right
   seen: string[];   // memberIds who swiped up ("Omar passed — he's seen it")
+  reason: string | null;   // the AI's one-liner about this pick (BE-13), null when none; never names who said no
 }                   // who said no is never revealed, only how many (A7)
 ```
 Rules (all in services; see docs/realtime.md for when each event is published):
@@ -407,6 +409,18 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 - **Result** (member): the stored result, also after the room was closed; 409 `room.no_result` before it is decided.
 - `yes` lists members in the order they voted. Hard nos can't reach the result because they never reach the deck (they
   are set in the lobby, before the deck is dealt), so the result doesn't filter them again.
+
+**As built (BE-13):** AI reasons on picks (owner's decisions of 2026-11-16; docs/ai.md → AI picks).
+- **Solo top 3:** our own order of the right swipes as before; the best 20 that have Wikidata facts go to
+  `rank-candidates.v2` with the user's own signals (the deck's mood genres, keywords and runtime; Wikidata genres of films
+  they loved or swiped away). Its top 3 come first with their reasons; ids we didn't send and repeats are dropped; the
+  rest fill up in our order with `reason: null`. Ranked on every `GET …/top` (nothing stored), so a new swipe can change it.
+- **Room result:** the picks and their order stay exactly as §6 decides (votes, then popularity); the AI only adds
+  `reason` (`explain-pick.v2`, given each pick's Wikidata facts and its yes / no / seen **counts**, never who voted what,
+  anyone's mood or hard nos). Written on the first read of `GET …/result` and stored on the room, so every member sees
+  the same reasons; `finish` returns the stored reasons, or `null` before that first read; picks without facts get `null`.
+- **Failures:** provider down, refusal, invalid reply or a 20 s timeout → the same picks with `reason: null` and a 200,
+  never an error. A room then stores nothing, so a later read tries again.
 
 ## 7. Library — My Cinema (UserFilm, ADR-0019)
 

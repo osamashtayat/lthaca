@@ -50,7 +50,7 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
   Both ship next to the API binary (`Ithaca.Api.csproj` links `*.md` and `*.schema.json`; a test loads every declared
   prompt from the shipped folder).
 - Schemas are closed (`additionalProperties: false`, every property in `required`; optional values as `anyOf [type, null]`)
-  and match the C# output record (`MoodParseOutput`, `RankCandidatesOutput`).
+  and match the C# output record (`MoodParseOutput`, `RankCandidatesOutput`, `ExplainPicksOutput`).
 - `{{variable}}` placeholders are filled by the caller. **User text (mood words) goes in `LlmRequest.Input`, never into the
   prompt template.**
 - Never edit a shipped version: add `v{N+1}` (both files), point `Prompts.X` at it, run the evals for both.
@@ -86,10 +86,36 @@ in BE-11) → a `MoodQuery` saved with the deck:
    is used; without chips: 422 `mood.unclear`, nothing saved. Model failures pass through as `ai.*`, nothing saved.
 5. The deck's filters are hard limits on every batch (any included genre, no excluded genre, runtime, years, language;
    a film missing a value doesn't pass), and its included genres are a strong signal for adaptation and the top 3.
-   `keywords` are stored for later (BE-13) but don't filter yet.
+   `keywords` don't filter; they reach the AI ranking of the top 3 (BE-13, below).
 6. The text is stored with the user's solo `MoodQuery` and returned only in their own `DeckDto.mood` (a room mood keeps
    no text at all, issue #51); it is never logged
    (a slice test checks the logs) and never put in an error message.
+
+## AI picks (BE-13)
+Reasons under picks, and the order of the solo top 3. `PickAdvisor` (Application/Ai) is the one caller of both prompts.
+- **What the model sees:** `PickFacts`, built from `FilmFacts` (Wikidata) only, never from `Film`, so no TMDB title,
+  overview, tagline or keyword can reach a prompt (a slice test sends films with marked TMDB fields and checks every
+  request). Plus our own data: the deck's mood (genres from our list, keywords, runtime) and Wikidata genres of films the
+  user loved (seen + loved here, liked or rated high in the library) or swiped away; for a room, only each pick's
+  yes / no / seen **counts**: never who voted what, anyone's mood or hard nos. Films without facts aren't sent. The input
+  is the user message (a typed record, `PickPrompts.cs`), never pasted into the prompt.
+- **Solo top 3** (`GET /api/decks/{id}/top`): our order of the right swipes (genre fit, then popularity) → the best 20
+  with facts go to `rank-candidates.v2` (`{{audience}}` = "one person", `{{limit}}` = 3) → its picks first, the rest of
+  ours fill up with `reason: null`. Ranked on every request; nothing stored (owner, 2026-11-16).
+- **Room result:** the votes decide the picks and their order (api-contract.md §6); `explain-pick.v2` (`{{audience}}` =
+  "a group of N friends") only writes a reason per pick. `RoomPickExplainer` does it on the first read of
+  `GET …/result` (never in `finish`, which returns stored reasons or nulls without waiting) and stores it in
+  `rooms.result_reasons` (aligned with the picks, null where none; owner, 2026-11-16). First reads that race (everyone
+  refetches on `roomMatched`) may each call the model; the room's `xmin` keeps only the first store, and every reader
+  shows the stored reasons (a reader that can't store or see a winner shows none). A single-flight per room would cut the
+  duplicate calls if cost needs it.
+- **Validation:** ids we didn't send and repeats are dropped; a reason is trimmed and dropped when empty or longer than
+  `PickReason.MaxLength` (200).
+- **Failures never fail the page:** provider down, refusal, invalid reply, or no answer within 20 s → the same picks
+  with `reason: null`, a warning log with the prompt id and error code only. A room then stores nothing, so the next read
+  tries again; a room whose picks have no facts stores "no reasons" without calling the model.
+- **Models:** `Ai:ModelOverrides` sends both prompts to `claude-haiku-5-5` (owner, 2026-11-16): short replies on a page
+  someone is waiting for. v1 of both prompts stays in `prompts/` for the evals but is no longer used.
 
 ## Embeddings and similarity (ADR-0002, ADR-0013)
 - One vector per film in `films.embedding` (`vector(1024)`, HNSW cosine index) plus `films.embedding_model`.
@@ -145,13 +171,20 @@ in BE-11) → a `MoodQuery` saved with the deck:
 
 ## Evals (`evals/`)
 - `evals/cases/*.json`, one case per file:
-  `id`, `description`, `prompt` (`name.vN`), `variables`, `input` or `candidates` (TMDB ids), `recordedResponse`, `checks[]`.
+  `id`, `description`, `prompt` (`name.vN`), `variables`, `input` and/or `candidates` (TMDB ids), `recordedResponse`,
+  `checks[]`. With both, `input` is sent (e.g. the v2 pick prompts' JSON object) and `candidates` serve the checks; with
+  `candidates` alone, they are sent as a JSON array.
 - Check types (`EvalChecks.cs`): `validJson`, `includesGenre`, `excludesGenre`, `doesNotIncludeGenre`, `idsFromCandidates`,
   `excludesTmdbId`, `intentIs`, `intentIsNot` (for text where `unclear` and `offTopic` are both fine), `hasNoFilters`
-  (a non-mood reply sets nothing) and `mustNotContain` (text that must not appear anywhere in the reply).
+  (a non-mood reply sets nothing), `mustNotContain` (text that must not appear anywhere in the reply), `maxReasonLength`
+  (every reason at most N characters) and `reasonForEveryCandidate` (every candidate id gets a reason). The id checks read
+  `ranked` (rank-candidates) or `reasons` (explain-pick.v2).
 - Each case has a `kind`: `representative`, `edge` or `adversarial`; the runner reports pass counts per kind. A
   prompt's suite covers all three. mood-parse.v2 has 21 cases (10 / 5 / 6, `evals/cases/mood-parse.v2.*.json`), their
   `recordedResponse`s recorded from a live Anthropic run (`claude-opus-5-5`, 2026-11-13, 21/21 passing).
+- rank-candidates.v2 has 6 cases (2 / 2 / 2) and explain-pick.v2 has 5 (2 / 1 / 2); their `recordedResponse`s are
+  hand-written examples of a passing reply, **not yet recorded from a live run** (run `-- --live --case rank-candidates.v2`
+  and `--case explain-pick.v2` before relying on them).
 - Run one prompt's cases with `--case <id prefix>`, e.g. `-- --live --case mood-parse`.
 - **Replay mode (default):** the recorded reply is checked. No network, safe for CI.
 - **Live mode (`-- --live`):** the configured `ILlmClient` answers and the reply is printed. With `Fake` the cases are expected

@@ -1,4 +1,5 @@
 using Ithaca.Domain.Common;
+using Ithaca.Domain.Decks;
 using Ithaca.Domain.Errors;
 
 namespace Ithaca.Domain.Rooms;
@@ -66,6 +67,12 @@ public sealed class Room
     /// room was decided (committed just after) can't change it.
     /// </summary>
     public Guid[] ResultVotes { get; private set; } = [];
+
+    /// <summary>
+    /// One reason per pick, aligned with <see cref="ResultPicks"/> (null where there is none), written once by the AI after
+    /// the decision (BE-13). Null until then, so everyone in the room sees the same reasons.
+    /// </summary>
+    public string?[]? ResultReasons { get; private set; }
 
     /// <summary>New members may join in the lobby and while swiping ("late arrivals can still hop in"), not once finished or closed.</summary>
     public bool AcceptsJoins => AcceptsJoinsIn(Status);
@@ -137,6 +144,27 @@ public sealed class Room
         ResultPicks = [.. verdict.Picks];
         ResultMembers = [.. memberIds];
         ResultVotes = [.. voteIds];
+        return true;
+    }
+
+    /// <summary>
+    /// Stores the reasons for the picks, one per pick in pick order. False when they were already stored (nothing
+    /// changed): the first writer wins, so a room's reasons never change once shown.
+    /// </summary>
+    public bool Explain(IReadOnlyList<string?> reasons)
+    {
+        ArgumentNullException.ThrowIfNull(reasons);
+        if (ResultKind is null || reasons.Count != ResultPicks.Length || reasons.Any(r => r is not null && PickReason.Clean(r) != r))
+        {
+            throw new DomainException(ErrorCodes.Validation, "A decided room gets one trimmed reason (or none) per pick.");
+        }
+
+        if (ResultReasons is not null)
+        {
+            return false;
+        }
+
+        ResultReasons = [.. reasons];
         return true;
     }
 

@@ -724,6 +724,10 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("uuid[]")
                         .HasColumnName("result_picks");
 
+                    b.PrimitiveCollection<string[]>("ResultReasons")
+                        .HasColumnType("text[]")
+                        .HasColumnName("result_reasons");
+
                     b.PrimitiveCollection<Guid[]>("ResultVotes")
                         .IsRequired()
                         .HasColumnType("uuid[]")

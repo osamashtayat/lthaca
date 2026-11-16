@@ -3335,6 +3335,7 @@ export interface components {
             noCount: number;
             yes: string[];
             seen: string[];
+            reason: null | string;
         };
         RoomPreviewDto: {
             code: string;
