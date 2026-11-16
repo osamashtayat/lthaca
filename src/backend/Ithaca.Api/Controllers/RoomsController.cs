@@ -1,10 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
+using Ithaca.Api.RateLimiting;
 using Ithaca.Application.Decks;
 using Ithaca.Application.Rooms;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Ithaca.Api.Controllers;
 
@@ -33,11 +35,13 @@ public sealed class RoomsController(RoomService rooms, RoomDeckService swiping, 
         this.ToActionResult(await rooms.GetPreviewAsync(code, ct));
 
     [HttpPost("{code}/join")]
+    [EnableRateLimiting(RateLimitPolicies.RoomJoin)]
     [IssueXsrfToken]
     [ProducesResponseType<RoomDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<RoomDto>> Join(string code, JoinRoomRequest request, CancellationToken ct) =>
         this.ToActionResult(await rooms.JoinAsync(code, request, ct));
 
@@ -50,6 +54,7 @@ public sealed class RoomsController(RoomService rooms, RoomDeckService swiping, 
         this.ToActionResult(await rooms.GetAsync(code, ct));
 
     [HttpPut("{code}/mood")]
+    [EnableRateLimiting(RateLimitPolicies.Ai)]
     [ProducesResponseType<RoomMoodDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
@@ -57,8 +62,7 @@ public sealed class RoomsController(RoomService rooms, RoomDeckService swiping, 
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<RoomMoodDto>> SetMood(string code, SetRoomMoodRequest request, CancellationToken ct) =>
         this.ToActionResult(await swiping.SetMoodAsync(code, request, ct));
 
@@ -110,11 +114,13 @@ public sealed class RoomsController(RoomService rooms, RoomDeckService swiping, 
         this.ToActionResult(await results.FinishAsync(code, ct));
 
     [HttpGet("{code}/result")]
+    [EnableRateLimiting(RateLimitPolicies.Ai)]
     [ProducesResponseType<RoomResultDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<RoomResultDto>> Result(string code, CancellationToken ct) =>
         this.ToActionResult(await results.GetResultAsync(code, ct));
 

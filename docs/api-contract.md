@@ -74,8 +74,27 @@ BE-01 adds all of them at once, so mocks and screens can use them from day one.
 | 422 | `deck.no_yeses` | top 3 requested before any right swipe |
 | 422 | `taste.not_ready` | a deck (or, for its host, a room) by taste without enough history (§12) — BE-14a |
 | 422 | `mood.unclear` | mood text isn't a mood (unclear or off-topic) and no chips were tapped; nothing created (ADR-0022) |
-| 422 / 502 / 503 | `ai.refused` / `ai.invalid_output` / `ai.unavailable` | mood parsing failed — exist (docs/ai.md) |
+| 422 | `mood.text_unavailable` | we couldn't read the mood text right now (the AI failed or the daily AI budget is spent) and no chips were tapped; nothing created. The screens say "mood text isn't available right now, pick a few moods instead" — BE-19 |
+| 429 | `rate.limited` | too many requests of this kind from one person (or, without a session, one IP address); the response has a `Retry-After` header in whole seconds — BE-19 (§2 as built below) |
+| 422 / 502 / 503 | `ai.refused` / `ai.invalid_output` / `ai.unavailable` | an AI call failed — exist (docs/ai.md); since BE-19 no endpoint returns them (mood text falls back, picks lose their reasons), only the catalog sync |
 | 503 | `tmdb.unavailable` | trailer lookup failed and nothing is cached — exists |
+
+**As built (BE-19): rate limits.** Over a limit the request is refused before any service runs: 429 `rate.limited`,
+ProblemDetails as usual plus `Retry-After: <seconds>` (time left in the window, at least 1). `auth` and `room-join` count
+by client IP always (a guest cookie is cheap to drop or renew, so it buys no new count); the other policies count per
+signed-in user or guest (their session's id), or by IP without a session. Since accounts and guests are only made
+through those IP-limited calls, both per-person and per-IP limits hold. `X-Forwarded-For` is read only from a trusted
+proxy (`RateLimits:TrustedProxyNetworks`, private ranges by default; behind Cloudflare: issue #74, OPS-07). A window opens with a person's first request and holds the
+limit until it ends; refused requests don't count, every other answer does (also a 4xx). Defaults (`RateLimits` in
+`appsettings.json`):
+
+| Policy | Endpoints | Default |
+|---|---|---|
+| `auth` | `POST /api/auth/register`, `sign-in`, `forgot-password`, `reset-password` | 20 per 15 min |
+| `room-join` | `POST /api/rooms/{code}/join` | 20 per 10 min |
+| `deck-create` | `POST /api/decks` (any source; its mood AI call included) | 30 per hour |
+| `import-create` | `POST /api/imports` (ADR-0024) | 5 per day |
+| `ai` | `PUT /api/rooms/{code}/mood`, `GET /api/decks/{deckId}/top`, `GET /api/rooms/{code}/result` | 60 per 10 min |
 
 **As built (BE-17):** every endpoint is live, so the stub code (501 `server.not_implemented`), `ContractStub` and
 `[ContractStub]` are deleted. A later contract-first task that needs stubs again (ADR-0021) re-adds them with its first
@@ -198,11 +217,11 @@ A solo deck belongs to one user. "Just swipe" starts with a varied **sampler** a
 
 | Method & path | Access | Body | Success | Errors |
 |---|---|---|---|---|
-| `POST /api/decks` | user | `CreateDeckRequest` | 201 `DeckDto` (first batch), `Location: /api/decks/{id}` | 400, 401, mood: 422 `mood.unclear` / `ai.refused`, 502 `ai.invalid_output`, 503 `ai.unavailable` |
+| `POST /api/decks` | user | `CreateDeckRequest` | 201 `DeckDto` (first batch), `Location: /api/decks/{id}` | 400, 401, mood: 422 `mood.unclear` / `mood.text_unavailable`, 429 `rate.limited` |
 | `GET /api/decks/{deckId}` | user | — | 200 `DeckDto` | 401, 404 `deck.not_found` |
 | `POST /api/decks/{deckId}/items` | user | — | 200 `DeckItemDto[]` (next batch; `[]` = nothing left) | 401, 404 |
 | `POST /api/decks/{deckId}/swipes` | user | `SwipeRequest` | 204 | 400, 401, 404 `deck.not_found` / `deck.item_not_found`, 409 `deck.already_swiped` |
-| `GET /api/decks/{deckId}/top` | user | — | 200 `DeckTopDto` | 401, 404, 422 `deck.no_yeses` |
+| `GET /api/decks/{deckId}/top` | user | — | 200 `DeckTopDto` | 401, 404, 422 `deck.no_yeses`, 429 `rate.limited` |
 
 ```ts
 type DeckSource = "justSwipe" | "mood" | "taste"   // "taste": §12 (BE-14a), built by BE-14
@@ -215,7 +234,9 @@ type MoodInput  = {
 type CreateDeckRequest = { source: DeckSource; mood: MoodInput | null }   // mood required iff source = "mood" (400 errors.mood)
 type MoodQueryDto = MoodInput & {
   id: string; filters: MoodFiltersDto;
-  textIgnored: boolean;   // true: the text wasn't a mood, so only the chips were used (ADR-0022)
+  textIgnored: boolean;   // true: the text wasn't used, so only the chips were (ADR-0022)
+  textUnavailable: boolean; // + BE-19: true when that's because we couldn't read the text right now (AI failure or the
+                            //   daily AI budget), not because it wasn't a mood; implies textIgnored
 }
 type MoodFiltersDto = {           // the validated output of mood-parse (MoodParseOutput), after our own checks
   includeGenres: string[]; excludeGenres: string[]; maxRuntimeMinutes: number | null;
@@ -244,6 +265,9 @@ Rules (server-side; the UI never decides them):
 - **Unclear, off-topic or injected text (ADR-0022):** empty text makes no LLM call. Text the model labels `unclear` or
   `offTopic` → with chips: the deck is built from the chips and `mood.textIgnored = true`; without chips: 422
   `mood.unclear`, nothing created. No response or log ever repeats the user's text.
+- **The AI can't read the text (BE-19, owner 2026-11-16):** provider down or no answer within 15 s, refusal, invalid reply,
+  or the daily AI budget spent → with chips: the deck is built from the chips, `textIgnored = true` and
+  `textUnavailable = true`; without chips: 422 `mood.text_unavailable`, nothing created. Never an `ai.*` code or a 5xx.
 - Solo decks require a signed-in user; no anonymous "Just swipe" (A3, decided).
 - Routes (A4, decided): `/mood` (picker), `/deck/:deckId` (swipe), `/deck/:deckId/top` (top 3; it belongs to a deck,
   "from 14 swipes").
@@ -283,15 +307,15 @@ match or best compromise. Codes look like `POP-428` (3 letters, dash, 3 digits),
 |---|---|---|---|---|
 | `POST /api/rooms` | user | `CreateRoomRequest` | 201 `RoomDto`, `Location: /api/rooms/{code}` | 400, 401 |
 | `GET /api/rooms/{code}/preview` | anon | — | 200 `RoomPreviewDto` | 404 `room.not_found` |
-| `POST /api/rooms/{code}/join` | anon | `JoinRoomRequest` | 200 `RoomDto` (+ guest cookie when anonymous) | 400, 404, 409 `room.closed` / `room.full` |
+| `POST /api/rooms/{code}/join` | anon | `JoinRoomRequest` | 200 `RoomDto` (+ guest cookie when anonymous) | 400, 404, 409 `room.closed` / `room.full`, 429 `rate.limited` |
 | `GET /api/rooms/{code}` | member | — | 200 `RoomDto` | 401, 403 `room.not_member`, 404 |
-| `PUT /api/rooms/{code}/mood` | member | `SetRoomMoodRequest` | 200 `RoomMoodDto` (now ready) | 400, 401, 403, 404, 409 `room.invalid_state`, 422 `mood.unclear` / `ai.refused`, 502, 503 |
+| `PUT /api/rooms/{code}/mood` | member | `SetRoomMoodRequest` | 200 `RoomMoodDto` (now ready) | 400, 401, 403, 404, 409 `room.invalid_state`, 422 `mood.unclear` / `mood.text_unavailable`, 429 `rate.limited` |
 | `POST /api/rooms/{code}/start` | host | — | 200 `RoomDto` (`status: "swiping"`) | 401, 403 `room.not_host`, 404, 409 `room.invalid_state` |
 | `GET /api/rooms/{code}/deck?fromPosition=0` | member | — | 200 `DeckItemDto[]` (`swipe` = my vote) | 401, 403, 404, 409 `room.invalid_state` (lobby) |
 | `POST /api/rooms/{code}/votes` | member | `CastVoteRequest` | 204 | 400, 401, 403, 404 / `deck.item_not_found`, 409 `room.already_voted` / `room.invalid_state` / `room.closed` |
 | `GET /api/rooms/{code}/progress` | member | — | 200 `RoomProgressDto` | 401, 403, 404 |
 | `POST /api/rooms/{code}/finish` | host | — | 200 `RoomResultDto` (compromise if no match yet) | 401, 403 `room.not_host`, 404, 409 `room.invalid_state` |
-| `GET /api/rooms/{code}/result` | member | — | 200 `RoomResultDto` | 401, 403, 404, 409 `room.no_result` |
+| `GET /api/rooms/{code}/result` | member | — | 200 `RoomResultDto` | 401, 403, 404, 409 `room.no_result`, 429 `rate.limited` |
 | `POST /api/rooms/{code}/leave` | member | — | 204 | 401, 403, 404 |
 | `POST /api/rooms/{code}/close` | host | — | 204 | 401, 403 `room.not_host`, 404 |
 
@@ -301,7 +325,7 @@ type RoomStatus = "lobby" | "swiping" | "result" | "closed"
 type CreateRoomRequest = { name: string; mode: RoomMode; startsAt: string | null }   // name 1–40 ("Friday Film Club")
 type JoinRoomRequest   = { displayName: string | null }   // required (1–30) when anonymous; ignored for users
 type SetRoomMoodRequest = { moods: Mood[]; maxRuntime: RuntimeLimit; hardNos: HardNo[]; text: string | null }
-type RoomMoodDto = { member: RoomMemberDto; textIgnored: boolean }   // textIgnored is only ever sent to that member (ADR-0022)
+type RoomMoodDto = { member: RoomMemberDto; textIgnored: boolean; textUnavailable: boolean }   // only ever sent to that member (ADR-0022); textUnavailable: + BE-19, as in §5
 type CastVoteRequest   = { voteId: string; deckItemId: string; direction: SwipeDirection; seenVerdict: SeenVerdict | null }
 
 type RoomMemberDto = { id: string; displayName: string; kind: "user" | "guest"; isHost: boolean; isReady: boolean; joinedAt: string }
@@ -375,7 +399,8 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 
 **As built (BE-11):** mood step, start, deck, votes and progress are live (owner's decisions of 2026-11-14 below).
 - **Mood step** (`PUT …/mood`): `mood` rooms in the `lobby` only, else 409 `room.invalid_state`. Same rules as a solo mood
-  (ADR-0022: `mood.unclear` without chips, `textIgnored` with chips, `ai.*` passed through; nothing changes on an error).
+  (ADR-0022: `mood.unclear` without chips, `textIgnored` with chips; when the AI can't read the text, BE-19:
+  `mood.text_unavailable` without chips, `textIgnored` + `textUnavailable` with chips; nothing changes on an error).
   A second answer replaces the first. `memberReady` only when the member first becomes ready. Hard nos are stored on the
   membership and appear in no response.
 - **Hard nos** (owner: "wide nets"; `HardNoRules`): `horror` = TMDB Horror; `gore` = TMDB Horror or a Wikidata genre

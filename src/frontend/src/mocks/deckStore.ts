@@ -157,6 +157,7 @@ export function parseMockMood(input: MoodInput): MockMoodOutcome {
       text: text === '' ? null : input.text,
       filters: { includeGenres: [], excludeGenres: [], maxRuntimeMinutes: RUNTIME_MINUTES[input.maxRuntime], minReleaseYear: null, maxReleaseYear: null, keywords: [] },
       textIgnored: unclear,
+      textUnavailable: false, // BE-19: the mock AI never fails; type-only (owner-approved)
     },
   }
 }

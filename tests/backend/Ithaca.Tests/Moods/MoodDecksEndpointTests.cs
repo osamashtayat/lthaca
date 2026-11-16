@@ -97,6 +97,7 @@ public sealed class MoodDecksEndpointTests(PostgresFixture postgres) : IAsyncLif
         deck.GetProperty("source").GetString().ShouldBe("mood");
         var mood = deck.GetProperty("mood");
         mood.GetProperty("textIgnored").GetBoolean().ShouldBeFalse();
+        mood.GetProperty("textUnavailable").GetBoolean().ShouldBeFalse();
         var filters = mood.GetProperty("filters");
         Strings(filters.GetProperty("includeGenres")).ShouldBe(["Comedy"], "our spelling; genres we don't have are dropped");
         Strings(filters.GetProperty("excludeGenres")).ShouldBe(["Horror"]);
@@ -148,6 +149,7 @@ public sealed class MoodDecksEndpointTests(PostgresFixture postgres) : IAsyncLif
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
         var mood = deck.GetProperty("mood");
         mood.GetProperty("textIgnored").GetBoolean().ShouldBeTrue();
+        mood.GetProperty("textUnavailable").GetBoolean().ShouldBeFalse("we read it: it just wasn't a mood");
         var filters = mood.GetProperty("filters");
         Strings(filters.GetProperty("includeGenres")).ShouldBe(["Comedy"], "the chip's genres only");
         Strings(filters.GetProperty("keywords")).ShouldBeEmpty("nothing from a non-mood reply is used");
@@ -182,20 +184,88 @@ public sealed class MoodDecksEndpointTests(PostgresFixture postgres) : IAsyncLif
     }
 
     [Theory]
-    [InlineData("refused", 422, "ai.refused")]
-    [InlineData("invalid", 502, "ai.invalid_output")]
-    [InlineData("unavailable", 503, "ai.unavailable")]
-    [InlineData("garbage", 502, "ai.invalid_output")]
-    public async Task AiFailures_MapToAiCodes_AndNothingIsCreated(string failure, int status, string code)
+    [InlineData("refused")]
+    [InlineData("invalid")]
+    [InlineData("unavailable")]
+    [InlineData("garbage")]
+    public async Task WhenTheAiFails_WithChips_TheDeckIsBuiltFromTheChips_AndTheTextIsMarkedUnavailable(string failure)
     {
         _llm.Failure = failure;
         var client = await BrowserClient.RegisteredAsync(_factory, Ct);
 
-        var (response, body) = await CreateAsync(client, Mood(["laugh"], text: "something"));
+        var (response, deck) = await CreateAsync(client, Mood(["laugh"], text: "something"));
 
-        ((int)response.StatusCode).ShouldBe(status);
-        body.GetProperty("code").GetString().ShouldBe(code);
+        response.StatusCode.ShouldBe(HttpStatusCode.Created, "BE-19: never an ai.* error for mood text");
+        AssertChipsOnly(deck.GetProperty("mood"));
+        Films(deck).ShouldAllBe(f => Strings(f.GetProperty("genres")).Contains("Comedy"));
+        var again = await client.GetFromJsonAsync<JsonElement>($"/api/decks/{deck.GetProperty("id").GetString()}", Ct);
+        again.GetProperty("mood").GetProperty("textUnavailable").GetBoolean().ShouldBeTrue("stored with the deck's mood");
+    }
+
+    [Theory]
+    [InlineData("refused")]
+    [InlineData("invalid")]
+    [InlineData("unavailable")]
+    [InlineData("garbage")]
+    public async Task WhenTheAiFails_WithoutChips_ItIs422MoodTextUnavailable_AndNothingIsCreated(string failure)
+    {
+        _llm.Failure = failure;
+        var client = await BrowserClient.RegisteredAsync(_factory, Ct);
+
+        var (response, body) = await CreateAsync(client, Mood(text: SecretText));
+
+        response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        body.GetProperty("code").GetString().ShouldBe("mood.text_unavailable");
+        body.GetRawText().ShouldNotContain("zebra-lantern", Case.Insensitive, "the text is never echoed");
         (await CountsAsync(client)).ShouldBe((0, 0));
+    }
+
+    [Fact]
+    public async Task WhenTheAiIsTooSlow_TheTextIsUnavailable()
+    {
+        _llm.Failure = "hang";
+        await using var fast = _factory.WithWebHostBuilder(b => b.ConfigureTestServices(s => s.AddSingleton<TimeProvider>(new FastTimers())));
+        var client = await BrowserClient.RegisteredAsync(fast, Ct);
+
+        var (withChips, deck) = await CreateAsync(client, Mood(["laugh"], text: "something"));
+        var (withoutChips, body) = await CreateAsync(client, Mood(text: "something"));
+
+        withChips.StatusCode.ShouldBe(HttpStatusCode.Created);
+        AssertChipsOnly(deck.GetProperty("mood"));
+        withoutChips.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        body.GetProperty("code").GetString().ShouldBe("mood.text_unavailable");
+    }
+
+    [Fact]
+    public async Task OnceTheDailyBudgetIsSpent_MoodTextIsNotSentToTheAi_AndChipsStillWork()
+    {
+        // One call costs far more than any day's share of the $25 monthly budget, so it spends the day.
+        _llm.Usage = new LlmUsage(10_000_000, 0);
+        await using var budgeted = _base.WithWebHostBuilder(b => b
+            .ConfigureTestServices(s => s.AddSingleton<ILlmClient>(_llm))
+            .UseSetting("Ai:MonthlyBudgetUsd", "25"));
+        var client = await BrowserClient.RegisteredAsync(budgeted, Ct);
+
+        var (first, firstDeck) = await CreateAsync(client, Mood(["laugh"], text: "something funny"));
+        var (second, secondDeck) = await CreateAsync(client, Mood(["laugh"], text: "something funny"));
+        var (third, body) = await CreateAsync(client, Mood(text: "something funny"));
+
+        first.StatusCode.ShouldBe(HttpStatusCode.Created);
+        firstDeck.GetProperty("mood").GetProperty("textUnavailable").GetBoolean().ShouldBeFalse("the budget wasn't spent yet");
+        _llm.Calls.ShouldBe(1, "no call once the day's share is spent");
+        second.StatusCode.ShouldBe(HttpStatusCode.Created);
+        AssertChipsOnly(secondDeck.GetProperty("mood"));
+        third.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        body.GetProperty("code").GetString().ShouldBe("mood.text_unavailable");
+    }
+
+    private static void AssertChipsOnly(JsonElement mood)
+    {
+        mood.GetProperty("textIgnored").GetBoolean().ShouldBeTrue();
+        mood.GetProperty("textUnavailable").GetBoolean().ShouldBeTrue("the client can tell this from 'not a mood'");
+        var filters = mood.GetProperty("filters");
+        Strings(filters.GetProperty("includeGenres")).ShouldBe(["Comedy"], "the chip's genres only");
+        Strings(filters.GetProperty("keywords")).ShouldBeEmpty();
     }
 
     [Fact]
@@ -246,23 +316,40 @@ public sealed class MoodDecksEndpointTests(PostgresFixture postgres) : IAsyncLif
 
         public string Reply { get; set; } = """{"intent":"mood","includeGenres":[],"excludeGenres":[],"maxRuntimeMinutes":null,"minReleaseYear":null,"maxReleaseYear":null,"keywords":[]}""";
 
+        /// <summary><c>refused</c>, <c>unavailable</c>, <c>invalid</c>, <c>garbage</c> (not JSON), <c>hang</c> (never answers), or null.</summary>
         public string? Failure { get; set; }
+
+        /// <summary>Token usage on each reply, for the AI budget; null by default (costs nothing).</summary>
+        public LlmUsage? Usage { get; set; }
 
         public int Calls => _calls;
 
-        public Task<Result<LlmResponse>> CompleteAsync(LlmRequest request, CancellationToken ct)
+        public async Task<Result<LlmResponse>> CompleteAsync(LlmRequest request, CancellationToken ct)
         {
             Interlocked.Increment(ref _calls);
-            Result<LlmResponse> result = Failure switch
+            if (Failure == "hang")
+            {
+                await Task.Delay(Timeout.Infinite, ct);
+            }
+
+            return Failure switch
             {
                 "refused" => AiErrors.Refused,
                 "unavailable" => AiErrors.Unavailable,
                 "invalid" => AiErrors.InvalidOutput(request.Prompt.Id, "a truncated reply"),
                 "garbage" => new LlmResponse("not json", request.Prompt.Id, "scripted"),
-                _ => new LlmResponse(Reply, request.Prompt.Id, "scripted"),
+                _ => new LlmResponse(Reply, request.Prompt.Id, "scripted", Usage),
             };
-            return Task.FromResult(result);
         }
+    }
+
+    /// <summary>The system clock with timers 100 times faster, so a 15 s AI timeout fires in 150 ms.</summary>
+    internal sealed class FastTimers : TimeProvider
+    {
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) =>
+            System.CreateTimer(callback, state, Faster(dueTime), Faster(period));
+
+        private static TimeSpan Faster(TimeSpan span) => span == Timeout.InfiniteTimeSpan ? span : span / 100;
     }
 
     /// <summary>Every log line the API writes, with its exception, at any level.</summary>

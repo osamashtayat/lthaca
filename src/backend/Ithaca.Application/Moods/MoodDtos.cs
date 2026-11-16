@@ -24,7 +24,8 @@ public sealed record MoodFiltersDto(
 
 /// <summary>
 /// A stored <c>MoodQuery</c>: the input as given plus the filters derived from it. <see cref="TextIgnored"/> is true when the
-/// text wasn't a mood, so only the chips were used (ADR-0022).
+/// text wasn't used, so only the chips were (ADR-0022); <see cref="TextUnavailable"/> is also true when that was because we
+/// couldn't read the text right now (AI failure or the daily AI budget), not because it wasn't a mood (BE-19).
 /// </summary>
 public sealed record MoodQueryDto(
     Guid Id,
@@ -33,4 +34,5 @@ public sealed record MoodQueryDto(
     string? Language,
     string? Text,
     MoodFiltersDto Filters,
-    bool TextIgnored);
+    bool TextIgnored,
+    bool TextUnavailable);

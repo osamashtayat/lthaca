@@ -64,9 +64,33 @@ public sealed class AiOptions : IConfigSection
     [Required]
     public string PromptsPath { get; init; } = "prompts";
 
+    /// <summary>
+    /// The monthly AI budget in US dollars (L3: $25). <see cref="AiBudget"/> lets each UTC day spend its share (this ÷ the days
+    /// in the month); once a day's share is spent, no LLM call is made until the next UTC day. 0 switches LLM calls off.
+    /// </summary>
+    [Range(0, 10_000)]
+    public decimal MonthlyBudgetUsd { get; init; } = 25m;
+
+    /// <summary>
+    /// Price per million tokens, keyed by model id, for <see cref="AiBudget"/>. A model missing here (e.g. a server-side
+    /// fallback model) is priced at the highest price listed, so the budget errs on the safe side. Required with the
+    /// Anthropic provider (startup fails otherwise); the Fake provider reports no usage.
+    /// </summary>
+    public Dictionary<string, ModelPrice> Prices { get; init; } = new(StringComparer.Ordinal);
+
     public string ModelFor(PromptId prompt)
     {
         ArgumentNullException.ThrowIfNull(prompt);
         return ModelOverrides.TryGetValue(prompt.Name, out var model) && !string.IsNullOrWhiteSpace(model) ? model : LlmModel;
     }
+}
+
+/// <summary>A model's list price in US dollars per million tokens (an <c>Ai:Prices</c> entry; 0–1000, checked at startup).</summary>
+public sealed class ModelPrice
+{
+    public decimal InputPerMillionTokens { get; init; }
+
+    public decimal OutputPerMillionTokens { get; init; }
+
+    public bool IsValid => InputPerMillionTokens is >= 0 and <= 1_000 && OutputPerMillionTokens is >= 0 and <= 1_000;
 }

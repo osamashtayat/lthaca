@@ -15,8 +15,10 @@ var caseFilter = caseArg >= 0 && caseArg + 1 < args.Length ? args[caseArg + 1] :
 var repoRoot = FindRepoRoot();
 var casesFolder = casesArg >= 0 && casesArg + 1 < args.Length ? args[casesArg + 1] : Path.Combine(repoRoot, "evals", "cases");
 
-// Same registrations and config keys as the API, so `--live` uses exactly the provider the API would.
+// Same registrations and config as the API (its appsettings.json, incl. model overrides and prices), so `--live` uses
+// exactly the provider and models the API would.
 var configuration = new ConfigurationBuilder()
+    .AddJsonFile(Path.Combine(repoRoot, "src", "backend", "Ithaca.Api", "appsettings.json"), optional: false)
     .AddInMemoryCollection(new Dictionary<string, string?> { ["Ai:PromptsPath"] = Path.Combine(repoRoot, "prompts") })
     .AddUserSecrets(ApiUserSecretsId)
     .AddEnvironmentVariables()

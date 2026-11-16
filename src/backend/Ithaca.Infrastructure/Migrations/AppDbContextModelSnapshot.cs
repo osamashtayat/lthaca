@@ -653,6 +653,10 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("text_ignored");
 
+                    b.Property<bool>("TextUnavailable")
+                        .HasColumnType("boolean")
+                        .HasColumnName("text_unavailable");
+
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");

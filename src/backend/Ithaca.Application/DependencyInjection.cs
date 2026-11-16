@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<FilmEmbedder>(); // collaborator of CatalogSyncService only, not a use-case service
         services.AddScoped<FilmTrailerService>();
         services.AddScoped<AuthService>();
+        services.AddSingleton<AiBudget>(); // the daily AI spend cap and the one caller of ILlmClient; singleton: it holds the day's count
         services.AddScoped<MoodInterpreter>(); // collaborator of DeckService and RoomDeckService, not a use-case service
         services.AddScoped<DeckDealer>(); // collaborator of DeckService and RoomDeckService, not a use-case service
         services.AddScoped<DeckItemReader>(); // collaborator of DeckService and RoomDeckService, not a use-case service

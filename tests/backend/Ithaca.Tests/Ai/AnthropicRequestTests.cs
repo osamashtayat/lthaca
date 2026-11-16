@@ -55,6 +55,14 @@ public sealed class AnthropicReplyTests
         AnthropicLlmClient.MapReply(Prompts.MoodParse, "end_turn", " ", "m").Error!.Code.ShouldBe(StructuredOutput.InvalidOutputCode);
 
     [Fact]
+    public void TheReply_CarriesItsTokenUsage_ForTheAiBudget()
+    {
+        var usage = new LlmUsage(1200, 80);
+
+        AnthropicLlmClient.MapReply(Prompts.MoodParse, "end_turn", "{}", "claude-haiku-5-5", usage).Value.Usage.ShouldBe(usage);
+    }
+
+    [Fact]
     public void Text_IsTheResponse()
     {
         var result = AnthropicLlmClient.MapReply(Prompts.MoodParse, "end_turn", "{}", "claude-opus-5-5");

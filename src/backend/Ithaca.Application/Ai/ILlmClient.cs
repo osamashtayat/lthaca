@@ -20,4 +20,8 @@ public sealed record LlmRequest(RenderedPrompt Prompt, string Input, int MaxOutp
 /// <param name="Json">The model's reply: one JSON object matching the prompt's schema.</param>
 /// <param name="PromptId">Which prompt (name + version) produced it, for logs and evals.</param>
 /// <param name="Model">The model that actually answered (may be a fallback model).</param>
-public sealed record LlmResponse(string Json, PromptId PromptId, string Model);
+/// <param name="Usage">Tokens the call used, for the daily AI budget (<see cref="AiBudget"/>); null when the provider doesn't say (Fake).</param>
+public sealed record LlmResponse(string Json, PromptId PromptId, string Model, LlmUsage? Usage = null);
+
+/// <summary>What one LLM call used; priced by <see cref="AiOptions.Prices"/>.</summary>
+public sealed record LlmUsage(long InputTokens, long OutputTokens);
