@@ -58,6 +58,15 @@ public static class ErrorCodes
     /// <summary>Mood text isn't a mood (unclear or off-topic) and no chips were tapped; nothing is created (ADR-0022).</summary>
     public const string MoodUnclear = "mood.unclear";
 
+    /// <summary>
+    /// Mood text we couldn't read right now (the AI failed or the daily AI budget is used up) and no chips were tapped;
+    /// nothing is created. The screens ask for a few moods instead (BE-19).
+    /// </summary>
+    public const string MoodTextUnavailable = "mood.text_unavailable";
+
+    /// <summary>Too many requests from one person or address for this kind of call; the response carries <c>Retry-After</c> (BE-19).</summary>
+    public const string RateLimited = "rate.limited";
+
     public const string AiInvalidOutput = "ai.invalid_output";
     public const string AiUnavailable = "ai.unavailable";
     public const string AiRefused = "ai.refused";

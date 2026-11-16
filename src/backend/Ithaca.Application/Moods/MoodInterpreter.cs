@@ -2,6 +2,7 @@ using Ithaca.Application.Ai;
 using Ithaca.Application.Common;
 using Ithaca.Application.Films;
 using Ithaca.Domain.Moods;
+using Microsoft.Extensions.Logging;
 
 namespace Ithaca.Application.Moods;
 
@@ -16,13 +17,18 @@ namespace Ithaca.Application.Moods;
 /// <item>Not a mood: with chips → chips only and <see cref="MoodQuery.TextIgnored"/>; without chips → <c>mood.unclear</c>.</item>
 /// <item>A chip's genre is never excluded by the text: chips are the explicit choice.</item>
 /// <item>The text is never logged or put in a message.</item>
+/// <item>The text can't be read (owner, 2026-11-16; BE-19): provider down or slower than <see cref="Timeout"/>, refusal,
+/// invalid reply, or the daily AI budget spent → with chips: chips only, <see cref="MoodQuery.TextIgnored"/> and
+/// <see cref="MoodQuery.TextUnavailable"/>; without chips → <c>mood.text_unavailable</c>. Never an <c>ai.*</c> error.</item>
 /// </list>
-/// Model failures pass through as <c>ai.refused</c> / <c>ai.invalid_output</c> / <c>ai.unavailable</c>.
 /// </summary>
-public sealed class MoodInterpreter(IAppDbContext db, ILlmClient llm, IPromptLibrary prompts, TimeProvider time)
+public sealed partial class MoodInterpreter(IAppDbContext db, AiBudget llm, IPromptLibrary prompts, TimeProvider time, ILogger<MoodInterpreter> logger)
 {
     /// <summary>Generous for the small JSON reply.</summary>
     private const int MaxOutputTokens = 512;
+
+    /// <summary>Someone is waiting on the mood screen; after this, the text is treated as unreadable.</summary>
+    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(15);
 
     public async Task<Result<MoodQuery>> InterpretAsync(Guid? userId, MoodInput input, CancellationToken ct)
     {
@@ -47,16 +53,17 @@ public sealed class MoodInterpreter(IAppDbContext db, ILlmClient llm, IPromptLib
                 ["year"] = now.Year.ToString(System.Globalization.CultureInfo.InvariantCulture),
             },
             ct);
-        var reply = await llm.CompleteAsync(new LlmRequest(prompt, query.Text, MaxOutputTokens), ct);
-        if (!reply.IsSuccess)
-        {
-            return reply.Error;
-        }
-
-        var parsed = StructuredOutput.Parse<MoodParseOutput>(reply.Value);
+        var parsed = await ParseAsync(prompt, query.Text, ct);
         if (!parsed.IsSuccess)
         {
-            return parsed.Error;
+            LogTextUnavailable(logger, prompt.Id, parsed.Error.Code);
+            if (query.Moods.Length == 0)
+            {
+                return MoodErrors.TextUnavailable;
+            }
+
+            query.SetFilters(chips.IncludeGenres, chips.ExcludeGenres, runtime, null, null, [], textIgnored: true, textUnavailable: true);
+            return query;
         }
 
         var text = parsed.Value;
@@ -85,6 +92,13 @@ public sealed class MoodInterpreter(IAppDbContext db, ILlmClient llm, IPromptLib
         return query;
     }
 
+    /// <summary>The model's reading of the text, or why there is none.</summary>
+    private async Task<Result<MoodParseOutput>> ParseAsync(RenderedPrompt prompt, string text, CancellationToken ct)
+    {
+        var reply = await llm.CompleteAsync(new LlmRequest(prompt, text, MaxOutputTokens), Timeout, ct);
+        return reply.IsSuccess ? StructuredOutput.Parse<MoodParseOutput>(reply.Value) : reply.Error;
+    }
+
     /// <summary>The model's genres that exist in our catalog, in our spelling; anything else is dropped.</summary>
     private static IEnumerable<string> Known(IEnumerable<string> genres, Dictionary<string, string> known) =>
         genres.Select(g => known.GetValueOrDefault(g.Trim())).OfType<string>();
@@ -95,4 +109,7 @@ public sealed class MoodInterpreter(IAppDbContext db, ILlmClient llm, IPromptLib
         (_, null) => a,
         _ => Math.Min(a.Value, b.Value),
     };
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Prompt {Prompt} failed with {Code}; mood text not used")]
+    private static partial void LogTextUnavailable(ILogger logger, PromptId prompt, string code);
 }

@@ -412,7 +412,7 @@ const roomHandlers = [
     setMockMemberReady(room.code, room.me.id, true)
     const ready = mockRoomFor(room.code)
     return ready
-      ? HttpResponse.json<ResponseOf<'/api/rooms/{code}/mood', 'put', 200>>({ member: ready.me, textIgnored: outcome.mood.textIgnored })
+      ? HttpResponse.json<ResponseOf<'/api/rooms/{code}/mood', 'put', 200>>({ member: ready.me, textIgnored: outcome.mood.textIgnored, textUnavailable: outcome.mood.textUnavailable })
       : problem(500, 'server.error')
   }),
   http.post(apiPath('/api/rooms/{code}/start'), ({ params }) => {

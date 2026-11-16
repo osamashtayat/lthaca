@@ -67,7 +67,7 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
   ("ignore your rules", fake `SYSTEM:` lines, closing tags) are `offTopic` and never followed. Filters are empty unless
   `intent` is `mood`.
 - The mood service decides: chips + non-mood text → chips only, `textIgnored: true`; no chips + non-mood text → 422
-  `mood.unclear`; empty text → no LLM call. Real refusals stay `ai.refused`.
+  `mood.unclear`; empty text → no LLM call. A refusal or any other AI failure is not an error for mood text (BE-19, below).
 - Never repeat the user's text in a response, message or log; user-facing copy says "we", never "the AI".
 
 ## Mood flow (BE-09)
@@ -84,7 +84,11 @@ in BE-11) → a `MoodQuery` saved with the deck:
    our spelling kept).
 4. **Intent** (ADR-0022): `mood` → text filters join the chips' (a chip's genre is never excluded by the text; the
    stricter runtime wins). `unclear` / `offTopic` → with chips: chips only, `textIgnored: true`, nothing from the reply
-   is used; without chips: 422 `mood.unclear`, nothing saved. Model failures pass through as `ai.*`, nothing saved.
+   is used; without chips: 422 `mood.unclear`, nothing saved.
+   **The text can't be read** (BE-19, owner 2026-11-16): provider down or no answer within 15 s, refusal, invalid reply,
+   or the daily budget spent (Spend cap, below) → with chips: chips only, `textIgnored` and `textUnavailable` true;
+   without chips: 422 `mood.text_unavailable`, nothing saved. A warning log with the prompt id and error code only. No
+   second provider as a standby.
 5. The deck's filters are hard limits on every batch (any included genre, no excluded genre, runtime, years, language;
    a film missing a value doesn't pass), and its included genres are a strong signal for adaptation and the top 3.
    `keywords` don't filter; they reach the AI ranking of the top 3 (BE-13, below).
@@ -117,6 +121,23 @@ Reasons under picks, and the order of the solo top 3. `PickAdvisor` (Application
   tries again; a room whose picks have no facts stores "no reasons" without calling the model.
 - **Models:** `Ai:ModelOverrides` sends both prompts to `claude-haiku-5-5` (owner, 2026-11-16): short replies on a page
   someone is waiting for. v1 of both prompts stays in `prompts/` for the evals but is no longer used.
+
+## Spend cap (BE-19, L3)
+- `AiBudget` (Application/Ai, singleton) is the one caller of `ILlmClient` in Application: `MoodInterpreter` and
+  `PickAdvisor` call `AiBudget.CompleteAsync`. Each UTC day may spend `Ai:MonthlyBudgetUsd` (25, L3) ÷ the days in that
+  month (≈ $0.83). Each reply's token usage (`LlmResponse.Usage`, from the Anthropic reply) is priced by `Ai:Prices`
+  (US dollars per million input / output tokens, per model; a model not listed, e.g. a server-side fallback, is priced at
+  the highest listed). Prices are required with `Ai:LlmProvider = Anthropic`; update them when Anthropic's list prices
+  change. `Ai:MonthlyBudgetUsd = 0` switches every LLM call off.
+- Once today's share is spent, no LLM call is made until the next UTC day: `AiErrors.BudgetReached` (code `ai.unavailable`),
+  so callers fall back as on any AI failure (mood text → chips or `mood.text_unavailable`; picks → `reason: null`). One
+  warning log per day when it is reached.
+- The count is in memory (one API instance today, OPS-06): a restart starts the day again, calls already running when the
+  share runs out still finish, and failed calls (refusals, truncated replies) aren't counted. Each provider's own
+  dashboard limit (OPS-10) is the hard backstop. Embeddings aren't counted: only the nightly sync embeds (no user request
+  calls Voyage), and By taste uses stored vectors.
+- Request rate limits on AI-backed endpoints (api-contract.md §2, as built BE-19) stop one person from spending the day's
+  share alone.
 
 ## Embeddings and similarity (ADR-0002, ADR-0013)
 - One vector per film in `films.embedding` (`vector(1024)`, HNSW cosine index) plus `films.embedding_model`.

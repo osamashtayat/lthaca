@@ -10,6 +10,10 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
 - **Contract stubs** (BE-01 to BE-16, ADR-0021): endpoints whose task hadn't landed answered 501
   `server.not_implemented` through `ContractStub` and documented it with `[ContractStub]`. BE-17 deleted all three once
   every endpoint was live; a later contract-first task that needs stubs re-adds them (api-contract.md §2, §10).
+- **Rate limits** (BE-19): an action that signs in, joins, creates a deck or an import, or calls the AI carries
+  `[EnableRateLimiting(RateLimitPolicies.X)]` and `[ProducesResponseType<ProblemDetails>(429)]`. The policies, their
+  per-person / per-IP partitioning and the 429 `rate.limited` + `Retry-After` answer live in `Api/RateLimiting/`; the limits
+  in the `RateLimits` config section (api-contract.md §2). Tests turn them off (`OfflineProviders`) except `RateLimitTests`.
 - List queries derive from `PageRequest` and bind camelCase names (`CamelCaseBindingMetadataProvider`).
 - Declare `[ProducesResponseType]` for every status; they feed `contracts/openapi.json` and the frontend types.
 - Route constraints (`{tmdbId:int:min(1)}`) and DataAnnotations on `…Request` records do input-shape validation
@@ -62,6 +66,7 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
 ## Configuration
 - One options class per section, implementing `IConfigSection` (`static string SectionName`), next to its consumer.
 - Register with `services.AddValidatedOptions<T>(configuration)` (binds, validates DataAnnotations, fails at startup).
+  Application's options are registered in `AddInfrastructure`; the Api's own (`RateLimitOptions`) in its setup method.
 - Defaults in `appsettings.json`; secrets only via env vars / user-secrets; every key in `.env.example` with a placeholder.
 
 ## File uploads (BE-15)
