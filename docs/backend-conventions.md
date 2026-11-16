@@ -7,13 +7,9 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
 - `[ApiController]`, `[Route("api/<plural>")]`, `[Tags("<Feature>")]`, sealed, primary-constructor injection of **services only**.
 - One action = one service call, then `this.ToActionResult(result)` (200), `this.ToCreatedResult(result, v => url)` (201) or
   `this.ToActionResult(result)` for a non-generic `Result` (204). Nothing else: no `if`, no mapping, no try/catch.
-- **Contract stubs** (BE-01): an endpoint whose task hasn't landed has its final route, DTOs and statuses, plus
-  `[ContractStub]` (documents 501), and its service method returns `ContractStub.Of<T>()` / `ContractStub.Command()`
-  (501 `server.not_implemented`). Implementing it: replace the body, drop `[ContractStub]` and the CA1822 suppression,
-  remove its row from `ContractStubEndpointTests`, re-export the contract.
-- **A stubbed enum value on a live endpoint** (BE-14a: `source: "taste"`, `mode: "taste"`): the action keeps working and
-  carries `[ContractStub]`; the service returns `ContractStub.NotImplemented` at the top for that value; the value has its
-  own row in `ContractStubEndpointTests`. Implementing it removes all three (guard, attribute, row).
+- **Contract stubs** (BE-01 to BE-16, ADR-0021): endpoints whose task hadn't landed answered 501
+  `server.not_implemented` through `ContractStub` and documented it with `[ContractStub]`. BE-17 deleted all three once
+  every endpoint was live; a later contract-first task that needs stubs re-adds them (api-contract.md §2, §10).
 - List queries derive from `PageRequest` and bind camelCase names (`CamelCaseBindingMetadataProvider`).
 - Declare `[ProducesResponseType]` for every status; they feed `contracts/openapi.json` and the frontend types.
 - Route constraints (`{tmdbId:int:min(1)}`) and DataAnnotations on `…Request` records do input-shape validation

@@ -674,7 +674,7 @@ lint, test, build.
 - **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L3, BE-19).
 - **Contract:** none here (BE-19 makes the mood change). **Scope:** in: docs only. **Tests:** none (docs).
 
-### BE-17 — Remove the contract-stub plumbing · `Todo`
+### BE-17 — Remove the contract-stub plumbing · `Done` (PR #67)
 - **Objective:** no stubs left. **Deps:** BE-12, BE-14, BE-15, BE-16. **Modules:** `ErrorCodes.cs`,
   `ErrorStatusCodes.cs`, `problem.ts`, stub test.
 - **Contract:** §2 (`server.not_implemented` removed).

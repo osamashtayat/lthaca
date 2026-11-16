@@ -75,11 +75,11 @@ BE-01 adds all of them at once, so mocks and screens can use them from day one.
 | 422 | `taste.not_ready` | a deck (or, for its host, a room) by taste without enough history (§12) — BE-14a |
 | 422 | `mood.unclear` | mood text isn't a mood (unclear or off-topic) and no chips were tapped; nothing created (ADR-0022) |
 | 422 / 502 / 503 | `ai.refused` / `ai.invalid_output` / `ai.unavailable` | mood parsing failed — exist (docs/ai.md) |
-| 501 | `server.not_implemented` | contract stub: the endpoint exists, its backlog task hasn't landed (BE-01) |
 | 503 | `tmdb.unavailable` | trailer lookup failed and nothing is cached — exists |
 
-`server.not_implemented` is temporary plumbing: it disappears from an endpoint when its task lands, and the code itself
-is deleted when no stub is left.
+**As built (BE-17):** every endpoint is live, so the stub code (501 `server.not_implemented`), `ContractStub` and
+`[ContractStub]` are deleted. A later contract-first task that needs stubs again (ADR-0021) re-adds them with its first
+stub and lists the code here.
 
 ## 3. Shared shapes
 
@@ -164,7 +164,7 @@ type CurrentUserDto  = {
 "Forgot password?" on `/sign-in` and the emailed link's page `/reset-password?token=…` (FE-16). BE-18a adds the DTOs, the
 code and 501 stubs; BE-18 the logic (`PasswordResetService` in `Application/Users`) and the email (Resend, L4).
 
-**Rules** (owner, 2026-11-16; BE-18 builds them, until then both answer 501 `server.not_implemented`):
+**Rules** (owner, 2026-11-16; BE-18 built them; until then both answered 501, a code BE-17 removed, §2):
 - **Forgot password:** always 204 for a well-formed email, whether or not it has an account, and for any caller (visitor,
   guest or user), so the answer never reveals an account. When it has one, the server emails a link to
   `<site>/reset-password?token=<token>`. Asking again sends a new link; earlier links stay valid until they expire or one
@@ -519,6 +519,7 @@ Mirrors FlowOps (ADR-0021):
 3. **Breaking changes** (rename, remove, retype, new required input) go additive first: add, migrate consumers, remove in a
    later task. Adding an enum value (e.g. `taste`) is additive but must be handled by the frontend in the same release.
 4. A stub (`501 server.not_implemented`) is part of the contract: its shapes are final, only the behaviour is missing.
+   BE-17 removed the stub plumbing once nothing was stubbed (§2); a task that stubs again re-adds it.
 
 ### As built (BE-01)
 The stubs follow this file exactly. Names the shapes above leave implicit, now fixed in `contracts/openapi.json`:
@@ -527,7 +528,7 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
   `site: TrailerSite` (`"YouTube"`, TMDB's spelling kept).
 - `MoodInput` keeps its name (it is part of `CreateDeckRequest`, not a request of its own).
 - Browse and library sorts are the enums `FilmSort` and `LibrarySort`; query parameters are camelCase like JSON.
-- Stubbed actions also declare `501` (`[ContractStub]`); a feature task removes the attribute when it lands.
+- Stubbed actions also declared `501` (`[ContractStub]`); feature tasks removed the attribute, BE-17 the attribute itself.
 
 ## 11. Open questions
 
@@ -576,7 +577,7 @@ type TasteDto = {
 }
 type TasteGenreDto = { genre: string; percent: number }   // a catalog genre (as in FilmDto.genres); 1–100
 ```
-Rules (BE-14 builds them; until then the three rows answer 501 `server.not_implemented`, other sources and modes work):
+Rules (BE-14 built them; until then the three rows answered 501, a code BE-17 removed, §2):
 - **Ready** (A16, ADR-0024 Q2): at least `signalsNeeded` films with a positive signal. Guests have no taste (no
   library, ADR-0012): `GET /api/taste` is user-only.
 - **Receipt:** `percent` is a genre's share among the positive-signal films' genres, rounded; `notForYou` comes from
@@ -785,7 +786,7 @@ the sign-in lockout and is saved before anything else happens. Deletion closes t
 the account in one commit (room memberships, votes and everything else by FK cascade), then signs out and publishes
 `roomClosed` / `memberLeft`.
 
-**As built (BE-16a):** the four actions exist with the shapes above and answer 501 `server.not_implemented` until
+**As built (BE-16a):** the four actions existed with the shapes above and answered 501 (removed in BE-17, §2) until
 BE-16; guests and visitors get 401 `auth.unauthenticated`. `DELETE /api/profile` takes a JSON body (`openapi-fetch`
 sends it; keep the `Content-Type: application/json`). Password change and deletion re-issue `XSRF-TOKEN` like the §4 actions
 (checked on the stub answer). A body missing a required property is a 400 `validation` on `$` (deserialisation),

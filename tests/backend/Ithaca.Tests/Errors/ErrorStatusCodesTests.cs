@@ -1,6 +1,7 @@
 using System.Reflection;
 using Ithaca.Api.Errors;
 using Ithaca.Domain.Errors;
+using Microsoft.AspNetCore.Http;
 
 namespace Ithaca.Tests.Errors;
 
@@ -13,6 +14,13 @@ public sealed class ErrorStatusCodesTests
             .Where(f => f.IsLiteral).Select(f => (string)f.GetRawConstantValue()!);
 
         codes.ShouldBe(ErrorStatusCodes.MappedCodes, ignoreOrder: true);
+    }
+
+    /// <summary>BE-17: the contract-stub code is gone, so nothing answers 501 any more; a stub that comes back re-adds it.</summary>
+    [Fact]
+    public void NoErrorCode_MapsToNotImplemented()
+    {
+        ErrorStatusCodes.MappedCodes.ShouldNotContain(code => ErrorStatusCodes.For(code) == StatusCodes.Status501NotImplemented);
     }
 
     [Fact]

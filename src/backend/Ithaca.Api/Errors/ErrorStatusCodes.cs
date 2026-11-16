@@ -21,7 +21,6 @@ public static class ErrorStatusCodes
         [ErrorCodes.TmdbUnavailable] = StatusCodes.Status503ServiceUnavailable,
         [ErrorCodes.WikidataUnavailable] = StatusCodes.Status503ServiceUnavailable,
         [ErrorCodes.ServerError] = StatusCodes.Status500InternalServerError,
-        [ErrorCodes.ServerNotImplemented] = StatusCodes.Status501NotImplemented,
         [ErrorCodes.AuthAntiforgeryFailed] = StatusCodes.Status400BadRequest,
         [ErrorCodes.AuthUnauthenticated] = StatusCodes.Status401Unauthorized,
         [ErrorCodes.AuthInvalidCredentials] = StatusCodes.Status401Unauthorized,
