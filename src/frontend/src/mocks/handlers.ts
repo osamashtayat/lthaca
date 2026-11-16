@@ -111,6 +111,7 @@ const authHandlers = [
     const body = (await request.json()) as RequestOf<'/api/auth/reset-password', 'post'>
     if (body.newPassword.length < 8 || body.newPassword.length > 128) return problem(400, 'validation', { newPassword: ['Use 8 to 128 characters.'] })
     if (body.token !== MOCK_RESET_TOKEN) return problem(400, 'auth.invalid_reset_token')
+    // The mock is single-account: its one valid token resets the default mock user, whatever email was asked for.
     const user = resetMockPassword(MOCK_USER.email ?? '', body.newPassword)
     if (!user) return problem(400, 'auth.invalid_reset_token')
     setMockSession(user)

@@ -8,6 +8,7 @@ type ForgotPasswordRequest = components['schemas']['ForgotPasswordRequest']
 export function useForgotPassword() {
   return useMutation({
     mutationFn: async (body: ForgotPasswordRequest): Promise<void> => {
+      // No result to read: a non-2xx throws ApiError from the client middleware, so failures still reach onError.
       await api.POST('/api/auth/forgot-password', { body })
     },
   })
