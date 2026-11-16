@@ -30,6 +30,6 @@ public sealed record RenderedPrompt(PromptId Id, string Text, string OutputSchem
 public static class Prompts
 {
     public static readonly PromptId MoodParse = new("mood-parse", 2);
-    public static readonly PromptId RankCandidates = new("rank-candidates", 1);
-    public static readonly PromptId ExplainPick = new("explain-pick", 1);
+    public static readonly PromptId RankCandidates = new("rank-candidates", 2);
+    public static readonly PromptId ExplainPick = new("explain-pick", 2);
 }

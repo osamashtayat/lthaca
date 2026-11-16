@@ -31,7 +31,7 @@ public sealed record DeckDto(
     int SwipeCount,
     int YesCount);
 
-/// <summary>One of the deck's top picks; <see cref="Reason"/> stays null until BE-13.</summary>
+/// <summary>One of the deck's top picks; <see cref="Reason"/> is the AI's one-liner (BE-13), null when there is none.</summary>
 public sealed record TopPickDto(FilmDto Film, string? Reason);
 
 /// <summary><c>GET /api/decks/{deckId}/top</c>: 1–3 picks from the right swipes, best first.</summary>

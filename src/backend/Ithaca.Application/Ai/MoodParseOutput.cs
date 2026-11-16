@@ -29,7 +29,7 @@ public enum MoodIntent
     OffTopic,
 }
 
-/// <summary>Typed output of <c>prompts/rank-candidates.v1.md</c>: TMDB ids taken ONLY from the candidates we sent.</summary>
+/// <summary>Typed output of <c>prompts/rank-candidates.v2.md</c> (same shape as v1): TMDB ids taken ONLY from the candidates we sent.</summary>
 public sealed record RankCandidatesOutput(IReadOnlyList<RankedCandidate> Ranked);
 
 public sealed record RankedCandidate(int TmdbId, string Reason);

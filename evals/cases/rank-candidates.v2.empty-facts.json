@@ -1,0 +1,43 @@
+{
+  "id": "rank-candidates.v2.empty-facts",
+  "kind": "edge",
+  "description": "a candidate with almost no facts gets a modest reason that invents nothing",
+  "prompt": "rank-candidates.v2",
+  "variables": {
+    "audience": "one person",
+    "limit": "3"
+  },
+  "input": "{\"taste\": {\"moodGenres\": [\"Drama\"], \"moodKeywords\": [], \"maxRuntimeMinutes\": null, \"likedGenres\": [], \"dislikedGenres\": []}, \"candidates\": [{\"tmdbId\": 680, \"genres\": [], \"subjects\": [], \"directors\": [], \"cast\": [], \"countries\": [], \"languages\": [], \"year\": 1994, \"runtimeMinutes\": null, \"awards\": []}, {\"tmdbId\": 550, \"genres\": [\"drama film\", \"thriller film\"], \"subjects\": [\"dissociative identity disorder\", \"insomnia\", \"consumerism\"], \"directors\": [\"David Fincher\"], \"cast\": [\"Brad Pitt\", \"Edward Norton\", \"Helena Bonham Carter\"], \"countries\": [\"United States\"], \"languages\": [\"English\"], \"year\": 1999, \"runtimeMinutes\": 139, \"awards\": []}]}",
+  "candidates": [
+    680,
+    550
+  ],
+  "recordedResponse": {
+    "ranked": [
+      {
+        "tmdbId": 550,
+        "reason": "A Fincher drama, which fits the drama you're in the mood for."
+      },
+      {
+        "tmdbId": 680,
+        "reason": "A 1994 film you said yes to; we know little more about it."
+      }
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "idsFromCandidates"
+    },
+    {
+      "type": "maxReasonLength",
+      "value": 200
+    },
+    {
+      "type": "mustNotContain",
+      "value": "Tarantino"
+    }
+  ]
+}

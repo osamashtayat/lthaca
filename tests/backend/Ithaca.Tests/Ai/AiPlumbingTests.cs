@@ -58,6 +58,20 @@ public sealed class AiPlumbingTests
     }
 
     [Fact]
+    public async Task FakeLlm_V2Inputs_EchoOnlyGivenIds()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var rank = await Library().RenderAsync(Prompts.RankCandidates, new Dictionary<string, string>(), ct);
+        var explain = await Library().RenderAsync(Prompts.ExplainPick, new Dictionary<string, string>(), ct);
+
+        var ranked = await new FakeLlmClient().CompleteAsync(new LlmRequest(rank, """{"taste":{},"candidates":[{"tmdbId":27205},{"tmdbId":550}]}"""), ct);
+        var explained = await new FakeLlmClient().CompleteAsync(new LlmRequest(explain, """{"result":"match","groupSize":2,"picks":[{"tmdbId":550}]}"""), ct);
+
+        StructuredOutput.Parse<RankCandidatesOutput>(ranked.Value).Value.Ranked.Select(r => r.TmdbId).ShouldBe([27205, 550]);
+        StructuredOutput.Parse<ExplainPicksOutput>(explained.Value).Value.Reasons.Select(r => r.TmdbId).ShouldBe([550]);
+    }
+
+    [Fact]
     public void StructuredOutput_InvalidJson_IsAnError()
     {
         var parsed = StructuredOutput.Parse<MoodParseOutput>(new LlmResponse("not json", Prompts.MoodParse, "fake"));

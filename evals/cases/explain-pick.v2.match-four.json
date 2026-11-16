@@ -1,0 +1,36 @@
+{
+  "id": "explain-pick.v2.match-four",
+  "kind": "representative",
+  "description": "a four-way match gets one warm reason for the group",
+  "prompt": "explain-pick.v2",
+  "variables": {
+    "audience": "a group of 4 friends"
+  },
+  "input": "{\"result\": \"match\", \"groupSize\": 4, \"picks\": [{\"tmdbId\": 27205, \"yesCount\": 4, \"noCount\": 0, \"seenCount\": 0, \"facts\": {\"genres\": [\"science fiction film\", \"heist film\", \"action film\"], \"subjects\": [\"dream\", \"subconscious\"], \"directors\": [\"Christopher Nolan\"], \"cast\": [\"Leonardo DiCaprio\", \"Elliot Page\", \"Tom Hardy\"], \"countries\": [\"United States\", \"United Kingdom\"], \"languages\": [\"English\", \"Japanese\"], \"year\": 2010, \"runtimeMinutes\": 148, \"awards\": [\"Academy Award for Best Cinematography\", \"Academy Award for Best Visual Effects\"]}}]}",
+  "candidates": [
+    27205
+  ],
+  "recordedResponse": {
+    "reasons": [
+      {
+        "tmdbId": 27205,
+        "reason": "All four of you said yes to Nolan's dream heist, so it's an easy call."
+      }
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "idsFromCandidates"
+    },
+    {
+      "type": "reasonForEveryCandidate"
+    },
+    {
+      "type": "maxReasonLength",
+      "value": 200
+    }
+  ]
+}

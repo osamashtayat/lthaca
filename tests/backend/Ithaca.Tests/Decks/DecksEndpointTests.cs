@@ -297,6 +297,8 @@ public sealed class DecksEndpointTests(PostgresFixture postgres) : IAsyncLifetim
         var picks = top.GetProperty("picks").EnumerateArray().ToList();
         picks.Count.ShouldBe(3);
         picks.Select(p => p.GetProperty("film").GetProperty("tmdbId").GetInt32()).ShouldBeSubsetOf(yes.Select(TmdbId));
-        picks.ShouldAllBe(p => p.GetProperty("reason").ValueKind == JsonValueKind.Null);
+        // Reasons come from the AI (BE-13; the Fake LLM here) and only for films with Wikidata facts; these films have none.
+        picks.Where(p => p.GetProperty("film").GetProperty("tmdbId").GetInt32() >= 790000 && p.GetProperty("film").GetProperty("tmdbId").GetInt32() < 791000)
+            .ShouldAllBe(p => p.GetProperty("reason").ValueKind == JsonValueKind.Null);
     }
 }

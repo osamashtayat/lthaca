@@ -1,0 +1,39 @@
+{
+  "id": "rank-candidates.v2.mind-bender",
+  "kind": "representative",
+  "description": "a twisty sci-fi mood favours the heist-in-dreams film",
+  "prompt": "rank-candidates.v2",
+  "variables": {
+    "audience": "one person",
+    "limit": "3"
+  },
+  "input": "{\"taste\": {\"moodGenres\": [\"Science Fiction\", \"Thriller\"], \"moodKeywords\": [\"twist\", \"mind-bending\"], \"maxRuntimeMinutes\": null, \"likedGenres\": [\"science fiction film\"], \"dislikedGenres\": []}, \"candidates\": [{\"tmdbId\": 550, \"genres\": [\"drama film\", \"thriller film\"], \"subjects\": [\"dissociative identity disorder\", \"insomnia\", \"consumerism\"], \"directors\": [\"David Fincher\"], \"cast\": [\"Brad Pitt\", \"Edward Norton\", \"Helena Bonham Carter\"], \"countries\": [\"United States\"], \"languages\": [\"English\"], \"year\": 1999, \"runtimeMinutes\": 139, \"awards\": []}, {\"tmdbId\": 27205, \"genres\": [\"science fiction film\", \"heist film\", \"action film\"], \"subjects\": [\"dream\", \"subconscious\"], \"directors\": [\"Christopher Nolan\"], \"cast\": [\"Leonardo DiCaprio\", \"Elliot Page\", \"Tom Hardy\"], \"countries\": [\"United States\", \"United Kingdom\"], \"languages\": [\"English\", \"Japanese\"], \"year\": 2010, \"runtimeMinutes\": 148, \"awards\": [\"Academy Award for Best Cinematography\", \"Academy Award for Best Visual Effects\"]}]}",
+  "candidates": [
+    550,
+    27205
+  ],
+  "recordedResponse": {
+    "ranked": [
+      {
+        "tmdbId": 27205,
+        "reason": "Nolan's dream heist is exactly the mind-bending ride you're after."
+      },
+      {
+        "tmdbId": 550,
+        "reason": "Fincher and a big twist reputation, with Brad Pitt and Edward Norton."
+      }
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "idsFromCandidates"
+    },
+    {
+      "type": "maxReasonLength",
+      "value": 200
+    }
+  ]
+}

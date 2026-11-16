@@ -5264,7 +5264,8 @@
           "yesCount",
           "noCount",
           "yes",
-          "seen"
+          "seen",
+          "reason"
         ],
         "type": "object",
         "properties": {
@@ -5296,6 +5297,12 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

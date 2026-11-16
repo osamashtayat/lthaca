@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tmdbId": { "type": "integer" },
+          "reason": { "type": "string" }
+        },
+        "required": ["tmdbId", "reason"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["reasons"],
+  "additionalProperties": false
+}

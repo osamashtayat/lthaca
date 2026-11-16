@@ -1,3 +1,4 @@
+using Ithaca.Application.Ai;
 using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
 using Ithaca.Application.Films;
@@ -17,12 +18,19 @@ namespace Ithaca.Application.Decks;
 /// input into a <see cref="MoodQuery"/>; its filters narrow every batch, and its genres count as a strong signal. Films come
 /// from our own catalog only (ADR-0003): available, not yet in this deck, not seen by the user.
 /// </summary>
-public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInterpreter moods, DeckDealer dealer, DeckItemReader cards, TimeProvider time)
+public sealed class DeckService(
+    IAppDbContext db, ICurrentActor current, MoodInterpreter moods, DeckDealer dealer, DeckItemReader cards, PickAdvisor advisor, TimeProvider time)
 {
     /// <summary>Most recently changed library rows used as signals.</summary>
     private const int LibrarySignalLimit = 200;
 
     private const int TopPicks = 3;
+
+    /// <summary>The best yeses by our own order that the AI ranks for the top 3 (keeps its input small).</summary>
+    private const int MaxRankCandidates = 20;
+
+    /// <summary>Genres per list in the taste the AI sees.</summary>
+    private const int MaxTasteGenres = 8;
 
     /// <summary>Tries at dealing a batch when concurrent requests for the same deck collide.</summary>
     private const int DealAttempts = 3;
@@ -196,7 +204,12 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
         return Result.Success();
     }
 
-    /// <summary>Up to three of the deck's right swipes, best genre fit with the deck's swipes first, then TMDB popularity.</summary>
+    /// <summary>
+    /// Up to three of the deck's right swipes. Our own order first (genre fit with the mood, the deck's swipes and the
+    /// library, then TMDB popularity); then the AI ranks the best of them from Wikidata facts and the user's own signals
+    /// and gives each a reason (BE-13). Films the AI didn't pick (no facts, or not chosen) fill up in our order with no
+    /// reason; when the AI fails, the picks are ours alone, all without reasons.
+    /// </summary>
     public async Task<Result<DeckTopDto>> GetTopAsync(Guid deckId, CancellationToken ct)
     {
         if (UserId() is not { } userId)
@@ -218,16 +231,60 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
             return DeckErrors.NoYeses;
         }
 
-        var signals = MoodSignals(await MoodOfAsync(deckId, ct)).Concat(await SignalsAsync(deckId, userId, ct, includeEmbeddings: false)).ToList();
+        var mood = await MoodOfAsync(deckId, ct);
+        var signals = MoodSignals(mood).Concat(await SignalsAsync(deckId, userId, ct, includeEmbeddings: false)).ToList();
         var ranked = DeckSampler.RankByGenreFit(
             yeses.Select(y => new SamplerFilm(y.Id, y.Genres, y.ReleaseYear, y.RuntimeMinutes, y.Popularity ?? 0, null)).ToList(),
             signals.Select(sig => sig.ToDeckSignal(model: null)).ToList());
         var tmdbIds = yeses.ToDictionary(y => y.Id, y => y.TmdbId);
-        var best = ranked.Take(TopPicks).Select(id => tmdbIds[id]).ToList();
-        var films = await cards.FilmDtosAsync(best, ct);
+        var ours = ranked.Select(id => tmdbIds[id]).ToList();
 
-        return new DeckTopDto(swipes.Count, yeses.Count, best.Select(id => new TopPickDto(films[id], null)).ToList());
+        var facts = await advisor.FactsAsync(ours.Take(MaxRankCandidates), ct);
+        var candidates = ours.Take(MaxRankCandidates).Where(facts.ContainsKey).Select(id => facts[id]).ToList();
+        var advised = candidates.Count == 0
+            ? null
+            : await advisor.RankAsync("one person", TopPicks, new RankCandidatesInput(await TasteAsync(deckId, userId, mood, ct), candidates), ct);
+        var best = (advised ?? [])
+            .Concat(ours.Select(id => new AdvisedPick(id, null)))
+            .DistinctBy(p => p.TmdbId)
+            .Take(TopPicks)
+            .ToList();
+        var films = await cards.FilmDtosAsync(best.Select(p => p.TmdbId).ToList(), ct);
+
+        return new DeckTopDto(swipes.Count, yeses.Count, best.Select(p => new TopPickDto(films[p.TmdbId], p.Reason)).ToList());
     }
+
+    /// <summary>
+    /// The user's own signals for the AI: the deck's mood, and the Wikidata genres of films they loved (seen + loved in this
+    /// deck, liked or rated high in their library) or swiped away here. Never TMDB text (ADR-0017).
+    /// </summary>
+    private async Task<SoloTaste> TasteAsync(Guid deckId, Guid userId, MoodQuery? mood, CancellationToken ct)
+    {
+        var swiped = await SwipesOf(deckId)
+            .Where(x => x.Swipe.Direction != SwipeDirection.Right)
+            .Join(db.FilmFacts.AsNoTracking(), x => x.Film.Id, ff => ff.FilmId, (x, ff) => new { x.Swipe.Direction, x.Swipe.SeenVerdict, ff.Genres })
+            .ToListAsync(ct);
+        var library = await db.UserFilms.AsNoTracking()
+            .Where(u => u.UserId == userId && (u.Liked || u.RatingHalfStars != null))
+            .OrderByDescending(u => u.UpdatedAt)
+            .Take(LibrarySignalLimit)
+            .Join(db.FilmFacts.AsNoTracking(), u => u.FilmId, ff => ff.FilmId, (u, ff) => new { u.Liked, u.RatingHalfStars, ff.Genres })
+            .ToListAsync(ct);
+
+        var loved = swiped.Where(s => DeckSignals.OfSwipe(s.Direction, s.SeenVerdict) > 1).Select(s => s.Genres)
+            .Concat(library.Where(l => DeckSignals.OfLibrary(l.Liked, false, UserFilm.ToRating(l.RatingHalfStars)) > 0).Select(l => l.Genres));
+        var disliked = swiped.Where(s => DeckSignals.OfSwipe(s.Direction, s.SeenVerdict) < 0).Select(s => s.Genres);
+        return new SoloTaste(
+            mood?.IncludeGenres ?? [], mood?.Keywords ?? [], mood?.MaxRuntimeMinutes, MostFrequent(loved), MostFrequent(disliked));
+    }
+
+    private static List<string> MostFrequent(IEnumerable<string[]> genreLists) =>
+        genreLists.SelectMany(g => g)
+            .GroupBy(g => g, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal)
+            .Take(MaxTasteGenres)
+            .Select(g => g.Key)
+            .ToList();
 
     /// <summary>
     /// Adds up to <see cref="Deck.BatchSize"/> new items (positions after <paramref name="dealt"/>), never past
