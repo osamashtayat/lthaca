@@ -41,8 +41,8 @@ const items: LegalItem[] = [
       </p>
     ),
   },
-  { title: 'Where.', body: <p>Our servers are in [country].</p> },
-  { title: 'Contact.', body: <p>Questions or requests: [email]</p> },
+  { title: 'Where.', body: <p>Our servers are in Jordan.</p> },
+  { title: 'Contact.', body: <p>Questions or requests: hello@ithacamovies.com</p> },
 ]
 
 /** `/privacy`: the Privacy Policy (L5). */
