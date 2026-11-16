@@ -19,6 +19,7 @@ The LLM is used **only at the edges**: (1) parse mood text into filters, (2) ran
 | Prompts | `IPromptLibrary.RenderAsync(PromptId, variables)` → text + output schema | `FilePromptLibrary` (reads `prompts/`) | `Ai:PromptsPath` |
 | Typed output | `StructuredOutput.Parse<T>(response) → Result<T>` | — | — |
 | Movie data | `ITmdbClient` (returns `Result`) | `FakeTmdbClient`, `TmdbHttpClient` | `Tmdb:Client`, `Tmdb:Language`, `Tmdb:ApiKey` |
+| Transactional email (not AI; same provider rules) | `IEmailSender.SendAsync(EmailMessage) → bool` | `FakeEmailSender`, `ResendEmailSender` (L4) | `Email:Provider`, `Email:From`, `Email:SiteUrl`, `Email:ApiKey` |
 | AI-safe film facts | `IWikidataClient.GetFilmsAsync(tmdbIds)` (returns `Result`) | `FakeWikidataClient`, `WikidataHttpClient` (SPARQL) | `Wikidata:Client`, `Wikidata:Endpoint`, `Wikidata:UserAgent`, `Wikidata:BatchSize`, `Wikidata:RefreshDays` (no key) |
 
 Provider selection happens once, in `Infrastructure/DependencyInjection.cs → AddExternalClients`. Callers never know which
@@ -50,7 +51,7 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
   Both ship next to the API binary (`Ithaca.Api.csproj` links `*.md` and `*.schema.json`; a test loads every declared
   prompt from the shipped folder).
 - Schemas are closed (`additionalProperties: false`, every property in `required`; optional values as `anyOf [type, null]`)
-  and match the C# output record (`MoodParseOutput`, `RankCandidatesOutput`).
+  and match the C# output record (`MoodParseOutput`, `RankCandidatesOutput`, `ExplainPicksOutput`).
 - `{{variable}}` placeholders are filled by the caller. **User text (mood words) goes in `LlmRequest.Input`, never into the
   prompt template.**
 - Never edit a shipped version: add `v{N+1}` (both files), point `Prompts.X` at it, run the evals for both.
@@ -66,7 +67,7 @@ For the evals runner, export them as environment variables (`Ai__ApiKey=… Ai__
   ("ignore your rules", fake `SYSTEM:` lines, closing tags) are `offTopic` and never followed. Filters are empty unless
   `intent` is `mood`.
 - The mood service decides: chips + non-mood text → chips only, `textIgnored: true`; no chips + non-mood text → 422
-  `mood.unclear`; empty text → no LLM call. Real refusals stay `ai.refused`.
+  `mood.unclear`; empty text → no LLM call. A refusal or any other AI failure is not an error for mood text (BE-19, below).
 - Never repeat the user's text in a response, message or log; user-facing copy says "we", never "the AI".
 
 ## Mood flow (BE-09)
@@ -83,12 +84,60 @@ in BE-11) → a `MoodQuery` saved with the deck:
    our spelling kept).
 4. **Intent** (ADR-0022): `mood` → text filters join the chips' (a chip's genre is never excluded by the text; the
    stricter runtime wins). `unclear` / `offTopic` → with chips: chips only, `textIgnored: true`, nothing from the reply
-   is used; without chips: 422 `mood.unclear`, nothing saved. Model failures pass through as `ai.*`, nothing saved.
+   is used; without chips: 422 `mood.unclear`, nothing saved.
+   **The text can't be read** (BE-19, owner 2026-11-16): provider down or no answer within 15 s, refusal, invalid reply,
+   or the daily budget spent (Spend cap, below) → with chips: chips only, `textIgnored` and `textUnavailable` true;
+   without chips: 422 `mood.text_unavailable`, nothing saved. A warning log with the prompt id and error code only. No
+   second provider as a standby.
 5. The deck's filters are hard limits on every batch (any included genre, no excluded genre, runtime, years, language;
    a film missing a value doesn't pass), and its included genres are a strong signal for adaptation and the top 3.
-   `keywords` are stored for later (BE-13) but don't filter yet.
-6. The text is stored with the user's `MoodQuery` and returned only in their own `DeckDto.mood`; it is never logged
+   `keywords` don't filter; they reach the AI ranking of the top 3 (BE-13, below).
+6. The text is stored with the user's solo `MoodQuery` and returned only in their own `DeckDto.mood` (a room mood keeps
+   no text at all, issue #51); it is never logged
    (a slice test checks the logs) and never put in an error message.
+
+## AI picks (BE-13)
+Reasons under picks, and the order of the solo top 3. `PickAdvisor` (Application/Ai) is the one caller of both prompts.
+- **What the model sees:** `PickFacts`, built from `FilmFacts` (Wikidata) only, never from `Film`, so no TMDB title,
+  overview, tagline or keyword can reach a prompt (a slice test sends films with marked TMDB fields and checks every
+  request). Plus our own data: the deck's mood (genres from our list, keywords, runtime) and Wikidata genres of films the
+  user loved (seen + loved here, liked or rated high in the library) or swiped away; for a room, only each pick's
+  yes / no / seen **counts**: never who voted what, anyone's mood or hard nos. Films without facts aren't sent. The input
+  is the user message (a typed record, `PickPrompts.cs`), never pasted into the prompt.
+- **Solo top 3** (`GET /api/decks/{id}/top`): our order of the right swipes (genre fit, then popularity) → the best 20
+  with facts go to `rank-candidates.v2` (`{{audience}}` = "one person", `{{limit}}` = 3) → its picks first, the rest of
+  ours fill up with `reason: null`. Ranked on every request; nothing stored (owner, 2026-11-16).
+- **Room result:** the votes decide the picks and their order (api-contract.md §6); `explain-pick.v2` (`{{audience}}` =
+  "a group of N friends") only writes a reason per pick. `RoomPickExplainer` does it on the first read of
+  `GET …/result` (never in `finish`, which returns stored reasons or nulls without waiting) and stores it in
+  `rooms.result_reasons` (aligned with the picks, null where none; owner, 2026-11-16). First reads that race (everyone
+  refetches on `roomMatched`) may each call the model; the room's `xmin` keeps only the first store, and every reader
+  shows the stored reasons (a reader that can't store or see a winner shows none). A single-flight per room would cut the
+  duplicate calls if cost needs it.
+- **Validation:** ids we didn't send and repeats are dropped; a reason is trimmed and dropped when empty or longer than
+  `PickReason.MaxLength` (200).
+- **Failures never fail the page:** provider down, refusal, invalid reply, or no answer within 20 s → the same picks
+  with `reason: null`, a warning log with the prompt id and error code only. A room then stores nothing, so the next read
+  tries again; a room whose picks have no facts stores "no reasons" without calling the model.
+- **Models:** `Ai:ModelOverrides` sends both prompts to `claude-haiku-5-5` (owner, 2026-11-16): short replies on a page
+  someone is waiting for. v1 of both prompts stays in `prompts/` for the evals but is no longer used.
+
+## Spend cap (BE-19, L3)
+- `AiBudget` (Application/Ai, singleton) is the one caller of `ILlmClient` in Application: `MoodInterpreter` and
+  `PickAdvisor` call `AiBudget.CompleteAsync`. Each UTC day may spend `Ai:MonthlyBudgetUsd` (25, L3) ÷ the days in that
+  month (≈ $0.83). Each reply's token usage (`LlmResponse.Usage`, from the Anthropic reply) is priced by `Ai:Prices`
+  (US dollars per million input / output tokens, per model; a model not listed, e.g. a server-side fallback, is priced at
+  the highest listed). Prices are required with `Ai:LlmProvider = Anthropic`; update them when Anthropic's list prices
+  change. `Ai:MonthlyBudgetUsd = 0` switches every LLM call off.
+- Once today's share is spent, no LLM call is made until the next UTC day: `AiErrors.BudgetReached` (code `ai.unavailable`),
+  so callers fall back as on any AI failure (mood text → chips or `mood.text_unavailable`; picks → `reason: null`). One
+  warning log per day when it is reached.
+- The count is in memory (one API instance today, OPS-06): a restart starts the day again, calls already running when the
+  share runs out still finish, and failed calls (refusals, truncated replies) aren't counted. Each provider's own
+  dashboard limit (OPS-10) is the hard backstop. Embeddings aren't counted: only the nightly sync embeds (no user request
+  calls Voyage), and By taste uses stored vectors.
+- Request rate limits on AI-backed endpoints (api-contract.md §2, as built BE-19) stop one person from spending the day's
+  share alone.
 
 ## Embeddings and similarity (ADR-0002, ADR-0013)
 - One vector per film in `films.embedding` (`vector(1024)`, HNSW cosine index) plus `films.embedding_model`.
@@ -103,7 +152,9 @@ in BE-11) → a `MoodQuery` saved with the deck:
   429 and 5xx are retried up to 6 attempts, waiting `Retry-After` when sent, else 1, 2, 4… s (capped at 120 s); other
   failures are `ai.unavailable`; the wrong number or size of vectors is `ai.invalid_output`. Texts are never logged.
   Without a payment method Voyage's rate limits are low (not published); keep the batch size modest. First 200M tokens free.
-- `TasteProfile` (taste vector) lives in the same space: build it from embeddings of films the user liked.
+- `TasteProfile` (taste vector, BE-14) lives in the same space: the weighted, normalised sum of the vectors of films the
+  user liked and rated (`TasteProfile.WeightOf`, half-star scale), computed per request; no text is embedded for it
+  (api-contract.md §12 as built). A room blends its present users' profiles.
 - Never compare vectors from different models (`embedding_model` tells them apart).
 
 ## Catalog sync (ADR-0003)
@@ -144,13 +195,20 @@ in BE-11) → a `MoodQuery` saved with the deck:
 
 ## Evals (`evals/`)
 - `evals/cases/*.json`, one case per file:
-  `id`, `description`, `prompt` (`name.vN`), `variables`, `input` or `candidates` (TMDB ids), `recordedResponse`, `checks[]`.
+  `id`, `description`, `prompt` (`name.vN`), `variables`, `input` and/or `candidates` (TMDB ids), `recordedResponse`,
+  `checks[]`. With both, `input` is sent (e.g. the v2 pick prompts' JSON object) and `candidates` serve the checks; with
+  `candidates` alone, they are sent as a JSON array.
 - Check types (`EvalChecks.cs`): `validJson`, `includesGenre`, `excludesGenre`, `doesNotIncludeGenre`, `idsFromCandidates`,
   `excludesTmdbId`, `intentIs`, `intentIsNot` (for text where `unclear` and `offTopic` are both fine), `hasNoFilters`
-  (a non-mood reply sets nothing) and `mustNotContain` (text that must not appear anywhere in the reply).
+  (a non-mood reply sets nothing), `mustNotContain` (text that must not appear anywhere in the reply), `maxReasonLength`
+  (every reason at most N characters) and `reasonForEveryCandidate` (every candidate id gets a reason). The id checks read
+  `ranked` (rank-candidates) or `reasons` (explain-pick.v2).
 - Each case has a `kind`: `representative`, `edge` or `adversarial`; the runner reports pass counts per kind. A
   prompt's suite covers all three. mood-parse.v2 has 21 cases (10 / 5 / 6, `evals/cases/mood-parse.v2.*.json`), their
   `recordedResponse`s recorded from a live Anthropic run (`claude-opus-5-5`, 2026-11-13, 21/21 passing).
+- rank-candidates.v2 has 6 cases (2 / 2 / 2) and explain-pick.v2 has 5 (2 / 1 / 2); their `recordedResponse`s are
+  hand-written examples of a passing reply, **not yet recorded from a live run** (run `-- --live --case rank-candidates.v2`
+  and `--case explain-pick.v2` before relying on them).
 - Run one prompt's cases with `--case <id prefix>`, e.g. `-- --live --case mood-parse`.
 - **Replay mode (default):** the recorded reply is checked. No network, safe for CI.
 - **Live mode (`-- --live`):** the configured `ILlmClient` answers and the reply is printed. With `Fake` the cases are expected

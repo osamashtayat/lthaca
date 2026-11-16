@@ -32,13 +32,17 @@ authorization stays in one place. Group name per room: `RoomEvents.GroupFor(room
 - Known gap: connections of a member who left, or of a closed room, stay in the group until they disconnect or call
   `LeaveRoom`; events carry only ids, and every refetch is authorized (issue #40).
 - Publishers: `memberJoined`/`memberLeft`/`roomClosed` BE-10; `memberReady` (after `PUT …/mood` in mood rooms, and
-  after `PUT …/taste` makes a member ready in taste rooms, BE-14, ADR-0026),
+  after `PUT …/taste` makes a member ready in taste rooms, BE-14c, ADR-0029),
   `roomStarted` (after `POST …/start`), `voteCast`, `deckExtended` BE-11; `roomMatched` BE-12.
+- Built (BE-12): `roomMatched` (`RoomMatchedEvent`: the matched film, or the compromise's #1; `tmdbId` null when the
+  compromise has no picks), published once per room by `RoomReferee` after the vote, leave or finish that decided it.
 - Hub methods are thin: call one Application service, return. Group membership changes happen only after the service
   confirmed the member.
 - Services publish through `IRoomEventPublisher.PublishAsync(roomId, RoomEvents.X, payload, ct)` **after** `SaveChangesAsync`,
   with the payload records `RoomMemberEvent` / `RoomEvent` (Application/Realtime). A failed publish must not fail the
   request (clients refetch on reconnect): `SignalRRoomEventPublisher` is the one place that catches and logs it.
+- Built (BE-11): `memberReady` (first answer to the mood step only), `roomStarted`, `voteCast` (`VoteCastEvent`: room and
+  card ids, never a value; not for a retried or rejected vote), `deckExtended` (`DeckExtendedEvent`: first new position).
 - Built (BE-10): `JoinRoom`, `LeaveRoom`; `memberJoined` (a new or returning member, not a repeated join), `memberLeft`,
   `roomClosed` (host close, or the last member leaving).
 

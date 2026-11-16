@@ -1,3 +1,4 @@
+using Ithaca.Application.Ai;
 using Ithaca.Application.Auth;
 using Ithaca.Application.Catalog;
 using Ithaca.Application.Decks;
@@ -7,6 +8,7 @@ using Ithaca.Application.Library;
 using Ithaca.Application.Moods;
 using Ithaca.Application.Rooms;
 using Ithaca.Application.Taste;
+using Ithaca.Application.Users;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -24,18 +26,34 @@ public static class DependencyInjection
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<FilmQueryService>();
         services.AddScoped<CatalogSyncService>();
+        services.AddScoped<CatalogFilmWriter>(); // collaborator of CatalogSyncService and ImportFilmMatcher, not a use-case service
         services.AddScoped<WikidataEnricher>(); // collaborator of CatalogSyncService only, not a use-case service
         services.AddScoped<FilmEmbedder>(); // collaborator of CatalogSyncService only, not a use-case service
         services.AddScoped<FilmTrailerService>();
         services.AddScoped<AuthService>();
-        services.AddScoped<MoodInterpreter>(); // collaborator of DeckService (and RoomService in BE-11), not a use-case service
+        services.AddSingleton<AiBudget>(); // the daily AI spend cap and the one caller of ILlmClient; singleton: it holds the day's count
+        services.AddScoped<MoodInterpreter>(); // collaborator of DeckService and RoomDeckService, not a use-case service
+        services.AddScoped<DeckDealer>(); // collaborator of DeckService and RoomDeckService, not a use-case service
+        services.AddScoped<DeckItemReader>(); // collaborator of DeckService and RoomDeckService, not a use-case service
+        services.AddScoped<PickAdvisor>(); // collaborator of DeckService and RoomPickExplainer, not a use-case service
         services.AddScoped<DeckService>();
-        services.AddScoped<RoomAccess>(); // collaborator of RoomService and RoomMembershipService, not a use-case service
-        services.AddScoped<GuestUpgrade>(); // collaborator of AuthService, not a use-case service
+        services.AddScoped<RoomAccess>(); // collaborator of RoomService, RoomDeckService and RoomMembershipService, not a use-case service
+        services.AddScoped<RoomReader>(); // collaborator of RoomService, RoomDeckService and RoomReferee, not a use-case service
+        services.AddScoped<RoomReferee>(); // collaborator of RoomDeckService, RoomService and RoomResultService, not a use-case service
+        services.AddScoped<GuestUpgrade>(); // collaborator of SignInCompletion, not a use-case service
+        services.AddScoped<SignInCompletion>(); // collaborator of AuthService and PasswordResetService, not a use-case service
         services.AddScoped<RoomService>();
+        services.AddScoped<RoomDeckService>();
+        services.AddScoped<RoomPickExplainer>(); // collaborator of RoomResultService only, not a use-case service
+        services.AddScoped<RoomResultService>();
         services.AddScoped<RoomMembershipService>();
         services.AddScoped<LibraryService>();
+        services.AddScoped<TasteProfileReader>(); // collaborator of TasteService, DeckService, RoomService and RoomDeckService, not a use-case service
         services.AddScoped<TasteService>();
+        services.AddScoped<ProfileService>();
+        services.AddScoped<PasswordResetService>();
+        services.AddScoped<LetterboxdExportReader>(); // collaborator of ImportService only, not a use-case service
+        services.AddScoped<ImportFilmMatcher>(); // collaborator of ImportService only, not a use-case service
         services.AddScoped<ImportService>();
         return services;
     }

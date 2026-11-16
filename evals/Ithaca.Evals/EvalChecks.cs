@@ -9,7 +9,7 @@ namespace Ithaca.Evals;
 /// </summary>
 internal static class EvalChecks
 {
-    public static readonly string[] Known = ["validJson", "excludesGenre", "doesNotIncludeGenre", "idsFromCandidates", "excludesTmdbId", "intentIs", "intentIsNot", "mustNotContain", "includesGenre", "hasNoFilters"];
+    public static readonly string[] Known = ["validJson", "excludesGenre", "doesNotIncludeGenre", "idsFromCandidates", "excludesTmdbId", "intentIs", "intentIsNot", "mustNotContain", "includesGenre", "hasNoFilters", "maxReasonLength", "reasonForEveryCandidate"];
 
     public static string? Run(EvalCheck check, EvalCase evalCase, string replyJson)
     {
@@ -43,6 +43,10 @@ internal static class EvalChecks
             "mustNotContain" => replyJson.Contains(Text(check), StringComparison.OrdinalIgnoreCase)
                 ? $"reply contains forbidden text '{Text(check)}'" : null,
             "hasNoFilters" => HasFilters(reply) ? "a non-mood reply carries filters" : null,
+            "maxReasonLength" => Picks(reply).Select(p => p?["reason"]?.GetValue<string>() ?? "").FirstOrDefault(r => r.Length > check.Value!.GetValue<int>()) is { } tooLong
+                ? $"reason longer than {check.Value}: '{tooLong}'" : null,
+            "reasonForEveryCandidate" => (evalCase.Candidates ?? []).Except(RankedIds(reply)).ToArray() is { Length: > 0 } missing
+                ? $"no reason for: {string.Join(", ", missing)}" : null,
             _ => $"unknown check type '{check.Type}' (known: {string.Join(", ", Known)})",
         };
     }
@@ -60,6 +64,9 @@ internal static class EvalChecks
     private static IEnumerable<string> Strings(JsonNode? node) =>
         node is JsonArray array ? array.Select(n => n?.GetValue<string>() ?? "") : [];
 
-    private static IEnumerable<int> RankedIds(JsonNode? reply) =>
-        reply?["ranked"] is JsonArray ranked ? ranked.Select(r => r?["tmdbId"]?.GetValue<int>() ?? 0) : [];
+    /// <summary>The picks of a reply: <c>ranked</c> (rank-candidates) or <c>reasons</c> (explain-pick.v2).</summary>
+    private static JsonArray Picks(JsonNode? reply) =>
+        (reply?["ranked"] ?? reply?["reasons"]) as JsonArray ?? [];
+
+    private static IEnumerable<int> RankedIds(JsonNode? reply) => Picks(reply).Select(r => r?["tmdbId"]?.GetValue<int>() ?? 0);
 }

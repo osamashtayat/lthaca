@@ -1,2 +1,3 @@
-/** Types for the profile feature. API shapes come from @/shared/api (generated), not hand-written. */
-export {}
+import type { components } from '@/shared/api'
+
+export type Profile = components['schemas']['ProfileDto']

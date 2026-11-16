@@ -12,10 +12,10 @@ Use these names exactly in code (types, tables, routes, UI copy where it fits). 
 | `UserFilm` | A user's relation to a film: liked, watchlist, seen, personal rating (0.5–5 in half steps, shown as ticket stubs). No "watching" state. | Powers "My Cinema" (Library). Stored as half stars 1–10 (ADR-0024). |
 | `Room` | A group session with one shared deck, joined by link or code. | Stored in the DB (table `rooms`, codes like `POP-428`); real-time via RoomHub. |
 | `RoomMember` | A `User` or `Guest` in a `Room`. | Host is a member with extra rights: the one present longest (BE-10). Leaving keeps the row (`left_at`). Table `room_members`. |
-| `Deck` | A user's solo deck: how it was started (just swipe, mood, taste) and the `DeckItem`s dealt so far. | Table `decks`. A room's shared deck is the room's (BE-11). Proposed by BE-08 (A12). |
+| `Deck` | A user's solo deck or a room's shared deck: how it was started (just swipe, mood, taste) and the `DeckItem`s dealt so far. | Table `decks`, exactly one owner (user or room); one deck per room (BE-11). Proposed by BE-08 (A12). |
 | `DeckItem` | One card (a `Film`) at a position in a deck — solo or a room's shared deck. | Group "Just swipe" adds them in batches. |
 | `Swipe` | A user's gesture on a card in their own `Deck`: right, left or up (+ optional loved it / not for me). | Table `swipes`, one per `DeckItem`, keyed by the client's `swipeId`. A room member's is a `Vote`. Proposed by BE-08 (A12). |
-| `Vote` | A member's swipe on a `DeckItem`: right (I'd watch it), left (not for me), up (seen it → loved it / not for me). | Same three gestures everywhere. |
+| `Vote` | A member's swipe on a `DeckItem`: right (I'd watch it), left (not for me), up (seen it → loved it / not for me). | Same three gestures everywhere. Table `votes`, one per card and member, keyed by the client's `voteId`, never changed (BE-11). |
 | `TasteProfile` | A user's (or room's) taste vector in the film-embedding space, plus what built it. | Built after a few swipes or from history. |
 | `MoodQuery` | A mood request: tapped moods and/or free text, and the structured filters the LLM parsed from it. | Output of `mood-parse.vN`. |
 | `ImportJob` | One upload of a user's Letterboxd export (ZIP or one CSV from it), processed in the background: progress, counts, and the films it couldn't match. Its parsed rows are `ImportItem`s; the file itself is never stored. | Feeds `UserFilm`; only adds, never removes; existing Ithaca choices win (ADR-0024). Tables `import_jobs`, `import_items`. |
@@ -24,8 +24,8 @@ Use these names exactly in code (types, tables, routes, UI copy where it fits). 
 Other words used in docs and UI:
 - **Deck** — the swipeable stack. **Sampler** — the varied first cards of "Just swipe" before a `TasteProfile` exists.
 - **Just swipe / By mood / By taste** — the three ways to start a deck. **Solo / Group** — alone or in a `Room`.
-- **Match** — every member said yes to the same film. **Best compromise** — the highest-scoring film when there's no match.
-- **Hard no** — a member's explicit exclusion; must never appear in the group result.
-- **Taste picks** — the 10–20 films someone picks as "films I love" when they have too little history (ADR-0026): a
+- **Match** — every (present) member said yes to the same film. **Best compromise** — the highest-scoring films (up to three) when there's no match: the room's result once everyone finished or the host finishes (`RoomResultRules`).
+- **Hard no** — a member's explicit exclusion; must never appear in the group's deck or result. What each one rules out: `HardNoRules` (api-contract.md §6, as built BE-11).
+- **Taste picks** — the 10–20 films someone picks as "films I love" when they have too little history (ADR-0029): a
   user's become likes in My Cinema; a guest's are kept on their `RoomMember` for that room only.
 - **My Cinema** — the Library screen. **Tonight** — the home screen.

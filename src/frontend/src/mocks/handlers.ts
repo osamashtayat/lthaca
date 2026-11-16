@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import { addMockAccount, findMockAccount, getMockSession, isMockEmailTaken, setMockSession } from './authStore'
+import { addMockAccount, deleteMockAccount, findMockAccount, getMockSession, isMockEmailTaken, isMockPassword, MOCK_CREATED_AT, MOCK_RESET_TOKEN, MOCK_USER, resetMockPassword, setMockDisplayName, setMockPassword, setMockSession } from './authStore'
 import { findMockFilm, mockFilms, mockTrailers } from './fixtures'
 import { createMockDeck, mockDeckDto, parseMockMood, mockDeckTop, nextMockBatch, recordMockSwipe } from './deckStore'
 import { createMockImport, hasActiveMockImport, listMockImports, mockImportOutcome, mockNotFound, readMockImport } from './importStore'
@@ -101,8 +101,66 @@ const authHandlers = [
     setMockSession(user)
     return HttpResponse.json<ResponseOf<'/api/auth/sign-in', 'post', 200>>(user)
   }),
+  // Always 204 for a well-formed email, account or not (api-contract §4). Dev: the "email" is `MOCK_RESET_TOKEN` at /reset-password?token=…
+  http.post(apiPath('/api/auth/forgot-password'), async ({ request }) => {
+    const body = (await request.json()) as RequestOf<'/api/auth/forgot-password', 'post'>
+    if (!body.email.includes('@') || body.email.length > 256) return problem(400, 'validation', { email: ['Enter a valid email address.'] })
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.post(apiPath('/api/auth/reset-password'), async ({ request }) => {
+    const body = (await request.json()) as RequestOf<'/api/auth/reset-password', 'post'>
+    if (body.newPassword.length < 8 || body.newPassword.length > 128) return problem(400, 'validation', { newPassword: ['Use 8 to 128 characters.'] })
+    if (body.token !== MOCK_RESET_TOKEN) return problem(400, 'auth.invalid_reset_token')
+    // The mock is single-account: its one valid token resets the default mock user, whatever email was asked for.
+    const user = resetMockPassword(MOCK_USER.email ?? '', body.newPassword)
+    if (!user) return problem(400, 'auth.invalid_reset_token')
+    setMockSession(user)
+    return HttpResponse.json<ResponseOf<'/api/auth/reset-password', 'post', 200>>(user)
+  }),
   http.post(apiPath('/api/auth/sign-out'), () => {
     setMockSession(null)
+    return new HttpResponse(null, { status: 204 })
+  }),
+]
+
+/** Profile (api-contract §14): the few rules the screen needs, name 1–40, new password 8–128, the current password checked. */
+const profileHandlers = [
+  http.get(apiPath('/api/profile'), () => {
+    const session = getMockSession()
+    if (session?.kind !== 'user') return problem(401, 'auth.unauthenticated')
+    return HttpResponse.json<ResponseOf<'/api/profile', 'get', 200>>({
+      id: session.id,
+      displayName: session.displayName,
+      email: session.email ?? '',
+      createdAt: MOCK_CREATED_AT,
+    })
+  }),
+  http.put(apiPath('/api/profile'), async ({ request }) => {
+    if (getMockSession()?.kind !== 'user') return problem(401, 'auth.unauthenticated')
+    const body = (await request.json()) as RequestOf<'/api/profile', 'put'>
+    const name = body.displayName.trim()
+    if (name.length < 1 || name.length > 40) return problem(400, 'validation', { displayName: ['Use 1 to 40 characters.'] })
+    const user = setMockDisplayName(name)
+    return HttpResponse.json<ResponseOf<'/api/profile', 'put', 200>>({
+      id: user?.id ?? '',
+      displayName: name,
+      email: user?.email ?? '',
+      createdAt: MOCK_CREATED_AT,
+    })
+  }),
+  http.put(apiPath('/api/profile/password'), async ({ request }) => {
+    if (getMockSession()?.kind !== 'user') return problem(401, 'auth.unauthenticated')
+    const body = (await request.json()) as RequestOf<'/api/profile/password', 'put'>
+    if (body.newPassword.length < 8 || body.newPassword.length > 128) return problem(400, 'validation', { newPassword: ['Use 8 to 128 characters.'] })
+    if (!isMockPassword(body.currentPassword)) return problem(400, 'profile.wrong_password')
+    setMockPassword(body.newPassword)
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.delete(apiPath('/api/profile'), async ({ request }) => {
+    if (getMockSession()?.kind !== 'user') return problem(401, 'auth.unauthenticated')
+    const body = (await request.json()) as RequestOf<'/api/profile', 'delete'>
+    if (!isMockPassword(body.password)) return problem(400, 'profile.wrong_password')
+    deleteMockAccount()
     return new HttpResponse(null, { status: 204 })
   }),
 ]
@@ -354,7 +412,7 @@ const roomHandlers = [
     setMockMemberReady(room.code, room.me.id, true)
     const ready = mockRoomFor(room.code)
     return ready
-      ? HttpResponse.json<ResponseOf<'/api/rooms/{code}/mood', 'put', 200>>({ member: ready.me, textIgnored: outcome.mood.textIgnored })
+      ? HttpResponse.json<ResponseOf<'/api/rooms/{code}/mood', 'put', 200>>({ member: ready.me, textIgnored: outcome.mood.textIgnored, textUnavailable: outcome.mood.textUnavailable })
       : problem(500, 'server.error')
   }),
   http.post(apiPath('/api/rooms/{code}/start'), ({ params }) => {
@@ -417,4 +475,4 @@ const roomHandlers = [
   }),
 ]
 
-export const handlers = [...healthHandlers, ...authHandlers, ...filmHandlers, ...libraryHandlers, ...watchlistHandlers, ...deckHandlers, ...tasteHandlers, ...importHandlers, ...roomHandlers]
+export const handlers = [...healthHandlers, ...authHandlers, ...profileHandlers, ...filmHandlers, ...libraryHandlers, ...watchlistHandlers, ...deckHandlers, ...tasteHandlers, ...importHandlers, ...roomHandlers]

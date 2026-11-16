@@ -75,7 +75,7 @@ describe('Group swipe', () => {
     renderAt(`/rooms/${code}/swipe`)
     await user.click(await screen.findByRole('button', { name: "I'd watch it" }))
     await waitFor(() => expect(screen.getByText(/0 OF 12/)).toBeTruthy())
-    expect(screen.getByText('Fight Club')).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 2, name: 'Fight Club' })).toBeTruthy()
   })
 
   it('counts a repeated voteId once (idempotent) and refuses a different vote on a voted card', () => {

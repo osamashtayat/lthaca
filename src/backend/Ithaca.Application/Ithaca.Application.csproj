@@ -1,12 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Ithaca.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- EF Core abstractions only (IAppDbContext, async LINQ); never a provider (docs/architecture.md). -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <!-- [LoggerMessage] logging from Application (e.g. WikidataEnricher); abstractions only. -->
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Email copy (EmailTemplates): files, not C# strings. -->
+    <EmbeddedResource Include="Email/Templates/*" />
   </ItemGroup>
 
   <ItemGroup>

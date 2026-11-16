@@ -52,11 +52,15 @@ public sealed class RoomAccess(IAppDbContext db, ICurrentActor current)
             return membership;
         }
 
-        var hostId = await InHostOrder(db.RoomMembers.AsNoTracking().Where(m => m.RoomId == membership.Value.RoomId && m.LeftAt == null))
-            .Select(m => m.Id)
-            .FirstAsync(ct);
+        var hostId = await HostIdAsync(membership.Value.RoomId, ct);
         return hostId == membership.Value.MemberId ? membership : RoomErrors.NotHost;
     }
+
+    /// <summary>The host's member id: the room's longest-present member. The room must have a present member.</summary>
+    public Task<Guid> HostIdAsync(Guid roomId, CancellationToken ct) =>
+        InHostOrder(db.RoomMembers.AsNoTracking().Where(m => m.RoomId == roomId && m.LeftAt == null))
+            .Select(m => m.Id)
+            .FirstAsync(ct);
 
     /// <summary>The actor's membership row in the room, present or not. A guest has none outside their own room.</summary>
     public static IQueryable<RoomMember> OfActor(IQueryable<RoomMember> members, Guid roomId, Actor actor)

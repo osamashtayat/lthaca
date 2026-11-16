@@ -8,7 +8,8 @@ swipes (incl. mood), rooms and votes, library (My Cinema), film details, browse.
 Not repeated here: the error pipeline (docs/backend-conventions.md → Result and errors), real-time events
 (`contracts/realtime-events.json` + docs/realtime.md), domain names (docs/glossary.md), AI rules (docs/ai.md).
 Second-wave features (taste, import, profile, Tonight) get their contract sections in their own backlog task: §12 Taste
-(BE-14a); §13 Import was designed with its decision (OPS-12, ADR-0024) and BE-15a makes it executable.
+(BE-14a); §13 Import was designed with its decision (OPS-12, ADR-0024) and BE-15a makes it executable; §14
+Profile (BE-16a).
 
 Places where the docs, ADRs or design leave a gap are marked **⚠ Open** with the assumption this contract makes.
 They are collected in §11 and in the backlog's open questions; the owner confirms or changes them.
@@ -55,6 +56,7 @@ BE-01 adds all of them at once, so mocks and screens can use them from day one.
 | 404 | `deck.item_not_found` | the deck item isn't in this deck / room |
 | 404 | `room.not_found` | no open or recent room with that code |
 | 409 | `auth.email_taken` | register with an email that has an account |
+| 400 | `auth.invalid_reset_token` | password reset with a token that is malformed, unknown, expired or already used, never saying which (§4) — BE-18a |
 | 409 | `deck.already_swiped` | a different `swipeId` for an item already swiped |
 | 409 | `room.already_voted` | a different `voteId` for an item this member already voted on |
 | 409 | `room.closed` | the room is closed (or finished) and takes no joins, votes or changes |
@@ -62,6 +64,7 @@ BE-01 adds all of them at once, so mocks and screens can use them from day one.
 | 409 | `room.invalid_state` | action not allowed in the room's current `status` (e.g. vote in the lobby, start twice) |
 | 409 | `room.no_result` | result requested before there is one |
 | 413 | `request.too_large` | the request body is over the server's limit for that endpoint (the pipeline refuses it before any service runs; mapped in `ProblemDetailsExceptionHandler`) — BE-15a |
+| 400 | `profile.wrong_password` | password change or account deletion with a wrong current password, also while locked out (§14) — BE-16a |
 | 404 | `import.not_found` | no such import **for this user** (another user's import is also 404) — BE-15a |
 | 400 | `import.invalid_file` | not a Letterboxd export: wrong type, unreadable, no recognised file or header, or a ZIP over the entry-count / ratio limits (§13) — BE-15a |
 | 409 | `import.already_running` | the user already has a `queued` or `running` import — BE-15a |
@@ -71,12 +74,31 @@ BE-01 adds all of them at once, so mocks and screens can use them from day one.
 | 422 | `deck.no_yeses` | top 3 requested before any right swipe |
 | 422 | `taste.not_ready` | a deck (or, for its host, a room) by taste without enough history (§12) — BE-14a |
 | 422 | `mood.unclear` | mood text isn't a mood (unclear or off-topic) and no chips were tapped; nothing created (ADR-0022) |
-| 422 / 502 / 503 | `ai.refused` / `ai.invalid_output` / `ai.unavailable` | mood parsing failed — exist (docs/ai.md) |
-| 501 | `server.not_implemented` | contract stub: the endpoint exists, its backlog task hasn't landed (BE-01) |
+| 422 | `mood.text_unavailable` | we couldn't read the mood text right now (the AI failed or the daily AI budget is spent) and no chips were tapped; nothing created. The screens say "mood text isn't available right now, pick a few moods instead" — BE-19 |
+| 429 | `rate.limited` | too many requests of this kind from one person (or, without a session, one IP address); the response has a `Retry-After` header in whole seconds — BE-19 (§2 as built below) |
+| 422 / 502 / 503 | `ai.refused` / `ai.invalid_output` / `ai.unavailable` | an AI call failed — exist (docs/ai.md); since BE-19 no endpoint returns them (mood text falls back, picks lose their reasons), only the catalog sync |
 | 503 | `tmdb.unavailable` | trailer lookup failed and nothing is cached — exists |
 
-`server.not_implemented` is temporary plumbing: it disappears from an endpoint when its task lands, and the code itself
-is deleted when no stub is left.
+**As built (BE-19): rate limits.** Over a limit the request is refused before any service runs: 429 `rate.limited`,
+ProblemDetails as usual plus `Retry-After: <seconds>` (time left in the window, at least 1). `auth` and `room-join` count
+by client IP always (a guest cookie is cheap to drop or renew, so it buys no new count); the other policies count per
+signed-in user or guest (their session's id), or by IP without a session. Since accounts and guests are only made
+through those IP-limited calls, both per-person and per-IP limits hold. `X-Forwarded-For` is read only from a trusted
+proxy (`RateLimits:TrustedProxyNetworks`, private ranges by default; behind Cloudflare: issue #74, OPS-07). A window opens with a person's first request and holds the
+limit until it ends; refused requests don't count, every other answer does (also a 4xx). Defaults (`RateLimits` in
+`appsettings.json`):
+
+| Policy | Endpoints | Default |
+|---|---|---|
+| `auth` | `POST /api/auth/register`, `sign-in`, `forgot-password`, `reset-password` | 20 per 15 min |
+| `room-join` | `POST /api/rooms/{code}/join` | 20 per 10 min |
+| `deck-create` | `POST /api/decks` (any source; its mood AI call included) | 30 per hour |
+| `import-create` | `POST /api/imports` (ADR-0024) | 5 per day |
+| `ai` | `PUT /api/rooms/{code}/mood`, `GET /api/decks/{deckId}/top`, `GET /api/rooms/{code}/result` | 60 per 10 min |
+
+**As built (BE-17):** every endpoint is live, so the stub code (501 `server.not_implemented`), `ContractStub` and
+`[ContractStub]` are deleted. A later contract-first task that needs stubs again (ADR-0021) re-adds them with its first
+stub and lists the code here.
 
 ## 3. Shared shapes
 
@@ -124,10 +146,14 @@ sign-in, sign-out, room join, and a guest's room leave) re-issues it.
 | `POST /api/auth/register` | anon | `RegisterRequest` | 201 `CurrentUserDto`, signed in | 400, 409 `auth.email_taken` |
 | `POST /api/auth/sign-in` | anon | `SignInRequest` | 200 `CurrentUserDto` | 400, 401 `auth.invalid_credentials` |
 | `POST /api/auth/sign-out` | user or guest | — | 204 (cookie cleared) | — |
+| `POST /api/auth/forgot-password` | anon | `ForgotPasswordRequest` | 204, always | 400 `validation` |
+| `POST /api/auth/reset-password` | anon | `ResetPasswordRequest` | 200 `CurrentUserDto`, signed in, new `XSRF-TOKEN` | 400 `validation` / `auth.invalid_reset_token` |
 
 ```ts
 type RegisterRequest = { email: string; password: string; displayName: string }  // password 8–128; name 1–40
 type SignInRequest   = { email: string; password: string }
+type ForgotPasswordRequest = { email: string }                     // a valid email, ≤ 256
+type ResetPasswordRequest  = { token: string; newPassword: string } // token ≤ 1024, opaque; new password 8–128
 type CurrentUserDto  = {
   kind: "user" | "guest"; id: string; displayName: string;
   email: string | null;      // users only
@@ -152,6 +178,38 @@ type CurrentUserDto  = {
   to anonymous callers **and to guests**. Member and host rules arrive with the room tasks.
 - Emails are matched case-insensitively and trimmed; display names are trimmed.
 
+### Password reset (BE-18a)
+
+"Forgot password?" on `/sign-in` and the emailed link's page `/reset-password?token=…` (FE-16). BE-18a adds the DTOs, the
+code and 501 stubs; BE-18 the logic (`PasswordResetService` in `Application/Users`) and the email (Resend, L4).
+
+**Rules** (owner, 2026-11-16; BE-18 built them; until then both answered 501, a code BE-17 removed, §2):
+- **Forgot password:** always 204 for a well-formed email, whether or not it has an account, and for any caller (visitor,
+  guest or user), so the answer never reveals an account. When it has one, the server emails a link to
+  `<site>/reset-password?token=<token>`. Asking again sends a new link; earlier links stay valid until they expire or one
+  is used. How often a caller may ask is BE-19's (rate limits).
+- **The token** is opaque to the client: send it back exactly as it came in the link (URL-decoded). It is valid for
+  **1 hour** and **one use**. Any password change (a reset, or §14's change) also invalidates every outstanding link.
+- **Reset:** input validation first (400 `validation`), then the token; a bad token is 400 `auth.invalid_reset_token`
+  with nothing changed. On success the new password is set (length is the only rule, as at registration), a sign-in
+  **lockout is lifted** and the failure count cleared, every other session of the user ends (security stamp, ADR-0027),
+  and the caller is **signed in** as that user: 200 `CurrentUserDto`, a session cookie and a new `XSRF-TOKEN`, as after
+  sign-in. A guest caller is upgraded exactly as at sign-in (ADR-0012).
+
+**As built (BE-18a, BE-18):** like every unsafe endpoint both need `X-XSRF-TOKEN` (no exemption, ADR-0023). Reset
+re-issues `XSRF-TOKEN` on every answer it gives; forgot-password changes nobody and doesn't.
+- **The token** is about 200 URL-safe characters (base64url, well under the 1,024 limit): the user id, the issue time and the account's security
+  stamp, encrypted and signed with ASP.NET Data Protection. Any password change changes the stamp, which is what makes a
+  link single-use and kills the others. The link URL-encodes it; send it back decoded, as it was.
+- **The email** (Resend, L4): from `Email:From` (`Ithaca <no-reply@mail.ithacamovies.com>`), subject "Reset your Ithaca
+  password", plain text + HTML from `Application/Email/Templates/password-reset.*`; the link is
+  `Email:SiteUrl` + `/reset-password?token=…` (`http://localhost:5273` by default, `:8080` in Docker).
+- **Same answer, every case:** 204 for an unknown email, and also 204 when the provider refuses or is down (logged, with
+  no address or token; the user asks again). Response *timing* may differ (a real address waits for the send), which we
+  accept: registration already answers 409 `auth.email_taken` for a known email. Logs never carry addresses or tokens.
+- `Email:Provider=Fake` (tests, local development, the default) sends nothing; in Development it logs the email text so
+  the link can be opened by hand. Production sets `Resend` and `Email__ApiKey` (a sending-only key).
+
 ## 5. Solo deck and swipes (incl. by mood)
 
 A solo deck belongs to one user. "Just swipe" starts with a varied **sampler** and adapts; "By mood" starts from a
@@ -159,11 +217,11 @@ A solo deck belongs to one user. "Just swipe" starts with a varied **sampler** a
 
 | Method & path | Access | Body | Success | Errors |
 |---|---|---|---|---|
-| `POST /api/decks` | user | `CreateDeckRequest` | 201 `DeckDto` (first batch), `Location: /api/decks/{id}` | 400, 401, mood: 422 `mood.unclear` / `ai.refused`, 502 `ai.invalid_output`, 503 `ai.unavailable` |
+| `POST /api/decks` | user | `CreateDeckRequest` | 201 `DeckDto` (first batch), `Location: /api/decks/{id}` | 400, 401, mood: 422 `mood.unclear` / `mood.text_unavailable`, 429 `rate.limited` |
 | `GET /api/decks/{deckId}` | user | — | 200 `DeckDto` | 401, 404 `deck.not_found` |
 | `POST /api/decks/{deckId}/items` | user | — | 200 `DeckItemDto[]` (next batch; `[]` = nothing left) | 401, 404 |
 | `POST /api/decks/{deckId}/swipes` | user | `SwipeRequest` | 204 | 400, 401, 404 `deck.not_found` / `deck.item_not_found`, 409 `deck.already_swiped` |
-| `GET /api/decks/{deckId}/top` | user | — | 200 `DeckTopDto` | 401, 404, 422 `deck.no_yeses` |
+| `GET /api/decks/{deckId}/top` | user | — | 200 `DeckTopDto` | 401, 404, 422 `deck.no_yeses`, 429 `rate.limited` |
 
 ```ts
 type DeckSource = "justSwipe" | "mood" | "taste"   // "taste": §12 (BE-14a), built by BE-14
@@ -176,7 +234,9 @@ type MoodInput  = {
 type CreateDeckRequest = { source: DeckSource; mood: MoodInput | null }   // mood required iff source = "mood" (400 errors.mood)
 type MoodQueryDto = MoodInput & {
   id: string; filters: MoodFiltersDto;
-  textIgnored: boolean;   // true: the text wasn't a mood, so only the chips were used (ADR-0022)
+  textIgnored: boolean;   // true: the text wasn't used, so only the chips were (ADR-0022)
+  textUnavailable: boolean; // + BE-19: true when that's because we couldn't read the text right now (AI failure or the
+                            //   daily AI budget), not because it wasn't a mood; implies textIgnored
 }
 type MoodFiltersDto = {           // the validated output of mood-parse (MoodParseOutput), after our own checks
   includeGenres: string[]; excludeGenres: string[]; maxRuntimeMinutes: number | null;
@@ -190,20 +250,24 @@ type DeckDto = {
 }
 type SwipeRequest = { swipeId: string; deckItemId: string; direction: SwipeDirection; seenVerdict: SeenVerdict | null }
 type DeckTopDto = { swipeCount: number; yesCount: number; picks: TopPickDto[] }   // 1–3 picks, best first
-type TopPickDto = { film: FilmDto; reason: string | null }                          // reason: BE-13, null until then
+type TopPickDto = { film: FilmDto; reason: string | null }                          // reason: the AI's one-liner (BE-13), null when none
 ```
 Rules (server-side; the UI never decides them):
 - `seenVerdict` only with `up` (else 400 `errors.seenVerdict`).
 - **Library effects** of a swipe: `up` → `seen = true`; `up` + `loved` → also `liked = true`. `right` and `left` don't
   touch the library: a right swipe is a deck "yes", not a watchlist add (A2, decided). Saving to the watchlist is a
   separate button on the card (`PUT`/`DELETE /api/library/{tmdbId}/watchlist`, §7).
-- The top 3 is chosen from the deck's right swipes only. Until BE-13 (Wikidata-based ranking/explanations) it is
-  ordered by our own data (genre fit with the mood/swipes, then TMDB popularity) with `reason = null`.
+- The top 3 is chosen from the deck's right swipes only. Our own order (genre fit with the mood/swipes, then TMDB
+  popularity) comes first; the AI then ranks the best of them from Wikidata facts and our own data and adds a reason
+  (BE-13, as built below). No reason is ever an error: `reason` is simply `null`.
 - Mood chips map to our genres/filters on the server; free `text` goes through `mood-parse.v2`. `language` and
   `maxRuntime` are plain filters, not LLM input.
 - **Unclear, off-topic or injected text (ADR-0022):** empty text makes no LLM call. Text the model labels `unclear` or
   `offTopic` → with chips: the deck is built from the chips and `mood.textIgnored = true`; without chips: 422
   `mood.unclear`, nothing created. No response or log ever repeats the user's text.
+- **The AI can't read the text (BE-19, owner 2026-11-16):** provider down or no answer within 15 s, refusal, invalid reply,
+  or the daily AI budget spent → with chips: the deck is built from the chips, `textIgnored = true` and
+  `textUnavailable = true`; without chips: 422 `mood.text_unavailable`, nothing created. Never an `ai.*` code or a 5xx.
 - Solo decks require a signed-in user; no anonymous "Just swipe" (A3, decided).
 - Routes (A4, decided): `/mood` (picker), `/deck/:deckId` (swipe), `/deck/:deckId/top` (top 3; it belongs to a deck,
   "from 14 swipes").
@@ -243,15 +307,15 @@ match or best compromise. Codes look like `POP-428` (3 letters, dash, 3 digits),
 |---|---|---|---|---|
 | `POST /api/rooms` | user | `CreateRoomRequest` | 201 `RoomDto`, `Location: /api/rooms/{code}` | 400, 401 |
 | `GET /api/rooms/{code}/preview` | anon | — | 200 `RoomPreviewDto` | 404 `room.not_found` |
-| `POST /api/rooms/{code}/join` | anon | `JoinRoomRequest` | 200 `RoomDto` (+ guest cookie when anonymous) | 400, 404, 409 `room.closed` / `room.full` |
+| `POST /api/rooms/{code}/join` | anon | `JoinRoomRequest` | 200 `RoomDto` (+ guest cookie when anonymous) | 400, 404, 409 `room.closed` / `room.full`, 429 `rate.limited` |
 | `GET /api/rooms/{code}` | member | — | 200 `RoomDto` | 401, 403 `room.not_member`, 404 |
-| `PUT /api/rooms/{code}/mood` | member | `SetRoomMoodRequest` | 200 `RoomMoodDto` (now ready) | 400, 401, 403, 404, 409 `room.invalid_state`, 422 `mood.unclear` / `ai.refused`, 502, 503 |
+| `PUT /api/rooms/{code}/mood` | member | `SetRoomMoodRequest` | 200 `RoomMoodDto` (now ready) | 400, 401, 403, 404, 409 `room.invalid_state`, 422 `mood.unclear` / `mood.text_unavailable`, 429 `rate.limited` |
 | `POST /api/rooms/{code}/start` | host | — | 200 `RoomDto` (`status: "swiping"`) | 401, 403 `room.not_host`, 404, 409 `room.invalid_state` |
 | `GET /api/rooms/{code}/deck?fromPosition=0` | member | — | 200 `DeckItemDto[]` (`swipe` = my vote) | 401, 403, 404, 409 `room.invalid_state` (lobby) |
 | `POST /api/rooms/{code}/votes` | member | `CastVoteRequest` | 204 | 400, 401, 403, 404 / `deck.item_not_found`, 409 `room.already_voted` / `room.invalid_state` / `room.closed` |
 | `GET /api/rooms/{code}/progress` | member | — | 200 `RoomProgressDto` | 401, 403, 404 |
 | `POST /api/rooms/{code}/finish` | host | — | 200 `RoomResultDto` (compromise if no match yet) | 401, 403 `room.not_host`, 404, 409 `room.invalid_state` |
-| `GET /api/rooms/{code}/result` | member | — | 200 `RoomResultDto` | 401, 403, 404, 409 `room.no_result` |
+| `GET /api/rooms/{code}/result` | member | — | 200 `RoomResultDto` | 401, 403, 404, 409 `room.no_result`, 429 `rate.limited` |
 | `POST /api/rooms/{code}/leave` | member | — | 204 | 401, 403, 404 |
 | `POST /api/rooms/{code}/close` | host | — | 204 | 401, 403 `room.not_host`, 404 |
 
@@ -261,7 +325,7 @@ type RoomStatus = "lobby" | "swiping" | "result" | "closed"
 type CreateRoomRequest = { name: string; mode: RoomMode; startsAt: string | null }   // name 1–40 ("Friday Film Club")
 type JoinRoomRequest   = { displayName: string | null }   // required (1–30) when anonymous; ignored for users
 type SetRoomMoodRequest = { moods: Mood[]; maxRuntime: RuntimeLimit; hardNos: HardNo[]; text: string | null }
-type RoomMoodDto = { member: RoomMemberDto; textIgnored: boolean }   // textIgnored is only ever sent to that member (ADR-0022)
+type RoomMoodDto = { member: RoomMemberDto; textIgnored: boolean; textUnavailable: boolean }   // only ever sent to that member (ADR-0022); textUnavailable: + BE-19, as in §5
 type CastVoteRequest   = { voteId: string; deckItemId: string; direction: SwipeDirection; seenVerdict: SeenVerdict | null }
 
 type RoomMemberDto = { id: string; displayName: string; kind: "user" | "guest"; isHost: boolean; isReady: boolean; joinedAt: string }
@@ -283,6 +347,7 @@ type RoomPickDto = {
   yesCount: number; noCount: number;
   yes: string[];    // memberIds who swiped right
   seen: string[];   // memberIds who swiped up ("Omar passed — he's seen it")
+  reason: string | null;   // the AI's one-liner about this pick (BE-13), null when none; never names who said no
 }                   // who said no is never revealed, only how many (A7)
 ```
 Rules (all in services; see docs/realtime.md for when each event is published):
@@ -290,7 +355,7 @@ Rules (all in services; see docs/realtime.md for when each event is published):
   Joining publishes `memberJoined`; leave publishes `memberLeft`; close publishes `roomClosed`.
   `PUT …/mood` publishes `memberReady`; `POST …/start` publishes `roomStarted` (both land with BE-11).
 - **Ready:** in `mood` rooms a member is ready after `PUT …/mood`; in `justSwipe` rooms every member is ready. The host
-  may start with members not ready ("2 OF 3 READY").
+  may start with members not ready ("2 OF 3 READY"). In `taste` rooms: §12 (ADR-0029).
 - **Hard nos** are private to the member ("the group never sees these") and a film matching any member's hard no never
   enters the shared deck nor the result (glossary: Hard no).
 - **Votes** follow ADR-0015: unique per (`DeckItem`, `RoomMember`), `voteId` makes retries idempotent, `voteCast` carries
@@ -307,7 +372,7 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 - **Hub:** `JoinRoom(code)` / `LeaveRoom(code)` on `/hubs/rooms`, membership checked by a service (ADR-0012); clients
   then refetch through the endpoints above. Events: `contracts/realtime-events.json`.
 
-**As built (BE-10):** create, preview, join, get, leave and close are live; the rest stay 501 until BE-11/BE-12.
+**As built (BE-10):** create, preview, join, get, leave and close are live (finish and result: BE-12 below).
 - **Codes** are drawn at random (`AAA-100`…`ZZZ-999`), unique, stored upper case; any case and surrounding spaces are
   accepted. A malformed code is `room.not_found`. Closed rooms keep their code and stay previewable (`status: "closed"`).
 - **Check order** for member and host endpoints: `room.not_found` (404), then `auth.unauthenticated` (401), then
@@ -326,11 +391,70 @@ Rules (all in services; see docs/realtime.md for when each event is published):
 - **Close** is host-only and idempotent (204 again); members still `GET` the room (`status: "closed"`), nobody joins.
 - **Guest upgrade:** `register` or `sign-in` with a guest cookie moves that guest's membership (same member id, so its
   votes follow) to the user. If the user is already present in that room, the user's membership stays and the guest's ends.
-- `deckSize` is 0 until the deck is dealt at start (BE-11); `isReady` is true for everyone in `justSwipe` rooms and false
-  in `mood` rooms until the mood step lands (BE-11).
+- `deckSize` is 0 until the deck is dealt at start (BE-11); `isReady` is true for everyone in `justSwipe` rooms and, in
+  `mood` rooms, true once the member answered the mood step (BE-11).
 - **Hub:** `JoinRoom(code)` fails with a `HubException` whose message is the error code (`room.not_found`,
   `auth.unauthenticated`, `room.not_member`). The connection's identity is the one it connected with: a client that just
   joined (or upgraded) over HTTP reconnects before `JoinRoom`. `LeaveRoom(code)` only stops that connection's events.
+
+**As built (BE-11):** mood step, start, deck, votes and progress are live (owner's decisions of 2026-11-14 below).
+- **Mood step** (`PUT …/mood`): `mood` rooms in the `lobby` only, else 409 `room.invalid_state`. Same rules as a solo mood
+  (ADR-0022: `mood.unclear` without chips, `textIgnored` with chips; when the AI can't read the text, BE-19:
+  `mood.text_unavailable` without chips, `textIgnored` + `textUnavailable` with chips; nothing changes on an error).
+  A second answer replaces the first. `memberReady` only when the member first becomes ready. Hard nos are stored on the
+  membership and appear in no response.
+- **Hard nos** (owner: "wide nets"; `HardNoRules`): `horror` = TMDB Horror; `gore` = TMDB Horror or a Wikidata genre
+  containing splatter / slasher / body horror / zombie / gore; `musicals` = TMDB Music or Wikidata "musical";
+  `sadEndings` = TMDB War or Wikidata "tragedy"; `subtitles` = a recorded original language other than `en` (films with
+  none pass). Every present member's hard nos apply to every batch.
+- **Start** (host, `lobby` only; a second or concurrent start is 409 `room.invalid_state`): one shared deck per room,
+  first batch of 10. Moods combine (owner: "union, strictest runtime"): any genre a ready member asked for, minus genres a
+  member ruled out unless another asked for them; the shortest runtime limit; years/language only when every mood set
+  one. Members who skipped the mood step don't count; no moods → the sampler. When the moods leave too few films the
+  batch is topped up by the sampler, hard nos still excluded. Members need not be ready.
+- **Deck** (`GET …/deck`): positions `>= fromPosition` (0 = all); 409 `room.invalid_state` in the `lobby`, readable
+  after. `swipe` is the caller's vote; `onWatchlist` is the caller's (always false for guests).
+- **Votes:** check order after membership: 400 `seenVerdict` (a verdict only with `up`), then a known `voteId` (same
+  member and card → 204 even after swiping ended; otherwise 409 `room.already_voted`), then 409 `room.closed` /
+  `room.invalid_state` unless `swiping`, then 404 `deck.item_not_found`, then 409 `room.already_voted`. A vote never
+  touches the library (A5: no).
+- **Extension** (owner: cap 30): when a voter has 3 or fewer cards left, the next batch of 10 is dealt (same filters),
+  up to 30 cards; `deckExtended` carries the first new position. A room deck at 30 doesn't grow; ending a room is BE-12.
+- **Progress:** present members, host first, with how many cards each voted on; `deckSize` 0 in the lobby.
+- **Races:** rooms carry an optimistic concurrency token (Postgres `xmin`), so a start racing a close or the last member
+  leaving can't reopen the room: the close wins and the start answers 409 `room.invalid_state`. Taste rooms: §12 (BE-14).
+- **Mood retention** (owner, issue #51): a room mood keeps no free text (only chips, runtime and the filters derived
+  from it, plus `textIgnored`) and belongs to its member: deleting the member, guest or room deletes it.
+
+**As built (BE-12):** finish and result are live (owner's decisions of 2026-11-15 below; rules in `RoomResultRules`).
+- **Who counts:** only present members. A match needs every present member's `right` on one card (several at once: the
+  earliest in the deck). Votes of members who left count nowhere; `memberCount` and each pick's `yes` / `seen` /
+  `noCount` are frozen at the members present when the room was decided, so the result doesn't change when people leave.
+- **When:** after every vote (match, or every present member voted on every card: compromise) and after a member leaves
+  (the rest may now agree or be done), each checked after that request's own commit so simultaneous last votes can't miss
+  the match; the room's concurrency token makes the result unique (exactly one `roomMatched`; ADR-0026). The result
+  counts only the votes the decision saw. A retried vote (known `voteId`) checks again. The room becomes
+  `result`; votes then answer 409 `room.invalid_state` (a retried `voteId` still 204).
+- **Compromise:** only cards at least one present member swiped right on, ranked by `right`, then fewer `left`, then
+  TMDB popularity (unknown last), then deck position; the top 3. `up` (seen it) is neither yes nor no. When nobody said
+  yes to anything, `picks` is empty and `roomMatched` carries `tmdbId: null`.
+- **Finish** (host): while `swiping` decides now (the match if there is one, else the compromise); on a decided room it
+  returns the same result again (200); in the `lobby` or once `closed` 409 `room.invalid_state`.
+- **Result** (member): the stored result, also after the room was closed; 409 `room.no_result` before it is decided.
+- `yes` lists members in the order they voted. Hard nos can't reach the result because they never reach the deck (they
+  are set in the lobby, before the deck is dealt), so the result doesn't filter them again.
+
+**As built (BE-13):** AI reasons on picks (owner's decisions of 2026-11-16; docs/ai.md → AI picks).
+- **Solo top 3:** our own order of the right swipes as before; the best 20 that have Wikidata facts go to
+  `rank-candidates.v2` with the user's own signals (the deck's mood genres, keywords and runtime; Wikidata genres of films
+  they loved or swiped away). Its top 3 come first with their reasons; ids we didn't send and repeats are dropped; the
+  rest fill up in our order with `reason: null`. Ranked on every `GET …/top` (nothing stored), so a new swipe can change it.
+- **Room result:** the picks and their order stay exactly as §6 decides (votes, then popularity); the AI only adds
+  `reason` (`explain-pick.v2`, given each pick's Wikidata facts and its yes / no / seen **counts**, never who voted what,
+  anyone's mood or hard nos). Written on the first read of `GET …/result` and stored on the room, so every member sees
+  the same reasons; `finish` returns the stored reasons, or `null` before that first read; picks without facts get `null`.
+- **Failures:** provider down, refusal, invalid reply or a 20 s timeout → the same picks with `reason: null` and a 200,
+  never an error. A room then stores nothing, so a later read tries again.
 
 ## 7. Library — My Cinema (UserFilm, ADR-0019)
 
@@ -360,6 +484,9 @@ type LibrarySummaryDto = { liked: number; watchlist: number; seen: number }
 - **Half stars (ADR-0024, BE-20):** `rating` is 0.5, 1, 1.5 … 5 or `null`. Anything else (0, 5.5, 3.25, 7) → 400
   `validation` with `errors.rating`. Stored as an integer count of half stars (1–10); the API never shows that number.
   `sort=rating` is unchanged (highest first, unrated last). Imports write ratings through the same rules (§13).
+  As built (BE-20): `rating` is a JSON number (`decimal?`; OpenAPI `number`); whole numbers stay valid and come back as
+  whole numbers (`4`, not `4.0`). Stored as `user_films.rating_half_stars smallint` (check 1–10); the migration doubled
+  existing ratings. `UserFilm.IsValidRating` is the one rule (request attribute `[HalfStarRating]` and the domain guard).
 - ADR-0019 lands here: referenced films are refreshed by the sync, never purged; FKs to `films` are `ON DELETE RESTRICT`.
 - As built (BE-05): `shelf` defaults to `liked`, `sort` to `recent` (last change first); `title` is A→Z; `rating` is
   highest first, unrated last; every order ends on `tmdbId`. `genre` matches one of the film's genres exactly. An
@@ -417,6 +544,7 @@ Mirrors FlowOps (ADR-0021):
 3. **Breaking changes** (rename, remove, retype, new required input) go additive first: add, migrate consumers, remove in a
    later task. Adding an enum value (e.g. `taste`) is additive but must be handled by the frontend in the same release.
 4. A stub (`501 server.not_implemented`) is part of the contract: its shapes are final, only the behaviour is missing.
+   BE-17 removed the stub plumbing once nothing was stubbed (§2); a task that stubs again re-adds it.
 
 ### As built (BE-01)
 The stubs follow this file exactly. Names the shapes above leave implicit, now fixed in `contracts/openapi.json`:
@@ -425,7 +553,7 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
   `site: TrailerSite` (`"YouTube"`, TMDB's spelling kept).
 - `MoodInput` keeps its name (it is part of `CreateDeckRequest`, not a request of its own).
 - Browse and library sorts are the enums `FilmSort` and `LibrarySort`; query parameters are camelCase like JSON.
-- Stubbed actions also declare `501` (`[ContractStub]`); a feature task removes the attribute when it lands.
+- Stubbed actions also declared `501` (`[ContractStub]`); feature tasks removed the attribute, BE-17 the attribute itself.
 
 ## 11. Open questions
 
@@ -441,7 +569,7 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
 | A8 | Rating implies seen? Liked vs rating? | **Decided:** rating ⇒ seen; liked is a separate flag |
 | A9 | "Watching" shelf and "Keep watching · 42 min left" | **Decided: dropped.** No Watching state, shelf or Tonight row |
 | A10 | Room codes `POP-428` vs the board's share link `ithaca.app/r/pop-428` | Links use the existing route `/rooms/POP-428`; a `/r/:code` short link is optional later |
-| A11 | Group taste ("Blend your histories") with guests who have no history | **Decided (ADR-0026):** the host must be ready; a member is ready with enough history or after picking 10–20 films (guests: kept in the room); the host may start without them |
+| A11 | Group taste ("Blend your histories") with guests who have no history | **Decided (ADR-0029):** the host must be ready; a member is ready with enough history or after picking 10–20 films (guests: kept in the room); the host may start without them. BE-14 built the earlier assumption (members without history add no taste); BE-14c builds the decision |
 | A12 | The glossary has no names for a solo deck's parent record or a solo swipe (`Vote` is a room member's) | **Proposed by BE-08:** `Deck` (table `decks`) and `Swipe` (table `swipes`), in the glossary; owner to confirm |
 | A13 | Room mood has no `language` (solo mood does); is it stored as a `MoodQuery`? | No language in rooms; stored per member as a `MoodQuery` |
 | A14 | ADR-0019's "unavailable" films (TMDB 404) have no flag in `FilmDto` | Add `isAvailable` additively in BE-05 if screens need it |
@@ -455,7 +583,7 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
 "By taste" (solo) and group taste build on the caller's `TasteProfile`: a vector in the film-embedding space made from
 the films they like (BE-14, docs/ai.md). Imported likes and ratings count like any other (ADR-0024 decision 9). The
 server decides readiness; the "Solo — by taste" screen only shows it (FE-13: not ready → the "Import your Letterboxd"
-screen; ready → the board). People without enough history can also **pick 10–20 films they love** (ADR-0026).
+screen; ready → the board). People without enough history can also **pick 10–20 films they love** (ADR-0029).
 
 | Method & path | Access | Body | Success | Errors |
 |---|---|---|---|---|
@@ -475,9 +603,10 @@ type TasteDto = {
   notForYou: string[];         // up to 3 genres turned down ("NOT FOR YOU: HORROR, HEISTS"); [] when not ready
 }
 type TasteGenreDto = { genre: string; percent: number }   // a catalog genre (as in FilmDto.genres); 1–100
-type TastePicksRequest = { tmdbIds: number[] }   // 10–20 distinct films from our catalog (ADR-0026)
+type TastePicksRequest = { tmdbIds: number[] }   // 10–20 distinct films from our catalog (ADR-0029)
 ```
-Rules (BE-14 builds them; until then the three rows answer 501 `server.not_implemented`, other sources and modes work):
+Rules (BE-14 built the first three rows; until then they answered 501, a code BE-17 removed, §2. The picker rows and
+the taste-room readiness below are ADR-0029: BE-14b adds the two rows as 501 stubs, BE-14c builds them):
 - **Ready** (A16, ADR-0024 Q2): at least `signalsNeeded` films with a positive signal. Guests have no taste (no
   library, ADR-0012): `GET /api/taste` is user-only.
 - **Receipt:** `percent` is a genre's share among the positive-signal films' genres, rounded; `notForYou` comes from
@@ -485,24 +614,45 @@ Rules (BE-14 builds them; until then the three rows answer 501 `server.not_imple
   (ADR-0017).
 - **Deck by taste:** like "Just swipe" (§5: batches, swipes, top 3) but ranked by similarity to the profile; skips films
   the user has seen. Not ready → 422 `taste.not_ready`, nothing created. `mood` must be null (400 `errors.mood`).
-- **Group taste** ("Blend your histories", ADR-0026): the host must be ready (else 422 `taste.not_ready`, no room). In
+- **Group taste** ("Blend your histories", ADR-0029): the host must be ready (else 422 `taste.not_ready`, no room). In
   a taste room `RoomMemberDto.isReady` means "the server has enough taste for this member": a user who meets A16, or a
   guest who picked films in this room. The host may start with members not ready; their taste isn't in the blend. The
   shared deck blends present members' taste; a film any member has seen is skipped (users' libraries; guests: unknown).
-- **Film picker** (ADR-0026): the screen searches and browses our catalog with `GET /api/films?search=…` (§9, open to
+- **Film picker** (ADR-0029): the screen searches and browses our catalog with `GET /api/films?search=…` (§9, open to
   guests) and submits 10–20 `tmdbIds`.
   - `POST /api/taste/picks` (solo, users): marks each film `liked` in My Cinema, creating the row if needed; it only
     adds (other flags and ratings untouched; already liked is fine). Answers the updated `TasteDto`.
   - `PUT /api/rooms/{code}/taste` (taste rooms, any member, while `lobby` or `swiping`): a user's picks become likes as
     above; a guest's picks are stored on their membership for this room only, replacing earlier picks, and deleted with
     the room. A non-taste room → 409 `room.invalid_state`; a finished or closed room → 409 `room.closed`. A member who
-    becomes ready this way publishes `memberReady` (docs/realtime.md; BE-14 also widens that event's description).
+    becomes ready this way publishes `memberReady` (docs/realtime.md; BE-14c also widens that event's description).
   - Fewer than 10, more than 20 or repeated ids → 400 `validation` (`errors.tmdbIds`); an id not in our catalog → 404
     `film.not_found`, nothing saved.
   - **Guest upgrade:** a guest's picks become likes in the user's library when they register or sign in (§4).
 - Check order once built: input validation (400: `mood` with a taste deck, a blank room name) before readiness (422).
 - The board's "Because you loved …" lines under the first cards are not in this contract (no field yet); the first
   cards are simply the deck's first items.
+
+**As built (BE-14):** the first three rows are live (the picker rows are BE-14b and BE-14c).
+- **Signals and counts:** `signalCount` = library rows liked (a seen + "loved it" swipe sets liked) or rated ≥ 3.5;
+  `loggedCount` = rows seen or rated. `signalsNeeded` is `Taste:SignalsNeeded` (default 10).
+- **`TasteProfile`** (computed per request, not stored): the user's 200 most recently changed liked or rated films with
+  a vector, weighted on the half-star scale (ADR-0024): liked +1, plus (rating − 3) / 2 clamped to ±1 (5 → +1, 3 → 0,
+  1 → −1); the weighted sum of their film vectors (one model: the one most of them share), scaled to unit length. Only
+  film vectors are used (Wikidata-based, ADR-0017); no text is embedded, so taste makes no AI call.
+- **Receipt:** `topGenres` share = a genre's mentions among the positive-signal films' genres ÷ all their genre mentions
+  (a film with two genres counts once for each), rounded, 1–100, biggest first then by name. `notForYou`: genres in at least
+  2 turned-down films (rated ≤ 2 and not liked, or a solo left swipe or "seen — not for me", latest 500 swipes) whose share
+  of the turned-down films is larger than of the positive ones, never a top genre; biggest difference first.
+- **Deck by taste:** as "Just swipe" (§5 as built: batches of 10, the 500 most popular eligible films, 70% fit / 30%
+  sampler, seen films skipped, swipes and top 3 unchanged) except that every batch, the first included, adds each
+  candidate's closeness to the profile (cosine, scaled 0–1 across the candidates; ×1.5) to its fit. Films without a vector
+  of the profile's model get no closeness. A ready user whose films have no vectors yet gets a plain "Just swipe" order.
+- **Group taste:** everyone is ready in the lobby (as in `justSwipe` rooms; BE-14c changes this to the readiness above).
+  At start and at each extension the deck leans towards the blend of the present users' profiles (each member counts
+  the same; members without a profile, guests included, add nothing) and skips every film a present user has seen.
+  Hard nos still apply (there is no lobby step to set them in a taste room). The host's readiness is checked only at
+  creation.
 
 ## 13. Import (Letterboxd)
 
@@ -592,8 +742,7 @@ action converts it with one Api helper (`request.ToImportUpload()`, no other log
 `ImportService.CreateAsync(ImportUpload upload, …)`; `ImportUpload(Stream Content, string FileName, long Length)` lives
 in `Application/Imports`.
 
-**As built (BE-15a):** all four actions exist with the shapes above and answer 501 `server.not_implemented` until
-BE-15; guests and visitors get 401 `auth.unauthenticated`. The upload is `multipart/form-data` with the field `file`
+**As built (BE-15a):** all four actions exist with the shapes above; guests and visitors get 401 `auth.unauthenticated`. The upload is `multipart/form-data` with the field `file`
 (binary); a request without it is 400 `validation` with `errors.file` (the generated schema doesn't mark the field
 required, so the TypeScript type shows it optional: always send it). The upload is antiforgery-checked like every
 unsafe request (`X-XSRF-TOKEN`). `[RequestSizeLimit(ImportLimits.MaxUploadBytes)]` (25 MB) makes the server refuse a
@@ -601,3 +750,86 @@ larger body; `[ReadFormFirst]` reads the form before model binding (which would 
 `ProblemDetailsExceptionHandler` answers 413 `request.too_large` (tested on real Kestrel). A client that sends the whole
 body before reading the answer may see the connection close instead; browsers read the early 413. List queries use the shared
 paging (`page` 1–10 000, `pageSize` 1–100). `ImportStatus` and `ImportNotFoundReason` are in `Domain/Imports`.
+
+**As built (BE-15):** the rules above, with these details the design left open:
+- **Upload:** the file is read in memory (`[RequestFormLimits]` keeps the whole form in memory, never a temp file) and
+  dropped before the response; only the parsed films are stored (`import_items`). A recognised header has the columns
+  `Name` and `Letterboxd URI` (plus `Rating` in `ratings.csv`); column names are exact, file names of a single CSV are
+  matched case-insensitively, ZIP entries by exact path (a file inside an extra folder isn't read). The ratio limit is
+  checked on the four files read, counting the bytes actually decompressed. Besides the skips listed above, a row is
+  skipped when its name has a control character (a line break included) or is longer than a film title (300); a
+  `ratings.csv` row with an empty `Rating` is skipped; a Letterboxd URI over 300 characters is dropped (the film is then
+  identified by title + year). One active import per user is enforced by the partial unique index
+  `ux_import_jobs_user_active`, so racing uploads get exactly one 201.
+- **Matching:** the catalog step needs a year (a year-less row goes straight to TMDB). When the year-filtered TMDB
+  search has no result within the year rule, a second search without the filter is made (a film TMDB files under the
+  neighbouring year). URI → TMDB-id matches are kept in `letterboxd_film_links` (no foreign key: the film may be purged
+  later and is then added again by id).
+- **Counts:** `ratingsKept` counts films where the file's rating **differs** from the kept one (a re-import of the same
+  ratings reports 0). A film added from TMDB counts in `addedToCatalogCount` once, even if two rows matched it.
+- **Job:** `ImportJobRunner` polls every `Imports:PollInterval` (2 s) and processes batches of `Imports:BatchSize` (50)
+  back to back, oldest import first. TMDB calls are paced (`TmdbRequestDelay`, 100 ms) and tried `TmdbAttempts` (3)
+  times with doubling back-off from `TmdbRetryDelay` (1 s). An older import's not-found list is emptied when the newer
+  job **starts** (not at upload). Imports run one at a time, oldest first across users (single instance, ADR-0016), so
+  a large import delays the next. A write conflict (the user or the sync wrote the same row meanwhile) saves nothing and
+  the batch is retried, up to `ImportJob.MaxConflictRetries` (5) times in a row, then the job fails; any other error fails the job: earlier batches stay, its pending items are dropped, its
+  not-found rows so far stay as its list.
+
+## 14. Profile (BE-16a)
+
+The "Profile & settings" board (`/profile`, FE-15): the user's name, email and join date, editing the display name,
+changing the password, and deleting the account. BE-16a adds the DTOs, the code and 501 stubs; BE-16 the logic
+(`ProfileService` in `Application/Users`).
+
+| Method & path | Access | Body | Success | Errors |
+|---|---|---|---|---|
+| `GET /api/profile` | user | — | 200 `ProfileDto` | 401 |
+| `PUT /api/profile` | user | `UpdateProfileRequest` | 200 `ProfileDto` | 400, 401 |
+| `PUT /api/profile/password` | user | `ChangePasswordRequest` | 204, new `XSRF-TOKEN` | 400 `validation` / `profile.wrong_password`, 401 |
+| `DELETE /api/profile` | user | `DeleteAccountRequest` | 204, signed out, new `XSRF-TOKEN` | 400 `validation` / `profile.wrong_password`, 401 |
+
+```ts
+type ProfileDto           = { id: string; displayName: string; email: string; createdAt: string }  // "since Nov 2026"
+type UpdateProfileRequest = { displayName: string }                           // trimmed, 1–40, as at registration
+type ChangePasswordRequest = { currentPassword: string; newPassword: string } // new: 8–128, length only (ADR-0023)
+type DeleteAccountRequest  = { password: string }                             // the current password
+```
+
+**Rules** (BE-16):
+- **Who:** users only; a guest or visitor gets 401 `auth.unauthenticated` (ADR-0023). Guests have no profile.
+- **Display name:** trimmed; blank after trimming → 400 `errors.displayName`. `GET /api/auth/me` returns the new name
+  at once (the client refetches it). A user `RoomMember`'s name is the account's, so rooms show the new name too
+  (owner, 2026-11-15: as BE-10 built it; a guest's name is the one they joined with).
+- **Re-authentication (owner, 2026-11-14):** password change and deletion both need the current password, so a stolen
+  session alone can't lock the owner out or erase the account. Wrong → 400 `profile.wrong_password`, nothing changed.
+  A wrong password counts toward the sign-in lockout (5 failures, 15 minutes, §4), and while locked out the answer is
+  the same `profile.wrong_password` (it never reveals the lockout). Check order: input validation (400 `validation`)
+  first, then the password.
+- **Password change:** the new password may equal the old one (length is the only rule). The security stamp changes:
+  the caller's session stays signed in (re-issued cookie), every other session of that user ends. Use the new
+  `XSRF-TOKEN` from the response.
+- **Account deletion (owner, 2026-11-14)** removes, in one use case:
+  - the account (Identity rows) and everything that belongs to it, by FK cascade from `users`: My Cinema (`UserFilm`),
+    decks and their swipes, mood queries, the `TasteProfile`, and imports with their not-found lists (ADR-0024, §13);
+  - the user's room memberships and their votes. Before that, every open room (`lobby` or `swiping`) the user hosts is
+    closed (`roomClosed`, docs/realtime.md); in other open rooms they leave (`memberLeft`). Events are published after
+    the commit. Finished rooms keep their result; that member's votes are gone from it.
+  - **Not** removed: `Film`s (catalog, ADR-0019) and `LetterboxdFilmLink`s (ids only, shared by all users, §13).
+  Then the caller is signed out (session cookie cleared, a new anonymous `XSRF-TOKEN` issued, as after sign-out). The
+  email can register again at once.
+- The board's other rows are not in this contract: taste chips come from `GET /api/taste` (§12); "Film history" from the
+  latest import (`GET /api/imports?pageSize=1`, §13); "Sign out" is §4; streaming services (P-01), notifications
+  (ADR-0014), appearance (a client setting), privacy and group history have no API yet.
+
+**As built (BE-16):** all four actions are live. The security stamp is checked on every user request
+(`SecurityStampValidatorOptions.ValidationInterval = 0`, AuthSetup, ADR-0027), so a password change ends the user's other sessions
+at once and a deleted account's sessions answer 401 at once. A wrong password on password change or deletion counts toward
+the sign-in lockout and is saved before anything else happens. Deletion closes the open rooms the user hosts and removes
+the account in one commit (room memberships, votes and everything else by FK cascade), then signs out and publishes
+`roomClosed` / `memberLeft`.
+
+**As built (BE-16a):** the four actions existed with the shapes above and answered 501 (removed in BE-17, §2) until
+BE-16; guests and visitors get 401 `auth.unauthenticated`. `DELETE /api/profile` takes a JSON body (`openapi-fetch`
+sends it; keep the `Content-Type: application/json`). Password change and deletion re-issue `XSRF-TOKEN` like the §4 actions
+(checked on the stub answer). A body missing a required property is a 400 `validation` on `$` (deserialisation),
+an empty one a 400 on the field. `profile.wrong_password` is in all three code lists with its user text.

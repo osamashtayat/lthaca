@@ -27,3 +27,12 @@ public sealed record RoomMemberEvent(Guid RoomId, Guid MemberId);
 
 /// <summary><c>roomStarted</c> / <c>roomClosed</c>.</summary>
 public sealed record RoomEvent(Guid RoomId);
+
+/// <summary><c>voteCast</c>: which card got a vote, never its value (ADR-0015).</summary>
+public sealed record VoteCastEvent(Guid RoomId, Guid DeckItemId);
+
+/// <summary><c>deckExtended</c>: the first position of the new batch.</summary>
+public sealed record DeckExtendedEvent(Guid RoomId, int FromPosition);
+
+/// <summary><c>roomMatched</c>: the matched film, or the compromise's #1 (null when nobody said yes to anything).</summary>
+public sealed record RoomMatchedEvent(Guid RoomId, int? TmdbId);

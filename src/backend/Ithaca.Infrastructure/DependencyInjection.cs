@@ -2,10 +2,14 @@ using Anthropic;
 using Ithaca.Application.Ai;
 using Ithaca.Application.Catalog;
 using Ithaca.Application.Common;
+using Ithaca.Application.Email;
+using Ithaca.Application.Imports;
+using Ithaca.Application.Taste;
 using Ithaca.Application.Tmdb;
 using Ithaca.Application.Wikidata;
 using Ithaca.Infrastructure.Ai;
 using Ithaca.Infrastructure.Configuration;
+using Ithaca.Infrastructure.Email;
 using Ithaca.Infrastructure.Identity;
 using Ithaca.Infrastructure.Jobs;
 using Ithaca.Infrastructure.Persistence;
@@ -45,12 +49,15 @@ public static class DependencyInjection
         // CatalogSyncOptions lives with its consumer (Application) but is bound here: AddApplication takes no configuration.
         services.AddValidatedOptions<CatalogSyncOptions>(configuration);
         services.AddHostedService<CatalogSyncJob>();
+        services.AddValidatedOptions<ImportOptions>(configuration);
+        services.AddHostedService<ImportJobRunner>();
+        services.AddValidatedOptions<TasteOptions>(configuration);
         return services;
     }
 
     /// <summary>
-    /// TMDB, Wikidata, LLM and embedding clients, each picked by config (docs/ai.md). Built: Fake everywhere, Anthropic (LLM),
-    /// Voyage (embeddings), Http (TMDB, Wikidata).
+    /// TMDB, Wikidata, LLM, embedding and email clients, each picked by config (docs/ai.md). Built: Fake everywhere, Anthropic
+    /// (LLM), Voyage (embeddings), Http (TMDB, Wikidata), Resend (email, L4).
     /// A real provider without its key, or a provider that isn't built, fails at startup with a clear message.
     /// </summary>
     private static void AddExternalClients(this IServiceCollection services, IConfiguration configuration)
@@ -58,6 +65,8 @@ public static class DependencyInjection
         services.AddValidatedOptions<AiOptions>(configuration)
             .Validate(o => o.LlmProvider is LlmProvider.Fake or LlmProvider.Anthropic, "Ai:LlmProvider: only 'Fake' and 'Anthropic' are implemented.")
             .Validate(o => o.LlmProvider != LlmProvider.Anthropic || !string.IsNullOrWhiteSpace(o.ApiKey), "Ai:ApiKey is required when Ai:LlmProvider is 'Anthropic' (user-secrets or Ai__ApiKey).")
+            .Validate(o => o.LlmProvider != LlmProvider.Anthropic || o.Prices.Count > 0, "Ai:Prices is required when Ai:LlmProvider is 'Anthropic': the daily AI budget prices each reply by its tokens.")
+            .Validate(o => o.Prices.Values.All(p => p is not null && p.IsValid), "Ai:Prices: every price per million tokens must be between 0 and 1000.")
             .Validate(o => o.EmbeddingProvider is EmbeddingProvider.Fake or EmbeddingProvider.Voyage, "Ai:EmbeddingProvider: only 'Fake' and 'Voyage' are implemented.")
             .Validate(o => o.EmbeddingProvider != EmbeddingProvider.Voyage || !string.IsNullOrWhiteSpace(o.EmbeddingApiKey), "Ai:EmbeddingApiKey is required when Ai:EmbeddingProvider is 'Voyage' (user-secrets or Ai__EmbeddingApiKey).");
         services.AddValidatedOptions<TmdbOptions>(configuration)
@@ -113,6 +122,23 @@ public static class DependencyInjection
             WikidataClientKind.Fake => new FakeWikidataClient(),
             WikidataClientKind.Http => sp.GetRequiredService<WikidataHttpClient>(),
             var other => throw NotImplemented("Wikidata", other),
+        });
+
+        // Email (password reset, BE-18). EmailOptions lives with its consumer (Application) but is bound here.
+        services.AddValidatedOptions<EmailOptions>(configuration)
+            .Validate(o => o.Provider is EmailProvider.Fake or EmailProvider.Resend, "Email:Provider: only 'Fake' and 'Resend' are implemented.")
+            .Validate(o => o.Provider != EmailProvider.Resend || !string.IsNullOrWhiteSpace(o.ApiKey), "Email:ApiKey is required when Email:Provider is 'Resend' (user-secrets or Email__ApiKey).");
+        services.AddSingleton<FakeEmailSender>(); // one instance, so tests can read what was "sent"
+        services.AddHttpClient<ResendEmailSender>(http =>
+        {
+            http.BaseAddress = new Uri("https://api.resend.com/");
+            http.Timeout = TimeSpan.FromSeconds(15);
+        });
+        services.AddTransient<IEmailSender>(sp => sp.GetRequiredService<IOptions<EmailOptions>>().Value.Provider switch
+        {
+            EmailProvider.Fake => sp.GetRequiredService<FakeEmailSender>(),
+            EmailProvider.Resend => sp.GetRequiredService<ResendEmailSender>(),
+            var other => throw NotImplemented("email", other),
         });
     }
 

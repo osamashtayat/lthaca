@@ -38,13 +38,17 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("mood_query_id");
 
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("room_id");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("source");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
@@ -54,12 +58,18 @@ namespace Ithaca.Infrastructure.Migrations
                     b.HasIndex("MoodQueryId")
                         .HasDatabaseName("ix_decks_mood_query_id");
 
+                    b.HasIndex("RoomId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_decks_room_id");
+
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_decks_user_id");
 
                     b.ToTable("decks", null, t =>
                         {
-                            t.HasCheckConstraint("ck_decks_mood_query", "(source = 'Mood') = (mood_query_id IS NOT NULL)");
+                            t.HasCheckConstraint("ck_decks_mood_query", "CASE WHEN room_id IS NULL THEN (source = 'Mood') = (mood_query_id IS NOT NULL) ELSE mood_query_id IS NULL END");
+
+                            t.HasCheckConstraint("ck_decks_user_or_room", "(user_id IS NULL) <> (room_id IS NULL)");
                         });
                 });
 
@@ -347,6 +357,187 @@ namespace Ithaca.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ithaca.Domain.Imports.ImportItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ImportJobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("import_job_id");
+
+                    b.Property<string>("LetterboxdUri")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("letterboxd_uri");
+
+                    b.Property<bool>("Liked")
+                        .HasColumnType("boolean")
+                        .HasColumnName("liked");
+
+                    b.Property<string>("NotFoundReason")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("not_found_reason");
+
+                    b.Property<bool>("OnWatchlist")
+                        .HasColumnType("boolean")
+                        .HasColumnName("on_watchlist");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<short?>("RatingHalfStars")
+                        .HasColumnType("smallint")
+                        .HasColumnName("rating_half_stars");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("title");
+
+                    b.Property<bool>("Watched")
+                        .HasColumnType("boolean")
+                        .HasColumnName("watched");
+
+                    b.Property<int?>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id")
+                        .HasName("pk_import_items");
+
+                    b.HasIndex("ImportJobId", "Position")
+                        .IsUnique()
+                        .HasDatabaseName("ux_import_items_job_position");
+
+                    b.ToTable("import_items", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_import_items_rating_half_stars", "rating_half_stars IS NULL OR rating_half_stars BETWEEN 1 AND 10");
+                        });
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Imports.ImportJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AddedToCatalogCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("added_to_catalog_count");
+
+                    b.Property<int>("ConflictRetries")
+                        .HasColumnType("integer")
+                        .HasColumnName("conflict_retries");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("FilmCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("film_count");
+
+                    b.Property<DateTimeOffset?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("finished_at");
+
+                    b.Property<int>("LikedSet")
+                        .HasColumnType("integer")
+                        .HasColumnName("liked_set");
+
+                    b.Property<int>("MatchedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("matched_count");
+
+                    b.Property<int>("NewFilms")
+                        .HasColumnType("integer")
+                        .HasColumnName("new_films");
+
+                    b.Property<int>("NotFoundCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("not_found_count");
+
+                    b.Property<bool>("NotFoundListKept")
+                        .HasColumnType("boolean")
+                        .HasColumnName("not_found_list_kept");
+
+                    b.Property<int>("ProcessedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("processed_count");
+
+                    b.Property<int>("RatedSet")
+                        .HasColumnType("integer")
+                        .HasColumnName("rated_set");
+
+                    b.Property<int>("RatingsKept")
+                        .HasColumnType("integer")
+                        .HasColumnName("ratings_kept");
+
+                    b.Property<int>("SeenSet")
+                        .HasColumnType("integer")
+                        .HasColumnName("seen_set");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("WatchlistSet")
+                        .HasColumnType("integer")
+                        .HasColumnName("watchlist_set");
+
+                    b.HasKey("Id")
+                        .HasName("pk_import_jobs");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_import_jobs_user_active")
+                        .HasFilter("status IN ('Queued', 'Running')");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_import_jobs_status_created_at");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_import_jobs_user_id_created_at");
+
+                    b.ToTable("import_jobs", (string)null);
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Imports.LetterboxdFilmLink", b =>
+                {
+                    b.Property<string>("LetterboxdUri")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("letterboxd_uri");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("TmdbId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tmdb_id");
+
+                    b.HasKey("LetterboxdUri")
+                        .HasName("pk_letterboxd_film_links");
+
+                    b.ToTable("letterboxd_film_links", (string)null);
+                });
+
             modelBuilder.Entity("Ithaca.Domain.Library.UserFilm", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -369,9 +560,9 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("on_watchlist");
 
-                    b.Property<int?>("Rating")
-                        .HasColumnType("integer")
-                        .HasColumnName("rating");
+                    b.Property<short?>("RatingHalfStars")
+                        .HasColumnType("smallint")
+                        .HasColumnName("rating_half_stars");
 
                     b.Property<bool>("Seen")
                         .HasColumnType("boolean")
@@ -392,7 +583,7 @@ namespace Ithaca.Infrastructure.Migrations
 
                     b.ToTable("user_films", null, t =>
                         {
-                            t.HasCheckConstraint("ck_user_films_rating", "rating IS NULL OR rating BETWEEN 1 AND 5");
+                            t.HasCheckConstraint("ck_user_films_rating_half_stars", "rating_half_stars IS NULL OR rating_half_stars BETWEEN 1 AND 10");
                         });
                 });
 
@@ -449,6 +640,10 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("text[]")
                         .HasColumnName("moods");
 
+                    b.Property<Guid?>("RoomMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("room_member_id");
+
                     b.Property<string>("Text")
                         .HasMaxLength(280)
                         .HasColumnType("character varying(280)")
@@ -458,17 +653,28 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("text_ignored");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<bool>("TextUnavailable")
+                        .HasColumnType("boolean")
+                        .HasColumnName("text_unavailable");
+
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
                         .HasName("pk_mood_queries");
 
+                    b.HasIndex("RoomMemberId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_mood_queries_room_member_id");
+
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_mood_queries_user_id");
 
-                    b.ToTable("mood_queries", (string)null);
+                    b.ToTable("mood_queries", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mood_queries_room_mood_no_text", "room_member_id IS NULL OR text IS NULL");
+                        });
                 });
 
             modelBuilder.Entity("Ithaca.Domain.Rooms.Room", b =>
@@ -491,6 +697,10 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
                     b.Property<string>("Mode")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -503,6 +713,30 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("name");
 
+                    b.Property<string>("ResultKind")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("result_kind");
+
+                    b.PrimitiveCollection<Guid[]>("ResultMembers")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("result_members");
+
+                    b.PrimitiveCollection<Guid[]>("ResultPicks")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("result_picks");
+
+                    b.PrimitiveCollection<string[]>("ResultReasons")
+                        .HasColumnType("text[]")
+                        .HasColumnName("result_reasons");
+
+                    b.PrimitiveCollection<Guid[]>("ResultVotes")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("result_votes");
+
                     b.Property<DateTimeOffset?>("StartsAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("starts_at");
@@ -512,6 +746,12 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_rooms");
@@ -532,6 +772,11 @@ namespace Ithaca.Infrastructure.Migrations
                     b.Property<Guid?>("GuestId")
                         .HasColumnType("uuid")
                         .HasColumnName("guest_id");
+
+                    b.PrimitiveCollection<string[]>("HardNos")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("hard_nos");
 
                     b.Property<DateTimeOffset>("JoinedAt")
                         .HasColumnType("timestamp with time zone")
@@ -580,6 +825,51 @@ namespace Ithaca.Infrastructure.Migrations
                             t.HasCheckConstraint("ck_room_members_seat", "seat BETWEEN 1 AND 8");
 
                             t.HasCheckConstraint("ck_room_members_user_or_guest", "(user_id IS NULL) <> (guest_id IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Rooms.Vote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeckItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deck_item_id");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("direction");
+
+                    b.Property<Guid>("RoomMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("room_member_id");
+
+                    b.Property<string>("SeenVerdict")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("seen_verdict");
+
+                    b.HasKey("Id")
+                        .HasName("pk_votes");
+
+                    b.HasIndex("RoomMemberId")
+                        .HasDatabaseName("ix_votes_room_member_id");
+
+                    b.HasIndex("DeckItemId", "RoomMemberId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_votes_deck_item_id_room_member_id");
+
+                    b.ToTable("votes", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_votes_seen_verdict", "seen_verdict IS NULL OR direction = 'Up'");
                         });
                 });
 
@@ -787,11 +1077,16 @@ namespace Ithaca.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("fk_decks_mood_queries_mood_query_id");
 
+                    b.HasOne("Ithaca.Domain.Rooms.Room", null)
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_decks_rooms_room_id");
+
                     b.HasOne("Ithaca.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
                         .HasConstraintName("fk_decks_users_user_id");
                 });
 
@@ -842,6 +1137,26 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasConstraintName("fk_film_trailers_films_film_id");
                 });
 
+            modelBuilder.Entity("Ithaca.Domain.Imports.ImportItem", b =>
+                {
+                    b.HasOne("Ithaca.Domain.Imports.ImportJob", null)
+                        .WithMany()
+                        .HasForeignKey("ImportJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_import_items_import_jobs_import_job_id");
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Imports.ImportJob", b =>
+                {
+                    b.HasOne("Ithaca.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_import_jobs_users_user_id");
+                });
+
             modelBuilder.Entity("Ithaca.Domain.Library.UserFilm", b =>
                 {
                     b.HasOne("Ithaca.Domain.Films.Film", null)
@@ -861,11 +1176,16 @@ namespace Ithaca.Infrastructure.Migrations
 
             modelBuilder.Entity("Ithaca.Domain.Moods.MoodQuery", b =>
                 {
+                    b.HasOne("Ithaca.Domain.Rooms.RoomMember", null)
+                        .WithMany()
+                        .HasForeignKey("RoomMemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_mood_queries_room_members_room_member_id");
+
                     b.HasOne("Ithaca.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
                         .HasConstraintName("fk_mood_queries_users_user_id");
                 });
 
@@ -889,6 +1209,23 @@ namespace Ithaca.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("fk_room_members_users_user_id");
+                });
+
+            modelBuilder.Entity("Ithaca.Domain.Rooms.Vote", b =>
+                {
+                    b.HasOne("Ithaca.Domain.Decks.DeckItem", null)
+                        .WithMany()
+                        .HasForeignKey("DeckItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_votes_deck_items_deck_item_id");
+
+                    b.HasOne("Ithaca.Domain.Rooms.RoomMember", null)
+                        .WithMany()
+                        .HasForeignKey("RoomMemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_votes_room_members_room_member_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>

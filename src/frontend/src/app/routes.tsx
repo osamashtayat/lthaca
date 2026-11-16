@@ -1,14 +1,14 @@
 import type { RouteObject } from 'react-router'
 import { AppShell } from '@/app/layout/AppShell'
-import { PlaceholderPage } from '@/app/PlaceholderPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
-import { RequireUser, SignInPage } from '@/features/auth'
+import { ForgotPasswordPage, RequireUser, ResetPasswordPage, SignInPage } from '@/features/auth'
 import { DeckPage, DeckStartPage, DeckTopPage } from '@/features/deck'
 import { MoodPage } from '@/features/mood'
 import { BrowsePage } from '@/features/browse'
 import { CinemaPage } from '@/features/library'
 import { FilmPage } from '@/features/films'
 import { ImportPage } from '@/features/import'
+import { ProfilePage } from '@/features/profile'
 import { TastePage } from '@/features/taste'
 import { TonightPage } from '@/features/tonight'
 import { RoomPage, RoomResultPage, RoomsPage, RoomSwipePage } from '@/features/rooms'
@@ -33,7 +33,7 @@ export const routes: RouteObject[] = [
           { path: '/taste', element: <TastePage /> },
           { path: '/cinema', element: <CinemaPage /> },
           { path: '/import', element: <ImportPage /> },
-          { path: '/profile', element: <PlaceholderPage title="Profile & settings" feature="profile" /> },
+          { path: '/profile', element: <ProfilePage /> },
         ],
       },
       { path: '/rooms', element: <RoomsPage /> },
@@ -42,6 +42,8 @@ export const routes: RouteObject[] = [
       { path: '/rooms/:code/result', element: <RoomResultPage /> },
       { path: '/browse', element: <BrowsePage /> },
       { path: '/sign-in', element: <SignInPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/reset-password', element: <ResetPasswordPage /> },
       // Reference slice: the one real page.
       { path: '/films/:tmdbId', element: <FilmPage /> },
       // Dev builds only: the import is dynamic, so production bundles don't contain the page at all.

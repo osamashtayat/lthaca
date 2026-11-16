@@ -24,4 +24,11 @@ internal sealed class FakeTmdbClient : ITmdbClient
 
     public Task<Result<IReadOnlyList<TmdbVideo>>> GetTrailersAsync(int tmdbId, CancellationToken ct) =>
         Task.FromResult<Result<IReadOnlyList<TmdbVideo>>>(Array.Empty<TmdbVideo>());
+
+    /// <summary>Sample films whose title contains the query (case-insensitive), in the given year when there is one.</summary>
+    public Task<Result<IReadOnlyList<TmdbSearchResult>>> SearchFilmsAsync(string title, int? year, CancellationToken ct) =>
+        Task.FromResult<Result<IReadOnlyList<TmdbSearchResult>>>(Films
+            .Where(f => f.Title.Contains(title, StringComparison.OrdinalIgnoreCase) && (year is null || f.ReleaseYear == year))
+            .Select(f => new TmdbSearchResult(f.TmdbId, f.Title, f.Title, f.ReleaseYear, f.Popularity ?? 0))
+            .ToList());
 }

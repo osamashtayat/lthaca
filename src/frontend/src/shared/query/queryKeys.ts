@@ -32,6 +32,10 @@ export const queryKeys = {
     detail: (importId: string) => ['imports', 'detail', importId] as const,
     notFound: (importId: string) => ['imports', 'notFound', importId] as const,
   },
+  profile: {
+    all: ['profile'] as const,
+    me: ['profile', 'me'] as const,
+  },
   taste: {
     all: ['taste'] as const,
     me: ['taste', 'me'] as const,

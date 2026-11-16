@@ -8,7 +8,7 @@ namespace Ithaca.Application.Catalog;
 
 /// <summary>
 /// TMDB → <c>films</c> sync (ADR-0003). Pages through TMDB's most popular films and upserts each by <c>TmdbId</c> (display
-/// data only); re-fetches by id every film user data references that this run hasn't refreshed yet, marking the ones TMDB
+/// data only, through <see cref="CatalogFilmWriter"/>, the add-a-film step the import shares); re-fetches by id every film user data references that this run hasn't refreshed yet, marking the ones TMDB
 /// no longer knows unavailable (ADR-0019); deletes only unreferenced films not refreshed within
 /// <see cref="CatalogSyncOptions.MaxAgeDays"/> (TMDB's 6-month caching limit) and cached trailers older than
 /// <see cref="FilmTrailer.MaxAge"/>; gives the remaining films their Wikidata
@@ -20,6 +20,7 @@ namespace Ithaca.Application.Catalog;
 public sealed class CatalogSyncService(
     IAppDbContext db,
     ITmdbClient tmdb,
+    CatalogFilmWriter writer,
     WikidataEnricher facts,
     FilmEmbedder embedder,
     IOptions<CatalogSyncOptions> options,
@@ -58,19 +59,13 @@ public sealed class CatalogSyncService(
                     return details.Error;
                 }
 
-                if (details.Value is not { } d || !Film.IsValidTitle(d.Title))
+                var written = details.Value is { } d ? writer.Write(existing.GetValueOrDefault(d.TmdbId), d, time.GetUtcNow()) : null;
+                if (written is null)
                 {
                     skipped++;
-                    continue;
                 }
-
-                var now = time.GetUtcNow();
-                var isNew = !existing.TryGetValue(d.TmdbId, out var film);
-                film ??= Film.Create(d.TmdbId, d.Title, now);
-                film.UpdateDetails(d.Title, d.ReleaseYear, d.Overview, d.PosterPath, d.RuntimeMinutes, [.. d.Genres], d.Popularity, d.BackdropPath, d.VoteAverage, d.VoteCount, d.OriginalLanguage, now);
-                if (isNew)
+                else if (written.Added)
                 {
-                    db.Films.Add(film);
                     added++;
                 }
                 else
@@ -155,9 +150,8 @@ public sealed class CatalogSyncService(
                 // Gone from TMDB, or served without a usable title: either way we can't refresh it, and keeping its old TMDB
                 // data past MaxAgeDays is what ADR-0019 rules out.
                 var now = time.GetUtcNow();
-                if (details.Value is { } d && Film.IsValidTitle(d.Title))
+                if (details.Value is { } d && writer.Write(film, d, now) is not null)
                 {
-                    film.UpdateDetails(d.Title, d.ReleaseYear, d.Overview, d.PosterPath, d.RuntimeMinutes, [.. d.Genres], d.Popularity, d.BackdropPath, d.VoteAverage, d.VoteCount, d.OriginalLanguage, now);
                     refreshed++;
                 }
                 else

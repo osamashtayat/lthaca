@@ -1,11 +1,14 @@
+using Ithaca.Application.Ai;
 using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
 using Ithaca.Application.Films;
 using Ithaca.Application.Moods;
+using Ithaca.Application.Taste;
 using Ithaca.Domain.Decks;
 using Ithaca.Domain.Films;
 using Ithaca.Domain.Library;
 using Ithaca.Domain.Moods;
+using Ithaca.Domain.Taste;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ithaca.Application.Decks;
@@ -14,24 +17,27 @@ namespace Ithaca.Application.Decks;
 /// Solo decks and swipes (api-contract.md §5), for the signed-in user from <see cref="ICurrentActor"/>; another user's deck
 /// is <c>deck.not_found</c>. "Just swipe" (BE-08): the first batch is the <see cref="DeckSampler"/>'s varied sampler; later
 /// batches adapt to this deck's swipes and the user's library. "By mood" (BE-09): the <see cref="MoodInterpreter"/> turns the
-/// input into a <see cref="MoodQuery"/>; its filters narrow every batch, and its genres count as a strong signal. Films come
-/// from our own catalog only (ADR-0003): available, not yet in this deck, not seen by the user.
+/// input into a <see cref="MoodQuery"/>; its filters narrow every batch, and its genres count as a strong signal. "By taste"
+/// (BE-14): like "Just swipe", but every batch leans towards the user's <see cref="TasteProfile"/>; only for users with enough
+/// history (<c>taste.not_ready</c>). Films come from our own catalog only (ADR-0003): available, not yet in this deck, not
+/// seen by the user.
 /// </summary>
-public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInterpreter moods, TimeProvider time)
+public sealed class DeckService(
+    IAppDbContext db, ICurrentActor current, MoodInterpreter moods, TasteProfileReader tastes, DeckDealer dealer, DeckItemReader cards, PickAdvisor advisor, TimeProvider time)
 {
-    /// <summary>Most popular eligible films the sampler chooses from per batch.</summary>
-    private const int CandidatePool = 500;
-
     /// <summary>Most recently changed library rows used as signals.</summary>
     private const int LibrarySignalLimit = 200;
 
     private const int TopPicks = 3;
 
+    /// <summary>The best yeses by our own order that the AI ranks for the top 3 (keeps its input small).</summary>
+    private const int MaxRankCandidates = 20;
+
+    /// <summary>Genres per list in the taste the AI sees.</summary>
+    private const int MaxTasteGenres = 8;
+
     /// <summary>Tries at dealing a batch when concurrent requests for the same deck collide.</summary>
     private const int DealAttempts = 3;
-
-    /// <summary>How much a deck's mood genres count, next to one right swipe (1).</summary>
-    private const double MoodSignalWeight = 2;
 
     public async Task<Result<DeckDto>> CreateAsync(CreateDeckRequest request, CancellationToken ct)
     {
@@ -41,12 +47,8 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
             return AuthErrors.Unauthenticated;
         }
 
-        if (request.Source == DeckSource.Taste)
-        {
-            return ContractStub.NotImplemented; // decks by taste: BE-14 (api-contract.md §12)
-        }
-
         MoodQuery? mood = null;
+        TasteProfile? taste = null;
         switch (request.Source, request.Mood)
         {
             case (DeckSource.Mood, null):
@@ -63,12 +65,20 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
                 break;
             case (_, not null):
                 return Error.Validation("mood", "A mood only goes with a deck by mood.");
+            case (DeckSource.Taste, null):
+                if (!await tastes.IsReadyAsync(userId, ct))
+                {
+                    return TasteErrors.NotReady; // after input validation (§12); nothing is created
+                }
+
+                taste = await tastes.ProfileAsync(userId, ct);
+                break;
         }
 
         var now = time.GetUtcNow();
         var deck = Deck.Create(userId, request.Source, mood?.Id, now);
         db.Decks.Add(deck);
-        await DealAsync(deck.Id, userId, dealt: 0, MoodSignals(mood), mood, now, ct);
+        await DealAsync(deck.Id, userId, dealt: 0, MoodSignals(mood), mood, taste, now, ct);
         await db.SaveChangesAsync(ct);
 
         return await DeckDtoAsync(deck.Id, userId, ct) ?? throw new InvalidOperationException("The deck just created is missing.");
@@ -92,17 +102,18 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
             return AuthErrors.Unauthenticated;
         }
 
-        if (!await OwnsDeckAsync(deckId, userId, ct))
+        if (await SourceOfAsync(deckId, userId, ct) is not { } source)
         {
             return DeckErrors.NotFound;
         }
 
         var mood = await MoodOfAsync(deckId, ct);
+        var taste = source == DeckSource.Taste ? await tastes.ProfileAsync(userId, ct) : null;
         var signals = MoodSignals(mood).Concat(await SignalsAsync(deckId, userId, ct)).ToList();
         for (var attempt = 1; ; attempt++)
         {
             var dealt = await db.DeckItems.CountAsync(i => i.DeckId == deckId, ct);
-            var added = await DealAsync(deckId, userId, dealt, signals, mood, time.GetUtcNow(), ct);
+            var added = await DealAsync(deckId, userId, dealt, signals, mood, taste, time.GetUtcNow(), ct);
             if (added.Count == 0)
             {
                 return Array.Empty<DeckItemDto>();
@@ -138,7 +149,7 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
 
         if (!Swipe.IsValidVerdict(request.Direction, request.SeenVerdict))
         {
-            return Error.Validation("seenVerdict", "A verdict only goes with an \"up\" swipe.");
+            return DeckErrors.VerdictOnlyWithUp;
         }
 
         if (!await OwnsDeckAsync(deckId, userId, ct))
@@ -202,7 +213,12 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
         return Result.Success();
     }
 
-    /// <summary>Up to three of the deck's right swipes, best genre fit with the deck's swipes first, then TMDB popularity.</summary>
+    /// <summary>
+    /// Up to three of the deck's right swipes. Our own order first (genre fit with the mood, the deck's swipes and the
+    /// library, then TMDB popularity); then the AI ranks the best of them from Wikidata facts and the user's own signals
+    /// and gives each a reason (BE-13). Films the AI didn't pick (no facts, or not chosen) fill up in our order with no
+    /// reason; when the AI fails, the picks are ours alone, all without reasons.
+    /// </summary>
     public async Task<Result<DeckTopDto>> GetTopAsync(Guid deckId, CancellationToken ct)
     {
         if (UserId() is not { } userId)
@@ -224,48 +240,83 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
             return DeckErrors.NoYeses;
         }
 
-        var signals = MoodSignals(await MoodOfAsync(deckId, ct)).Concat(await SignalsAsync(deckId, userId, ct, includeEmbeddings: false)).ToList();
+        var mood = await MoodOfAsync(deckId, ct);
+        var signals = MoodSignals(mood).Concat(await SignalsAsync(deckId, userId, ct, includeEmbeddings: false)).ToList();
         var ranked = DeckSampler.RankByGenreFit(
             yeses.Select(y => new SamplerFilm(y.Id, y.Genres, y.ReleaseYear, y.RuntimeMinutes, y.Popularity ?? 0, null)).ToList(),
             signals.Select(sig => sig.ToDeckSignal(model: null)).ToList());
         var tmdbIds = yeses.ToDictionary(y => y.Id, y => y.TmdbId);
-        var best = ranked.Take(TopPicks).Select(id => tmdbIds[id]).ToList();
-        var films = await FilmDtosAsync(best, ct);
+        var ours = ranked.Select(id => tmdbIds[id]).ToList();
 
-        return new DeckTopDto(swipes.Count, yeses.Count, best.Select(id => new TopPickDto(films[id], null)).ToList());
+        var facts = await advisor.FactsAsync(ours.Take(MaxRankCandidates), ct);
+        var candidates = ours.Take(MaxRankCandidates).Where(facts.ContainsKey).Select(id => facts[id]).ToList();
+        var advised = candidates.Count == 0
+            ? null
+            : await advisor.RankAsync("one person", TopPicks, new RankCandidatesInput(await TasteAsync(deckId, userId, mood, ct), candidates), ct);
+        var best = (advised ?? [])
+            .Concat(ours.Select(id => new AdvisedPick(id, null)))
+            .DistinctBy(p => p.TmdbId)
+            .Take(TopPicks)
+            .ToList();
+        var films = await cards.FilmDtosAsync(best.Select(p => p.TmdbId).ToList(), ct);
+
+        return new DeckTopDto(swipes.Count, yeses.Count, best.Select(p => new TopPickDto(films[p.TmdbId], p.Reason)).ToList());
     }
 
     /// <summary>
-    /// Adds up to <see cref="Deck.BatchSize"/> new items (positions after <paramref name="dealt"/>), never past
-    /// <see cref="Deck.MaxItems"/>. Not saved here: the caller saves once.
+    /// The user's own signals for the AI: the deck's mood, and the Wikidata genres of films they loved (seen + loved in this
+    /// deck, liked or rated high in their library) or swiped away here. Never TMDB text (ADR-0017).
     /// </summary>
-    private async Task<List<DeckItem>> DealAsync(
-        Guid deckId, Guid userId, int dealt, IReadOnlyList<SignalRow> signals, MoodQuery? mood, DateTimeOffset now, CancellationToken ct)
+    private async Task<SoloTaste> TasteAsync(Guid deckId, Guid userId, MoodQuery? mood, CancellationToken ct)
+    {
+        var swiped = await SwipesOf(deckId)
+            .Where(x => x.Swipe.Direction != SwipeDirection.Right)
+            .Join(db.FilmFacts.AsNoTracking(), x => x.Film.Id, ff => ff.FilmId, (x, ff) => new { x.Swipe.Direction, x.Swipe.SeenVerdict, ff.Genres })
+            .ToListAsync(ct);
+        var swipedFilms = SwipesOf(deckId).Select(x => x.Film.Id);
+        var library = await db.UserFilms.AsNoTracking()
+            .Where(u => u.UserId == userId && (u.Liked || u.RatingHalfStars != null) && !swipedFilms.Contains(u.FilmId))
+            .OrderByDescending(u => u.UpdatedAt)
+            .Take(LibrarySignalLimit)
+            .Join(db.FilmFacts.AsNoTracking(), u => u.FilmId, ff => ff.FilmId, (u, ff) => new { u.Liked, u.RatingHalfStars, ff.Genres })
+            .ToListAsync(ct);
+
+        // Loved: a seen + loved swipe (stronger than a plain yes) or a liked / high-rated library row (watchlist left out: not
+        // seen yet). Disliked: any negative swipe. The weights are DeckSignals'; this only picks rows by their sign.
+        var loved = swiped.Where(s => DeckSignals.OfSwipe(s.Direction, s.SeenVerdict) > DeckSignals.OfSwipe(SwipeDirection.Right, null)).Select(s => s.Genres)
+            .Concat(library.Where(l => DeckSignals.OfLibrary(l.Liked, onWatchlist: false, UserFilm.ToRating(l.RatingHalfStars)) > 0).Select(l => l.Genres));
+        var disliked = swiped.Where(s => DeckSignals.OfSwipe(s.Direction, s.SeenVerdict) < 0).Select(s => s.Genres);
+        return new SoloTaste(
+            mood?.IncludeGenres ?? [], mood?.Keywords ?? [], mood?.MaxRuntimeMinutes, MostFrequent(loved), MostFrequent(disliked));
+    }
+
+    private static List<string> MostFrequent(IEnumerable<string[]> genreLists) =>
+        genreLists.SelectMany(g => g)
+            .GroupBy(g => g, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal)
+            .Take(MaxTasteGenres)
+            .Select(g => g.Key)
+            .ToList();
+
+    /// <summary>
+    /// Adds up to <see cref="Deck.BatchSize"/> new items (positions after <paramref name="dealt"/>), never past
+    /// <see cref="Deck.MaxItems"/> nor a film the user has seen; leaning towards <paramref name="taste"/> when given. Not saved
+    /// here: the caller saves once.
+    /// </summary>
+    private Task<List<DeckItem>> DealAsync(
+        Guid deckId, Guid userId, int dealt, IReadOnlyList<SignalRow> signals, MoodQuery? mood, TasteProfile? taste, DateTimeOffset now, CancellationToken ct)
     {
         var count = Math.Min(Deck.BatchSize, Deck.MaxItems - dealt);
         if (count <= 0)
         {
-            return [];
+            return Task.FromResult(new List<DeckItem>());
         }
 
-        // Vectors from different models are never compared: use the model most signals were embedded with.
-        var model = signals.Where(s => s.Embedding is not null).GroupBy(s => s.EmbeddingModel).MaxBy(g => g.Count())?.Key;
-        var inDeck = db.DeckItems.Where(i => i.DeckId == deckId).Select(i => i.FilmId);
+        // Vectors from different models are never compared: the taste profile's model, else the one most signals were embedded with.
+        var model = taste?.EmbeddingModel ?? signals.Where(s => s.Embedding is not null).GroupBy(s => s.EmbeddingModel).MaxBy(g => g.Count())?.Key;
         var seen = db.UserFilms.Where(u => u.UserId == userId && u.Seen).Select(u => u.FilmId);
-        var candidates = await Filtered(db.Films.AsNoTracking(), mood)
-            .Where(f => f.IsAvailable && !inDeck.Contains(f.Id) && !seen.Contains(f.Id))
-            .OrderBy(f => f.Popularity == null).ThenByDescending(f => f.Popularity).ThenBy(f => f.TmdbId)
-            .Take(CandidatePool)
-            .Select(f => new SamplerFilm(
-                f.Id, f.Genres, f.ReleaseYear, f.RuntimeMinutes, f.Popularity ?? 0,
-                model != null && f.EmbeddingModel == model ? f.Embedding : null))
-            .ToListAsync(ct);
-
-        var deckSignals = signals.Select(s => s.ToDeckSignal(model)).ToList();
-        var picked = DeckSampler.Pick(candidates, deckSignals, count, Random.Shared);
-        var items = picked.Select((filmId, i) => DeckItem.Create(deckId, filmId, dealt + i + 1, now)).ToList();
-        db.DeckItems.AddRange(items);
-        return items;
+        return dealer.DealAsync(
+            deckId, dealt, count, [DeckFilter.FromMood(mood)], seen, signals.Select(s => s.ToDeckSignal(model)).ToList(), model, taste, now, ct);
     }
 
     /// <summary>This deck's swipes (full weight) and the user's most recent library rows (<see cref="DeckSignals"/>).</summary>
@@ -285,14 +336,14 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
 
         var swipedFilms = SwipesOf(deckId).Select(x => x.Film.Id);
         var library = await db.UserFilms.AsNoTracking()
-            .Where(u => u.UserId == userId && (u.Liked || u.OnWatchlist || u.Rating != null) && !swipedFilms.Contains(u.FilmId))
+            .Where(u => u.UserId == userId && (u.Liked || u.OnWatchlist || u.RatingHalfStars != null) && !swipedFilms.Contains(u.FilmId))
             .OrderByDescending(u => u.UpdatedAt)
             .Take(LibrarySignalLimit)
             .Join(db.Films, u => u.FilmId, f => f.Id, (u, f) => new
             {
                 u.Liked,
                 u.OnWatchlist,
-                u.Rating,
+                u.RatingHalfStars,
                 f.Genres,
                 f.RuntimeMinutes,
                 Embedding = includeEmbeddings ? f.Embedding : null,
@@ -302,7 +353,7 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
 
         return swiped
             .Select(s => new SignalRow(s.Genres, s.RuntimeMinutes, s.Embedding, s.EmbeddingModel, DeckSignals.OfSwipe(s.Direction, s.SeenVerdict)))
-            .Concat(library.Select(l => new SignalRow(l.Genres, l.RuntimeMinutes, l.Embedding, l.EmbeddingModel, DeckSignals.OfLibrary(l.Liked, l.OnWatchlist, l.Rating))))
+            .Concat(library.Select(l => new SignalRow(l.Genres, l.RuntimeMinutes, l.Embedding, l.EmbeddingModel, DeckSignals.OfLibrary(l.Liked, l.OnWatchlist, UserFilm.ToRating(l.RatingHalfStars)))))
             .Where(s => s.Weight != 0)
             .ToList();
     }
@@ -330,6 +381,10 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
             ? Result.Success()
             : DeckErrors.AlreadySwiped;
     }
+
+    /// <summary>The deck's source when it is the user's; null otherwise.</summary>
+    private async Task<DeckSource?> SourceOfAsync(Guid deckId, Guid userId, CancellationToken ct) =>
+        await db.Decks.AsNoTracking().Where(d => d.Id == deckId && d.UserId == userId).Select(d => (DeckSource?)d.Source).SingleOrDefaultAsync(ct);
 
     private Task<bool> OwnsDeckAsync(Guid deckId, Guid userId, CancellationToken ct) =>
         db.Decks.AnyAsync(d => d.Id == deckId && d.UserId == userId, ct);
@@ -360,87 +415,15 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
 
     /// <summary>A deck's mood genres as one strong signal, so batches and the top 3 lean towards them.</summary>
     private static List<SignalRow> MoodSignals(MoodQuery? mood) =>
-        mood is { IncludeGenres.Length: > 0 } ? [new SignalRow(mood.IncludeGenres, null, null, null, MoodSignalWeight)] : [];
+        mood is { IncludeGenres.Length: > 0 } ? [new SignalRow(mood.IncludeGenres, null, null, null, DeckSignals.MoodWeight)] : [];
 
-    /// <summary>
-    /// A mood's filters as hard limits: any included genre, no excluded genre, runtime, release years, original language.
-    /// A film missing the value a filter needs doesn't pass it.
-    /// </summary>
-    private static IQueryable<Film> Filtered(IQueryable<Film> films, MoodQuery? mood)
-    {
-        if (mood is null)
-        {
-            return films;
-        }
-
-        if (mood.IncludeGenres is { Length: > 0 } include)
-        {
-            films = films.Where(f => f.Genres.Any(g => include.Contains(g)));
-        }
-
-        if (mood.ExcludeGenres is { Length: > 0 } exclude)
-        {
-            films = films.Where(f => !f.Genres.Any(g => exclude.Contains(g)));
-        }
-
-        if (mood.MaxRuntimeMinutes is { } minutes)
-        {
-            films = films.Where(f => f.RuntimeMinutes <= minutes);
-        }
-
-        if (mood.MinReleaseYear is { } from)
-        {
-            films = films.Where(f => f.ReleaseYear >= from);
-        }
-
-        if (mood.MaxReleaseYear is { } to)
-        {
-            films = films.Where(f => f.ReleaseYear <= to);
-        }
-
-        if (mood.Language is { } language)
-        {
-            films = films.Where(f => f.OriginalLanguage == language);
-        }
-
-        return films;
-    }
-
-    /// <summary>Items in position order with their film, the caller's swipe and the caller's watchlist flag.</summary>
-    private async Task<IReadOnlyList<DeckItemDto>> ItemDtosAsync(IQueryable<DeckItem> items, Guid userId, CancellationToken ct)
-    {
-        var rows = await (
-            from i in items.AsNoTracking()
-            join f in db.Films.AsNoTracking() on i.FilmId equals f.Id
-            join s in db.Swipes.AsNoTracking() on i.Id equals s.DeckItemId into swipes
-            from s in swipes.DefaultIfEmpty()
-            orderby i.Position
-            select new
-            {
-                i.Id,
-                i.Position,
-                f.TmdbId,
-                Direction = s == null ? (SwipeDirection?)null : s.Direction,
-                Verdict = s == null ? null : s.SeenVerdict,
-                OnWatchlist = db.UserFilms.Any(u => u.UserId == userId && u.FilmId == i.FilmId && u.OnWatchlist),
-            })
-            .ToListAsync(ct);
-
-        var films = await FilmDtosAsync(rows.Select(r => r.TmdbId).ToList(), ct);
-
-        return rows
-            .Select(r => new DeckItemDto(
-                r.Id, r.Position, films[r.TmdbId],
-                r.Direction is { } direction ? new SwipeDto(direction, r.Verdict) : null,
-                r.OnWatchlist))
-            .ToList();
-    }
-
-    private async Task<Dictionary<int, FilmDto>> FilmDtosAsync(List<int> tmdbIds, CancellationToken ct) =>
-        await db.Films.AsNoTracking()
-            .Where(f => tmdbIds.Contains(f.TmdbId))
-            .Select(FilmProjections.Dto)
-            .ToDictionaryAsync(f => f.TmdbId, ct);
+    /// <summary>The deck's items with the user's own swipes.</summary>
+    private Task<IReadOnlyList<DeckItemDto>> ItemDtosAsync(IQueryable<DeckItem> items, Guid userId, CancellationToken ct) =>
+        cards.ItemDtosAsync(
+            items,
+            db.Swipes.AsNoTracking().Select(s => new CardGesture { DeckItemId = s.DeckItemId, Direction = s.Direction, SeenVerdict = s.SeenVerdict }),
+            userId,
+            ct);
 
     private Guid? UserId() => current.Actor is { IsUser: true } actor ? actor.Id : null;
 

@@ -42,8 +42,8 @@ public sealed class LibraryService(IAppDbContext db, ICurrentActor current, Time
         {
             LibrarySort.Title => withFilms.OrderBy(r => r.Film.Title).ThenBy(r => r.Film.TmdbId),
             LibrarySort.Rating => withFilms
-                .OrderBy(r => r.UserFilm.Rating == null)
-                .ThenByDescending(r => r.UserFilm.Rating)
+                .OrderBy(r => r.UserFilm.RatingHalfStars == null)
+                .ThenByDescending(r => r.UserFilm.RatingHalfStars)
                 .ThenByDescending(r => r.UserFilm.UpdatedAt)
                 .ThenBy(r => r.Film.TmdbId),
             _ => withFilms.OrderByDescending(r => r.UserFilm.UpdatedAt).ThenBy(r => r.Film.TmdbId),
@@ -54,7 +54,7 @@ public sealed class LibraryService(IAppDbContext db, ICurrentActor current, Time
                 r.UserFilm.Liked,
                 r.UserFilm.OnWatchlist,
                 r.UserFilm.Seen,
-                r.UserFilm.Rating,
+                UserFilm.ToRating(r.UserFilm.RatingHalfStars),
                 new FilmSummaryDto(r.Film.TmdbId, r.Film.Title, r.Film.ReleaseYear, r.Film.PosterPath, r.Film.RuntimeMinutes, r.Film.Genres, r.Film.VoteAverage),
                 r.UserFilm.UpdatedAt))
             .ToPagedResultAsync(request, ct);

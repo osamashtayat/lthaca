@@ -20,10 +20,10 @@ public sealed record LibraryListRequest : PageRequest
 /// <c>PUT /api/library/{tmdbId}</c>: the whole state, last write wins. All false + no rating deletes the row; a rating
 /// implies seen (service rules, A8).
 /// </summary>
-public sealed record UpdateUserFilmRequest(bool Liked, bool OnWatchlist, bool Seen, [Range(UserFilm.MinRating, UserFilm.MaxRating)] int? Rating);
+public sealed record UpdateUserFilmRequest(bool Liked, bool OnWatchlist, bool Seen, [HalfStarRating] decimal? Rating);
 
 /// <summary>A <c>UserFilm</c>: the caller's flags and rating for one film (all false/null when untouched).</summary>
-public sealed record UserFilmDto(bool Liked, bool OnWatchlist, bool Seen, int? Rating, FilmSummaryDto Film, DateTimeOffset UpdatedAt);
+public sealed record UserFilmDto(bool Liked, bool OnWatchlist, bool Seen, decimal? Rating, FilmSummaryDto Film, DateTimeOffset UpdatedAt);
 
 /// <summary>Shelf counts for My Cinema's header.</summary>
 public sealed record LibrarySummaryDto(int Liked, int Watchlist, int Seen);

@@ -8,7 +8,7 @@
     "roomStarted": "The host started the room: swiping begins. Payload: { roomId }",
     "voteCast": "Someone voted on a deck item. Payload: { roomId, deckItemId } (no vote values: results come from the API)",
     "deckExtended": "A new batch of deck items was added (group Just swipe). Payload: { roomId, fromPosition }",
-    "roomMatched": "The room reached a match or best compromise. Payload: { roomId, tmdbId }",
+    "roomMatched": "The room reached a match or best compromise. Payload: { roomId, tmdbId } (tmdbId: the match or the compromise's #1; null when no film got a yes)",
     "roomClosed": "The host closed the room. Payload: { roomId }"
   }
 }

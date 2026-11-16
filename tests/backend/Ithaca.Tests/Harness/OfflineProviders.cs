@@ -4,7 +4,7 @@ namespace Ithaca.Tests.Harness;
 
 /// <summary>
 /// Test hosts run in Development, which also loads the developer's user-secrets (real keys, real providers). Every test host
-/// applies these settings so tests stay offline and deterministic whatever the machine has configured.
+/// applies these settings so tests stay offline and deterministic (and unthrottled) whatever the machine has configured.
 /// </summary>
 internal static class OfflineProviders
 {
@@ -14,7 +14,11 @@ internal static class OfflineProviders
         ["Ai:EmbeddingProvider"] = "Fake",
         ["Tmdb:Client"] = "Fake",
         ["Wikidata:Client"] = "Fake",
+        ["Email:Provider"] = "Fake",
         ["CatalogSync:Enabled"] = "false",
+
+        // Tests send many requests from one client; RateLimitTests turns limits back on.
+        ["RateLimits:Enabled"] = "false",
     };
 
     public static IWebHostBuilder UseOfflineProviders(this IWebHostBuilder builder)

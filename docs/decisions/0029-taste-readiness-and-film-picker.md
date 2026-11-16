@@ -1,8 +1,10 @@
-# ADR-0026: Taste readiness and the film picker
+# ADR-0029: Taste readiness and the film picker
 
 - **Status:** Accepted (owner, 2026-11-14)
 - **Date:** 2026-11-14
 - **Amends:** api-contract.md §12 (BE-14a); answers A11
+- **Built by:** BE-14b (contract and stubs), BE-14c (logic), FE-23 (screens). Drafted as ADR-0026 in PR #44; BE-14
+  (PR #61) merged first and built the earlier A11 assumption, which BE-14c replaces.
 
 ## Context
 By taste (solo) and group taste ("Blend your histories") need history: at least 10 films liked, rated ≥ 3.5 or
@@ -42,7 +44,7 @@ no library at all (ADR-0012), so BE-14a could only assume they "add no taste" (A
 - A small room-scoped store for guests (10–20 film ids per membership), which ADR-0024 Q1 avoided for imports. The
   difference: no file, no background job, no retention rule beyond the room's own; it holds ids only.
 - Rooms never expire yet, so guest picks live as long as their room (see the BE-10 TODO on room expiry).
-- There is no design board for the picker; FE-21 follows the visual language (frontend-conventions.md).
+- There is no design board for the picker; FE-23 follows the visual language (frontend-conventions.md).
 
 ## Alternatives rejected
 A separate "taste seed" store for users (two sources of taste, and picks wouldn't show in My Cinema); no picks for

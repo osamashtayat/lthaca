@@ -63,6 +63,21 @@ internal sealed partial class TmdbHttpClient(HttpClient http, IOptions<TmdbOptio
             .ToList();
     }
 
+    public async Task<Result<IReadOnlyList<TmdbSearchResult>>> SearchFilmsAsync(string title, int? year, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(title);
+        var yearFilter = year is { } y ? $"&year={y.ToString(CultureInfo.InvariantCulture)}" : "";
+        var response = await GetAsync<SearchPage>($"search/movie?query={Uri.EscapeDataString(title)}&include_adult=false&page=1{yearFilter}", ct);
+        if (!response.IsSuccess)
+        {
+            return response.Error;
+        }
+
+        return (response.Value?.Results ?? [])
+            .Select(r => new TmdbSearchResult(r.Id, r.Title ?? "", Blank(r.OriginalTitle), YearOf(r.ReleaseDate), r.Popularity))
+            .ToList();
+    }
+
     /// <summary>One GET. Null value = 404. Never throws for HTTP or network failures.</summary>
     private async Task<Result<T?>> GetAsync<T>(string relativeUrl, CancellationToken ct)
         where T : class
@@ -126,6 +141,15 @@ internal sealed partial class TmdbHttpClient(HttpClient http, IOptions<TmdbOptio
     private sealed record DiscoverResult(
         [property: JsonPropertyName("id")] int Id,
         [property: JsonPropertyName("title")] string? Title,
+        [property: JsonPropertyName("release_date")] string? ReleaseDate,
+        [property: JsonPropertyName("popularity")] double Popularity);
+
+    private sealed record SearchPage([property: JsonPropertyName("results")] List<SearchResult> Results);
+
+    private sealed record SearchResult(
+        [property: JsonPropertyName("id")] int Id,
+        [property: JsonPropertyName("title")] string? Title,
+        [property: JsonPropertyName("original_title")] string? OriginalTitle,
         [property: JsonPropertyName("release_date")] string? ReleaseDate,
         [property: JsonPropertyName("popularity")] double Popularity);
 

@@ -31,8 +31,8 @@ flowchart LR
   BE08 --> BE11
   BE09 --> BE11
   BE03 & BE08 --> BE13[BE-13 AI picks]
-  BE04 --> BE14a[BE-14a taste contract] --> BE14b[BE-14b picker contract] --> BE14[BE-14 taste]
-  BE14a --> BE14
+  BE04 --> BE14a[BE-14a taste contract] --> BE14[BE-14 taste]
+  BE14 & BE17 --> BE14b[BE-14b picker contract] --> BE14c[BE-14c picker + taste readiness]
   OPS12[OPS-12 import + half-star decision] --> BE15a[BE-15a import contract] --> BE15[BE-15 import]
   BE05 --> OPS12
   BE05 --> BE20[BE-20 half-star ratings] --> BE15
@@ -48,7 +48,7 @@ flowchart LR
   FE06 --> FE10
   FE05 & FE07 & FE09 --> FE12[FE-12 Tonight]
   BE14a --> FE13[FE-13 taste]
-  BE14b & FE13 & FE09 --> FE21[FE-21 film picker]
+  BE14b & FE13 & FE09 --> FE23[FE-23 film picker]
   BE15a --> FE14[FE-14 import]
   FE03 --> FE14
   OPS12 --> FE20[FE-20 half-stub rating]
@@ -65,8 +65,8 @@ backend and can start at once (FE-01 after the owner approves the asset). Ops: O
 
 | Lane | Order | Notes |
 |---|---|---|
-| Backend | BE-01 → BE-09a → BE-02 → BE-03 → BE-04 → BE-05 → BE-06 → **BE-20** → BE-07 → BE-08 → BE-09 → BE-10 → BE-11 → BE-12 → BE-13 → BE-14a → BE-14b → BE-14 → BE-15a → BE-15 → BE-16a → BE-16 → BE-17 | BE-09a is a tiny contract task done early so FE-06 isn't blocked; BE-20 (half stars) goes next because it changes merged work; BE-15a needs only OPS-12 and may be pulled earlier; BE-06/BE-07 need only BE-01; the `a` contract tasks are small and may be pulled earlier so FE-13–15 can start |
-| Frontend | FE-01 (when approved) · FE-02 → FE-03 → FE-04 → FE-05 → FE-06 → FE-07 → FE-08 → FE-09 → **FE-20** → FE-10 → FE-11 → FE-12 → FE-13 → FE-14 → FE-15 → FE-21 | all on mocks |
+| Backend | BE-01 → BE-09a → BE-02 → BE-03 → BE-04 → BE-05 → BE-06 → **BE-20** → BE-07 → BE-08 → BE-09 → BE-10 → BE-11 → BE-12 → BE-13 → BE-14a → BE-14 → BE-15a → BE-15 → BE-16a → BE-16 → BE-17 → BE-14b → BE-14c | BE-09a is a tiny contract task done early so FE-06 isn't blocked; BE-20 (half stars) goes next because it changes merged work; BE-15a needs only OPS-12 and may be pulled earlier; BE-06/BE-07 need only BE-01; the `a` contract tasks are small and may be pulled earlier so FE-13–15 can start |
+| Frontend | FE-01 (when approved) · FE-02 → FE-03 → FE-04 → FE-05 → FE-06 → FE-07 → FE-08 → FE-09 → **FE-20** → FE-10 → FE-11 → FE-12 → FE-13 → FE-14 → FE-15 → FE-23 | all on mocks |
 
 With a second agent per side, tasks with no path between them can also run in parallel (BE-05 ‖ BE-06, FE-07 ‖ FE-08).
 Two backend tasks that add EF migrations merge one at a time: the later one deletes its migration, updates from `main`,
@@ -210,7 +210,7 @@ lint, test, build.
 - **Tests:** stub handler: request shape, batching, 429 back-off, dimension check, failure → Result; sync with the Fake.
 - **Docs:** docs/ai.md (embeddings, keys, provider table).
 
-### BE-13 — AI picks: ranking and reasons from Wikidata · `Todo`
+### BE-13 — AI picks: ranking and reasons from Wikidata · `Done` (PR #60)
 - **Objective:** better top 3 / compromise order and a one-line reason per pick, without any TMDB text reaching the LLM.
 - **Deps:** BE-03, BE-08 (BE-12 for rooms). **Modules:** `Application/Decks`, `Application/Rooms`, `Application/Ai`,
   `prompts/`, `evals/cases/`.
@@ -250,6 +250,21 @@ lint, test, build.
   failed swipe toasts and the card returns; top 3 shows 1–3 picks and the `deck.no_yeses` state.
 - **Tests:** gesture → direction (pure), swipe idempotency, flow with MSW.
 - **Docs:** none (routes decided, A4).
+
+### FE-22 — The story on the swipe card · `Done` (PR #73)
+- **Objective:** people decide from the story, so the swipe card shows it, as the "Solo — the deck" board does (poster,
+  tear line, facts, title, synopsis). Owner request, 2026-11-16.
+- **Deps:** FE-05, FE-11. **Modules:** `src/features/deck/` (`SwipeCard`, a film-story sheet), `src/mocks/` if a fixture
+  lacks an overview.
+- **Contract:** none: `DeckItemDto.film.overview` (§3) already carries TMDB's overview (display only, ADR-0017).
+- **Scope:** in: the card's lower panel (facts line incl. "★ score", title, overview clamped to a few lines); a "More"
+  button (≥ 44px, never starts a drag) that opens a `Sheet` with the full overview and the facts, without leaving the
+  deck; solo and group decks (both use `SwipeCard`); no text when a film has no overview. Out: overviews in list DTOs,
+  AI-shortened text (ADR-0017), taglines.
+- **Acceptance:** at 375px with mocks and against the real API: every card shows the start of the story, "More" shows
+  all of it, swipes by touch, mouse and keyboard still work, the card's height doesn't jump with the text length.
+- **Tests:** card renders the overview and none when null; "More" opens and closes the sheet; a press on "More" doesn't
+  swipe.
 
 ## Mood
 
@@ -303,27 +318,44 @@ lint, test, build.
 - **Scope:** in: as BE-01, for §12. Out: logic.
 - **Acceptance:** §12 endpoints in `openapi.json`, answering 501. **Tests:** stub slice test.
 
-### BE-14b — Film picker contract and stubs (ADR-0026) · `Todo`
-- **Objective:** unblock FE-21 before the picker logic exists.
-- **Deps:** BE-14a. **Modules:** `Application/Taste` (`TastePicksRequest`), `TasteController`, `RoomsController`,
-  `contracts/openapi.json`, `schema.d.ts`, `docs/api-contract.md` §12 (as built).
+### BE-14 — Taste profile and decks by taste · `Done` (PR #61)
+- **Objective:** a `TasteProfile` from what the user liked and rated, and decks/rooms built on it.
+- **Deps:** BE-14a, BE-05, BE-08. **Modules:** `Domain/Taste`, `Application/Taste`, `Application/Decks`, `Application/Rooms`.
+- **Contract:** §12.
+- **Scope:** in: profile vector from embeddings of liked/rated films (`input_type` `query` for text), readiness threshold,
+  taste decks, group taste skipping films any member has seen (A11 for guests). Ratings are 0.5–5 (ADR-0024): weight
+  them on that scale; imported `UserFilm`s count like any other (ADR-0024 decision 9). Out: import (BE-15).
+- **Acceptance:** per §12. **Tests:** slice tests; deterministic vector test with the Fake embedding client.
+
+### BE-14b — Film picker contract and stubs (ADR-0029) · `Todo`
+- **Objective:** unblock FE-23 before the picker logic exists.
+- **Deps:** BE-14, BE-17. **Modules:** `Application/Taste` (`TastePicksRequest`), `TasteController`, `RoomsController`,
+  `contracts/openapi.json`, `schema.d.ts`, `docs/api-contract.md` §12 (as built), and the 501 plumbing BE-17 removed
+  (`server.not_implemented` in `ErrorCodes`, `ErrorStatusCodes`, `problem.ts`; the stub attribute and test), re-added
+  as api-contract.md §10.4 says.
 - **Contract:** §12: `POST /api/taste/picks`, `PUT /api/rooms/{code}/taste` with every documented status.
-- **Scope:** in: as BE-01 for the two rows (DTOs, actions, 501 stubs, user-only / member access as §12 says). Out: logic (BE-14).
+- **Scope:** in: as BE-01 for the two rows (DTOs, actions, 501 stubs, user-only / member access as §12 says). Out: logic
+  (BE-14c).
 - **Acceptance:** both endpoints in `openapi.json`, answering 501; a guest gets 401 on `POST /api/taste/picks`.
   **Tests:** stub slice test.
 
-### BE-14 — Taste profile and decks by taste · `Todo`
-- **Objective:** a `TasteProfile` from what the user liked and rated, and decks/rooms built on it.
-- **Deps:** BE-14a, BE-14b, BE-05, BE-08, BE-10. **Modules:** `Domain/Taste`, `Application/Taste`, `Application/Decks`,
-  `Application/Rooms`, `Application/Auth` (upgrade), migration.
-- **Contract:** §12 (incl. ADR-0026).
-- **Scope:** in: profile vector from embeddings of liked/rated films (`input_type` `query` for text), readiness threshold,
-  taste decks, group taste skipping films any member has seen. Ratings are 0.5–5 (ADR-0024): weight
-  them on that scale; imported `UserFilm`s count like any other (ADR-0024 decision 9). ADR-0026: the film picker
-  (user picks → likes; guest picks stored per `RoomMember`, deleted with the room), `isReady` in taste rooms, guest
-  picks moved to likes on upgrade (`GuestUpgrade`), and remove the BE-14a/BE-14b stub guards. Out: import (BE-15).
-- **Acceptance:** per §12. **Tests:** slice tests; deterministic vector test with the Fake embedding client; picks
-  (10–20, unknown film, user vs guest, replace); taste-room readiness; upgrade moves guest picks to likes.
+### BE-14c — Film picker and taste-room readiness (ADR-0029) · `Todo`
+- **Objective:** the picker rows work, and guests count in group taste.
+- **Deps:** BE-14b. **Modules:** `Domain/Rooms` (`RoomMember`: a guest's picks), `Application/Taste`
+  (`TasteService`, `TasteProfileReader`), `Application/Rooms` (`RoomReader`, `RoomDeckService`, `GuestUpgrade`),
+  `RoomEvents.cs` + `contracts/realtime-events.json` (`memberReady` description), `docs/realtime.md`, migration.
+- **Contract:** §12 (picker rows, readiness in taste rooms); no shape change.
+- **Scope:** in, on top of what BE-14 built (§12 as built): `POST /api/taste/picks` marks each film `liked` (only adds)
+  and answers the updated `TasteDto`; `PUT /api/rooms/{code}/taste` routes a user's picks to likes and stores a guest's
+  on their `RoomMember` (replacing earlier ones; gone with the row); `RoomReader.IsReady` in taste rooms: a user who
+  meets A16 (`TasteProfileReader.IsReady`) or a guest with picks (today every taste-room member is ready); the room
+  blend in `RoomDeckService` adds a guest's picks as liked films (+1 each, as `TasteProfileReader` weighs likes);
+  `memberReady` after a `PUT …/taste` that makes the member ready; `GuestUpgrade` turns a guest's picks into likes in
+  both of its branches (moved or ended membership); remove the two 501 stubs and, once nothing returns it, the 501
+  plumbing again (as BE-17). Out: the screens (FE-23).
+- **Acceptance:** per §12. **Tests:** picks (10–20, repeated ids, unknown film → nothing saved, user vs guest, replace,
+  only adds); taste-room readiness for users and guests; a guest's picks lean the shared deck; `memberReady` published
+  once; upgrade moves guest picks to likes; grep finds no `server.not_implemented`.
 
 ### FE-13 — By taste screen · `Done`
 - **Objective:** the "Solo — by taste" board, and no dead end for people without history.
@@ -339,7 +371,7 @@ lint, test, build.
   board as designed; the decision comes only from the API.
 - **Tests:** ready vs not-ready rendering; "?" opens and closes the sheet (focus returns to the button).
 
-### FE-21 — Film picker and taste-room lobby (ADR-0026) · `Todo`
+### FE-23 — Film picker and taste-room lobby (ADR-0029) · `Todo`
 - **Objective:** "pick 10–20 films you love" for anyone without history, solo and in taste rooms.
 - **Deps:** BE-14b, FE-13, FE-09. **Modules:** `src/features/taste/`, `src/features/rooms/`, `src/mocks/`.
 - **Contract:** §12 (picker rows, `isReady` in taste rooms), §9 (search).
@@ -347,7 +379,7 @@ lint, test, build.
   enabled at 10–20); the `/taste` empty state's third option ("Pick films you love") next to import and "Just swipe
   instead"; in taste rooms, a lobby step for members who aren't ready (picker) and the note that their taste isn't in
   the blend yet; the host sees who isn't ready before starting; `taste` in the room mode options. No design board:
-  follow the visual language (frontend-conventions.md → Design reference). Out: the logic (BE-14).
+  follow the visual language (frontend-conventions.md → Design reference). Out: the logic (BE-14c).
 - **Acceptance:** with mocks: the picker submits only at 10–20; solo not-ready → three options; a guest in a taste
   room picks and becomes ready; readiness comes only from the API.
 - **Tests:** picker limits; empty state options; lobby step for a not-ready member.
@@ -374,7 +406,7 @@ lint, test, build.
 - **Tests:** slice tests; hub membership (SignalR client package, with the reason in the PR); guest scope; upgrade.
 - **Docs:** docs/realtime.md as built; api-contract.md §6.
 
-### BE-11 — Room swiping: mood step, start, shared deck, votes, progress · `Todo`
+### BE-11 — Room swiping: mood step, start, shared deck, votes, progress · `Done` (PR #48)
 - **Objective:** everyone swipes the same deck; votes are HTTP (ADR-0015).
 - **Deps:** BE-10, BE-08, BE-09. **Modules:** `Application/Rooms`, `Application/Decks`, `Domain/Rooms`, migration.
 - **Contract:** §6 (mood, start, deck, votes, progress); events `memberReady`, `roomStarted` (BE-10a), `voteCast`, `deckExtended`.
@@ -385,7 +417,7 @@ lint, test, build.
 - **Tests:** slice tests; hard-no exclusion; concurrent votes on one item (≥ 20 runs).
 - **Docs:** api-contract.md §6.
 
-### BE-12 — Room result: match and best compromise · `Todo`
+### BE-12 — Room result: match and best compromise · `Done` (PR #54)
 - **Objective:** the server decides the match or the best compromise.
 - **Deps:** BE-11. **Modules:** `Application/Rooms`, `Domain/Rooms`.
 - **Contract:** §6 (finish, result); event `roomMatched`.
@@ -455,7 +487,7 @@ lint, test, build.
 - **Acceptance:** with mocks, each shelf lists, filters and pages; user-only.
 - **Tests:** shelf switch and empty state.
 
-### BE-20 — Half-star ratings: contract and code (ADR-0024) · `Todo`
+### BE-20 — Half-star ratings: contract and code (ADR-0024) · `Done` (PR #46)
 - **Objective:** Ithaca ratings become 0.5–5 in steps of 0.5 everywhere (the BE-05 follow-up), before BE-15.
 - **Deps:** BE-05, OPS-12. **Modules:** `Domain/Library/UserFilm.cs` (`MinRating`/`MaxRating`, `Rating`, `Set`,
   half-star conversion), `Application/Library/LibraryDtos.cs` (`UpdateUserFilmRequest.Rating`, `UserFilmDto.Rating`),
@@ -558,7 +590,7 @@ lint, test, build.
   401; `ErrorStatusCodesTests` green.
 - **Tests:** stub slice test (incl. a multipart POST with the XSRF header); mapping tests.
 
-### BE-15 — Letterboxd import (ImportJob) · `Todo`
+### BE-15 — Letterboxd import (ImportJob) · `Done` (PR #53)
 - **Objective:** a user's Letterboxd export becomes `UserFilm`s, safely, with films we lack added from TMDB (ADR-0024).
 - **Deps:** BE-15a, BE-20 (half-star ratings), BE-05. **Modules:** `Domain/Imports` (`ImportJob`, `ImportItem`,
   `LetterboxdFilmLink`), `Application/Imports` (`ImportService`, parser, `ImportOptions`), `Application/Catalog` (the
@@ -623,17 +655,17 @@ lint, test, build.
 
 ## Profile
 
-### BE-16a — Profile contract and stubs · `Todo`
+### BE-16a — Profile contract and stubs · `Done` (PR #47)
 - **Objective:** unblock FE-15. **Deps:** BE-02. **Modules:** `docs/api-contract.md` (new §14), DTOs, stubs, contracts.
 - **Contract:** writes §14: display name, password change, delete account (what deletion removes: decided with the owner;
   imports and their lists go with the account by FK cascade, ADR-0024 / BE-15).
 - **Scope:** in: as BE-01, for §14. **Acceptance:** §14 in `openapi.json`, answering 501. **Tests:** stub slice test.
 
-### BE-16 — Profile · `Todo`
+### BE-16 — Profile · `Done` (PR #57)
 - **Objective:** implement §14. **Deps:** BE-16a. **Modules:** `Application/Users`, `AuthController` or `ProfileController`.
 - **Contract:** §14. **Scope / Acceptance / Tests:** per §14.
 
-### FE-15 — Profile & settings screen · `Todo`
+### FE-15 — Profile & settings screen · `Done` (PR #49)
 - **Objective:** the "Profile & settings" board. **Deps:** BE-16a, BE-15a, FE-03. **Modules:** `src/features/profile/`,
   `src/mocks/`. **Contract:** §14, §13 (latest import, read-only). **Scope:** in: `/profile` per the board, plus a
   "Letterboxd" row: "Import your history" → `/import`, or the latest import's date and counts when there is one
@@ -692,14 +724,30 @@ lint, test, build.
 - **Deps:** OPS-12. **Modules:** `docs/decisions/0024-…`, `docs/api-contract.md` §11, `docs/backlog.md`.
 - **Contract:** A15–A17 become decided (no shape changes). **Scope:** in: docs only. **Tests:** none (docs).
 
-### OPS-14 — Taste readiness and the film picker: decision and contract design (ADR-0026) · `Done` (PR #44)
+### OPS-14 — Taste readiness and the film picker: decision and contract design (ADR-0029) · `Done` (PR #44)
 - **Objective:** record the owner's decisions on group taste (A11) and a "pick films you love" path for people without
-  history, so BE-14b, BE-14 and FE-21 can start from one design.
-- **Deps:** BE-14a. **Modules:** `docs/decisions/0026-…`, `docs/api-contract.md` §11–§12, `docs/backlog.md`.
-- **Scope:** in: ADR-0026; §12 design (readiness in taste rooms, the picker, guest picks, the warning count); A11
-  decided; new BE-14b and FE-21; BE-14 and FE-13 follow-ups in scope. Out: code (BE-14b, BE-14, FE-21). **Tests:** none (docs).
+  history, so BE-14b, BE-14c and FE-23 can start from one design.
+- **Deps:** BE-14a. **Modules:** `docs/decisions/0029-…`, `docs/api-contract.md` §11–§12, `docs/backlog.md`.
+- **Scope:** in: ADR-0029; §12 design (readiness in taste rooms, the picker, guest picks, the warning count); A11
+  decided; new BE-14b, BE-14c and FE-23 (BE-14 merged first, so the picker logic is BE-14c; the FE-13 follow-up
+  is in FE-23). Out: code (BE-14b, BE-14c, FE-23). **Tests:** none (docs).
 
-### BE-17 — Remove the contract-stub plumbing · `Todo`
+### OPS-15 — Record the owner's email-provider decision (L4) · `Done`
+- **Objective:** record L4 and stop it blocking the password-reset contract.
+- **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L4, BE-18a, BE-18).
+- **Contract:** none. **Scope:** in: docs only. **Tests:** none (docs).
+
+### OPS-16 — Record the AI budget (L3) and the AI fallback rule · `Done`
+- **Objective:** record L3 ($25/month) and the owner's rule for when the AI fails, so BE-19 can start.
+- **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L3, BE-19).
+- **Contract:** none here (BE-19 makes the mood change). **Scope:** in: docs only. **Tests:** none (docs).
+
+### OPS-17 — Error tracking and monitoring: decision and tasks (ADR-0028) · `Done` (PR #71)
+- **Objective:** record L7 (Sentry for errors and logs, an uptime monitor) and plan the work, so BE-21 and FE-21 can start.
+- **Deps:** OPS-05. **Modules:** `docs/decisions/0028-…`, `docs/backlog.md` (L7, BE-21, FE-21, OPS-07, OPS-08, OPS-09).
+- **Contract:** none here (BE-21 adds the readiness check). **Scope:** in: docs only. **Tests:** none (docs).
+
+### BE-17 — Remove the contract-stub plumbing · `Done` (PR #67)
 - **Objective:** no stubs left. **Deps:** BE-12, BE-14, BE-15, BE-16. **Modules:** `ErrorCodes.cs`,
   `ErrorStatusCodes.cs`, `problem.ts`, stub test.
 - **Contract:** §2 (`server.not_implemented` removed).
@@ -753,27 +801,65 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   the Worker (route `<domain>/api/*` and `<domain>/hubs/*` → the VPS origin, WebSocket pass-through, in the repo with its
   own small test); the VPS reachable only through Cloudflare (firewall allows Cloudflare's IP ranges); production secrets on the server (never in the repo or CI logs), `ASPNETCORE_ENVIRONMENT=Production`
   (Secure cookies, no dev seed, no `/dev/*`), migrations run before the new API starts (the existing `migrate` service),
-  a manual-approval deploy job from CI, a documented rollback. Out: backups (OPS-08), monitoring (OPS-09).
+  a manual-approval deploy job from CI, a documented rollback; Sentry in production (ADR-0028): `Sentry__Dsn` on the
+  server, `VITE_SENTRY_DSN` and the release name at the Pages build, and the SPA's source maps uploaded to Sentry at
+  build time (`SENTRY_AUTH_TOKEN` as a CI secret, maps not served publicly). Out: backups (OPS-08), monitoring (OPS-09).
 - **Acceptance:** the domain serves the app from Pages over HTTPS; sign-in works through the Worker (Secure cookies,
   antiforgery); a room works across two phones (WebSockets through the Worker); the VPS refuses direct traffic; site and
-  API rollbacks were each rehearsed once.
+  API rollbacks were each rehearsed once; a production frontend error shows readable source lines in Sentry.
 - **Tests:** the Docker smoke test against the production compose file in CI.
 
 ### OPS-08 — Production data: backups, nightly sync, catalog size · `Todo`
 - **Objective:** user data survives a broken server; the catalog is fresh and big enough for good decks.
 - **Deps:** OPS-07, BE-03, BE-04. **Modules:** server scripts, `appsettings.Production.json` (no secrets), `docs/`.
-- **Scope:** in: nightly `pg_dump` to off-server storage (e.g. Cloudflare R2) with retention, a tested restore;
+- **Scope:** in: nightly `pg_dump` to off-server storage (e.g. Cloudflare R2) with retention, a tested restore, and a
+  heartbeat (a Sentry cron check-in or an uptime-monitor heartbeat) that alerts when a backup didn't run (ADR-0028);
   `CatalogSync:Enabled=true`; a catalog size target (L6) and the sync settings to reach it within TMDB's rate limits;
   embeddings for the whole catalog within Voyage limits (OPS-10). Out: analytics.
 - **Acceptance:** a restore into a fresh database was done once and is documented; the catalog meets L6.
 
 ### OPS-09 — Monitoring and alerts · `Todo`
 - **Objective:** know about errors and downtime before users report them.
-- **Deps:** OPS-07. **Modules:** API logging setup, server, `docs/`.
-- **Scope:** in: uptime check on `/api/health` with alerts to the owner; error tracking (the JSON logs shipped somewhere
-  searchable, or an error service: L7); disk and memory alerts on the VPS; AI/TMDB/Voyage failure counts visible. Never
-  log emails, mood text or keys (backend-conventions.md). Out: product analytics.
+- **Deps:** OPS-07, BE-21, FE-21. **Modules:** Sentry and uptime-monitor settings (owner's accounts), server, `docs/`.
+- **Scope:** in (ADR-0028; error capture itself is BE-21/FE-21): an uptime monitor on `https://<domain>/api/health/ready`
+  every minute with response-time alerts (Better Stack free tier, or Sentry Uptime); Sentry alert rules (new issue →
+  email; production only; warning counts above a threshold, e.g. AI or TMDB failures per hour; the catalog-sync cron
+  monitor); disk and memory alerts on the VPS; where the owner gets alerts (L7) written down in `docs/`. Never log
+  emails, mood text or keys (backend-conventions.md). Out: product analytics.
 - **Acceptance:** a forced 500 and a stopped API both reach the owner within minutes.
+
+### BE-21 — Sentry in the API, readiness check, container health (ADR-0028) · `Todo`
+- **Objective:** every backend error reaches Sentry with what happened, and the API reports whether it can serve.
+- **Deps:** OPS-17. **Modules:** `Ithaca.Api` (Sentry setup, options, readiness action), `Ithaca.Application` (readiness
+  service), `Ithaca.Infrastructure/Jobs/CatalogSyncJob.cs` (cron check-in), `ErrorCodes`, `ErrorStatusCodes`,
+  `problem.ts` (own code), `docker-compose.yml`, `.env.example`, `docs/backend-conventions.md`.
+- **Contract:** §1 adds `GET /api/health/ready` (200 `{ status: "ok" }`, 503 `health.database_unavailable`); additive, no
+  FE task waits on it.
+- **Scope:** in: Sentry.AspNetCore configured from a `Sentry` options section (off without a DSN; environment and release
+  set; traces 1.0 in Development, 0.1 otherwise; `SendDefaultPii` off, no request bodies, cookies or auth headers; the
+  user as internal id only); Error-and-above logs from anywhere (requests, jobs, hub) as issues and Warning-and-above to
+  Sentry Logs; a cron check-in around each catalog-sync run; the readiness check (database reachable); the `api`
+  container's healthcheck on it, `restart: unless-stopped` and log rotation for every service. Out: alert rules and
+  uptime (OPS-09), production DSN (OPS-07).
+- **Acceptance:** with a DSN, a forced exception from the running API arrives in `ithaca-server` with its stack trace,
+  route and internal user id, and nothing personal; without one, nothing is sent; ready answers 503 with the database
+  stopped; `docker compose ps` shows the api healthy.
+- **Tests:** options and scrubbing (a captured event has no cookies, body or email); readiness ok and unavailable;
+  error-code mapping.
+
+### FE-21 — Sentry in the SPA and a crash screen (ADR-0028) · `Todo`
+- **Objective:** errors on users' phones reach Sentry, and a crash shows a friendly screen instead of a blank page.
+- **Deps:** OPS-17. **Modules:** `src/main.tsx` or `src/app/` (Sentry init, error boundary, router error element),
+  `src/shared/` (the init, so `@sentry/react` is only imported there), `.env.example`, `docs/frontend-conventions.md`.
+- **Contract:** none.
+- **Scope:** in: `@sentry/react` initialised from `VITE_SENTRY_DSN` (off without it, so tests and mocks send nothing);
+  environment from the build mode; browser tracing (1.0 in development, 0.1 in production, traces propagated to
+  same-origin `/api` only); Session Replay on errors only with all text and inputs masked and media blocked; no default
+  PII; the user as internal id only, set when the session is known; a crash screen in the brand style (tokens only, a
+  "Reload" action) for render errors and router errors. Out: source-map upload (OPS-07).
+- **Acceptance:** with a DSN, a forced render error from the running SPA arrives in `ithaca-frontend` and the crash
+  screen shows at 375px; without one, nothing is sent; the bundle-size change is recorded in the PR.
+- **Tests:** the crash screen renders for a throwing child and a router error; init does nothing without a DSN.
 
 ### OPS-10 — Paid API accounts, keys and budgets · `Todo` (owner)
 - **Objective:** production keys with spending limits, so a busy day can't run up a surprise bill.
@@ -782,35 +868,44 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   low rate limits); TMDB terms check for a public, possibly commercial site (ADR-0017); a separate key per environment.
 - **Acceptance:** each provider has a production key and a limit at or below L3.
 
-### BE-19 — Rate limits and AI spend cap · `Todo`
+### BE-19 — Rate limits and AI spend cap · `Done` (PR #70)
 - **Objective:** one person or a bot can't flood the API or burn the AI budget.
-- **Deps:** BE-09, L3. **Modules:** `Program.cs` (ASP.NET Core rate limiter), `Application/Ai`, `ErrorCodes`,
-  `ErrorStatusCodes`, `problem.ts`, options class.
-- **Contract:** §2 adds 429 `rate.limited` with `Retry-After` (contract change in this task; no FE task waits on it).
+- **Deps:** BE-09, L3 (decided: $25/month). **Modules:** `Program.cs` (ASP.NET Core rate limiter), `Application/Ai`,
+  `Application/Moods`, `ErrorCodes`, `ErrorStatusCodes`, `problem.ts`, options class.
+- **Contract:** §2 adds 429 `rate.limited` with `Retry-After`; §5/§6 (mood) say what happens when the AI can't read the
+  text (below), additively, so the client can tell "not a mood" from "AI unavailable" (contract changes in this task;
+  no FE task waits on them, the screens show the new case in a follow-up).
 - **Scope:** in: per-user and per-IP limits on sign-in/register, room join, deck creation, **import creation**
   (`POST /api/imports`, e.g. 5 per user per day; ADR-0024) and every AI-backed call;
-  a daily global AI budget counter that switches mood parsing off (chips still work, ADR-0022) when reached; limits in
-  config. Out: billing.
-- **Acceptance:** exceeding a limit → 429 `rate.limited` with `Retry-After`; when the budget is reached, mood text gets
-  `textIgnored` with chips or a clear message without.
-- **Tests:** limiter slice tests with `FakeTimeProvider`; budget switch.
+  a daily global AI budget counter (the monthly L3 budget, **$25**, as a daily share; in config) that switches mood
+  parsing off (chips still work, ADR-0022) when reached; limits in config.
+  **AI fallback (owner, 2026-11-16):** when mood parsing fails for any reason (provider down or timing out, refusal,
+  invalid reply, or the budget reached), a solo deck or a room mood **with chips** is built from the chips and says the
+  text was not used (like `textIgnored`); **without chips** it answers one clear code the screens turn into "mood text
+  isn't available right now, pick a few moods instead", with nothing saved. No second AI provider as a standby. AI picks
+  (reasons → null) and By taste (stored vectors, no live embedding call) already degrade this way; keep them so.
+  Out: billing.
+- **Acceptance:** exceeding a limit → 429 `rate.limited` with `Retry-After`; when the budget is reached or the model
+  fails, mood text with chips still gives a deck (text marked unused) and without chips a clear code, never a 5xx.
+- **Tests:** limiter slice tests with `FakeTimeProvider`; budget switch; mood with a failing Fake LLM, with and without
+  chips (solo and room).
 
-### BE-18a — Password reset contract and stubs · `Todo` (needs L4)
-- **Objective:** unblock FE-16. **Deps:** BE-02, L4. **Modules:** `docs/api-contract.md` (§4), DTOs, stubs, contracts.
+### BE-18a — Password reset contract and stubs · `Done` (PR #59)
+- **Objective:** unblock FE-16. **Deps:** BE-02 (the contract doesn't depend on the provider; L4 is only BE-18's). **Modules:** `docs/api-contract.md` (§4), DTOs, stubs, contracts.
 - **Contract:** writes `POST /api/auth/forgot-password` (always 204, never reveals whether the email exists) and
   `POST /api/auth/reset-password` (token + new password).
 - **Scope:** in: as BE-01. **Acceptance:** both in `openapi.json`, answering 501.
 
-### BE-18 — Password reset by email · `Todo`
+### BE-18 — Password reset by email · `Done` (PR #63)
 - **Objective:** users who forget their password can get back in.
-- **Deps:** BE-18a. **Modules:** `Application/Users`, an `IEmailSender` (Application) + provider client
+- **Deps:** BE-18a, the owner's Resend account, sending domain and API key (L4). **Modules:** `Application/Users`, an `IEmailSender` (Application) + provider client
   (Infrastructure), options, templates.
-- **Scope:** in: Identity reset tokens (short expiry, single use), the email via the provider chosen in L4 (SPF/DKIM on the
-  Cloudflare domain), rate-limited (BE-19). Out: marketing email.
+- **Scope:** in: Identity reset tokens (short expiry, single use), the email via Resend (L4; SPF/DKIM on the
+  Cloudflare domain, sent from a subdomain such as `mail.<domain>`), rate-limited (BE-19). Out: marketing email.
 - **Acceptance:** reset works end to end on staging; unknown emails get the same response; tokens expire.
 - **Tests:** stub email sender; token expiry and reuse.
 
-### FE-16 — Forgot / reset password screens · `Todo`
+### FE-16 — Forgot / reset password screens · `Done` (PR #65)
 - **Objective:** the screens for BE-18. **Deps:** BE-18a, FE-03. **Modules:** `src/features/auth/`, `src/mocks/`.
 - **Scope:** in: "Forgot password?" on `/sign-in`, `/reset-password?token=…`. **Acceptance:** with mocks, both flows and
   their errors.
@@ -818,8 +913,8 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 ### FE-17 — Terms, Privacy and account deletion · `Todo` (needs L5)
 - **Objective:** the legal pages the Welcome board links to, and a way to delete an account.
 - **Deps:** L5 (the texts), BE-16 (delete account), FE-15. **Modules:** `src/app/pages/`, routes, footer, `/profile`.
-- **Scope:** in: `/terms`, `/privacy` (owner-provided text; mention TMDB, Wikidata, Anthropic, Voyage and the email
-  provider as processors where relevant), footer links, "Delete account" in profile with confirmation. Out: cookie
+- **Scope:** in: `/terms`, `/privacy` (owner-provided text; mention TMDB, Wikidata, Anthropic, Voyage, the email
+  provider and Sentry (EU, ADR-0028) as processors where relevant), footer links, "Delete account" in profile with confirmation. Out: cookie
   banner (only essential cookies are used; revisit if analytics are added, L8).
 - **Acceptance:** pages reachable from Welcome and the footer; deletion removes the account and signs out.
 
@@ -847,11 +942,11 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 |---|---|---|
 | L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker (db, migrate, api), behind Cloudflare.** Provider still to choose (OPS-06) |
 | L2 | Where the site runs | **Decided (2026-11-13): Cloudflare Pages + a Worker routing `/api` and `/hubs` to the VPS (B1).** |
-| L3 | Monthly AI budget (Anthropic + Voyage) | A hard cap you're comfortable with; BE-19 enforces a daily share of it |
-| L4 | Email provider for password reset | Any transactional provider that supports a custom domain (SPF/DKIM on Cloudflare DNS) |
+| L3 | Monthly AI budget (Anthropic + Voyage) | **Decided (2026-11-16): $25 per month.** BE-19 enforces a daily share of it (and falls back to the mood chips when it's reached or the AI fails); OPS-10 sets each provider's dashboard limit at or below it |
+| L4 | Email provider for password reset | **Decided (2026-11-15): Resend**, sending from a subdomain (e.g. `no-reply@mail.<domain>`), SPF/DKIM on Cloudflare DNS. Behind `IEmailSender`, so Postmark stays a one-class swap. The owner creates the account and key (user-secrets locally, `.env` on the VPS). Only BE-18 needs it; BE-18a doesn't |
 | L5 | Terms and Privacy texts | Written or approved by you (not legal advice from agents) |
 | L6 | Catalog size at launch | Enough for varied decks, e.g. several thousand films (843 today). Not a prerequisite for the Letterboxd import (ADR-0024 Q4, decided) |
-| L7 | Error tracking: logs only or an error service | Start with logs + uptime alerts; add a service if errors are hard to find |
+| L7 | Error tracking: logs only or an error service | **Decided (2026-11-16): Sentry** (EU region, org `osama-vz`, projects `ithaca-server` and `ithaca-frontend`) for errors, logs, traces, cron check-ins and masked error replays; users reported by internal id only; an uptime monitor on `/api/health/ready` (OPS-09). Alerts by email. ADR-0028 |
 | L8 | Analytics at launch? | None at launch (no cookie banner needed); decide later |
 | P-02 | Google / Apple sign-in at launch? | Not required for launch; email works |
 

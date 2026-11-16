@@ -1,10 +1,11 @@
 using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
-using Ithaca.Api.OpenApi;
+using Ithaca.Api.RateLimiting;
 using Ithaca.Application.Common;
 using Ithaca.Application.Imports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Ithaca.Api.Controllers;
 
@@ -16,16 +17,18 @@ namespace Ithaca.Api.Controllers;
 public sealed class ImportsController(ImportService imports) : ControllerBase
 {
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.ImportCreate)]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(ImportLimits.MaxUploadBytes)]
     [ReadFormFirst] // so an oversized body is 413 request.too_large, not a 400 from form binding
+    [RequestFormLimits(MultipartBodyLengthLimit = ImportLimits.MaxUploadBytes, MemoryBufferThreshold = (int)ImportLimits.MaxUploadBytes)] // in memory: never a temp file (ADR-0024)
     [ProducesResponseType<ImportJobDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
-    [ContractStub]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<ImportJobDto>> Create([FromForm] CreateImportRequest request, CancellationToken ct) =>
         this.ToCreatedResult(await imports.CreateAsync(request.ToImportUpload(), ct), job => $"/api/imports/{job.Id}");
 
@@ -33,7 +36,6 @@ public sealed class ImportsController(ImportService imports) : ControllerBase
     [ProducesResponseType<PagedResult<ImportJobDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
-    [ContractStub]
     public async Task<ActionResult<PagedResult<ImportJobDto>>> List([FromQuery] PageRequest page, CancellationToken ct) =>
         this.ToActionResult(await imports.ListAsync(page, ct));
 
@@ -41,7 +43,6 @@ public sealed class ImportsController(ImportService imports) : ControllerBase
     [ProducesResponseType<ImportJobDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ContractStub]
     public async Task<ActionResult<ImportJobDto>> Get(Guid importId, CancellationToken ct) =>
         this.ToActionResult(await imports.GetAsync(importId, ct));
 
@@ -50,7 +51,6 @@ public sealed class ImportsController(ImportService imports) : ControllerBase
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ContractStub]
     public async Task<ActionResult<PagedResult<ImportNotFoundDto>>> ListNotFound(Guid importId, [FromQuery] PageRequest page, CancellationToken ct) =>
         this.ToActionResult(await imports.ListNotFoundAsync(importId, page, ct));
 }

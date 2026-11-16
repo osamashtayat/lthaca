@@ -23,9 +23,10 @@ public sealed record RoomDto(
 
 /// <summary>
 /// <c>PUT /api/rooms/{code}/mood</c>: the caller, now ready. <see cref="TextIgnored"/> is true when their text wasn't a mood,
-/// so only their chips were used; it is only ever sent to that member (ADR-0022).
+/// so only their chips were used; it is only ever sent to that member (ADR-0022). <see cref="TextUnavailable"/> is also true
+/// when that was because we couldn't read the text right now (AI failure or the daily AI budget; BE-19).
 /// </summary>
-public sealed record RoomMoodDto(RoomMemberDto Member, bool TextIgnored);
+public sealed record RoomMoodDto(RoomMemberDto Member, bool TextIgnored, bool TextUnavailable);
 
 /// <summary>What anyone with the link sees before joining.</summary>
 public sealed record RoomPreviewDto(
@@ -43,14 +44,18 @@ public sealed record MemberProgressDto(Guid MemberId, int VotedCount);
 /// <summary><c>GET /api/rooms/{code}/progress</c>.</summary>
 public sealed record RoomProgressDto(RoomStatus Status, int DeckSize, IReadOnlyList<MemberProgressDto> Members);
 
-/// <summary>A picked film. Names who said yes and who has seen it; only counts the noes (A7).</summary>
+/// <summary>
+/// A picked film. Names who said yes and who has seen it; only counts the noes (A7). <see cref="Reason"/> is the AI's
+/// one-liner from Wikidata facts and the vote counts (BE-13), null when there is none.
+/// </summary>
 public sealed record RoomPickDto(
     int Rank,
     FilmSummaryDto Film,
     int YesCount,
     int NoCount,
     IReadOnlyList<Guid> Yes,
-    IReadOnlyList<Guid> Seen);
+    IReadOnlyList<Guid> Seen,
+    string? Reason);
 
 /// <summary>Match: exactly one pick. Compromise: up to three, best first.</summary>
 public sealed record RoomResultDto(RoomResultKind Kind, IReadOnlyList<RoomPickDto> Picks, int MemberCount, DateTimeOffset DecidedAt);

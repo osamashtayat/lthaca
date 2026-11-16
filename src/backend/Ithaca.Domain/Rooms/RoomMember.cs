@@ -1,5 +1,6 @@
 using Ithaca.Domain.Common;
 using Ithaca.Domain.Errors;
+using Ithaca.Domain.Moods;
 
 namespace Ithaca.Domain.Rooms;
 
@@ -43,6 +44,25 @@ public sealed class RoomMember
     public DateTimeOffset? LeftAt { get; private set; }
 
     public bool IsPresent => LeftAt is null;
+
+    /// <summary>
+    /// The member's private hard nos (glossary: Hard no): never shown to the group, never in the deck. Their mood step answer
+    /// is a <c>MoodQuery</c> that points at this member (<c>MoodQuery.RoomMemberId</c>).
+    /// </summary>
+    public HardNo[] HardNos { get; private set; } = [];
+
+    /// <summary>The mood step's hard nos, replacing earlier ones.</summary>
+    public void SetHardNos(IEnumerable<HardNo> hardNos)
+    {
+        ArgumentNullException.ThrowIfNull(hardNos);
+        var distinct = hardNos.Distinct().ToArray();
+        if (distinct.Any(h => !Enum.IsDefined(h)))
+        {
+            throw new DomainException(ErrorCodes.Validation, "Unknown hard no.", "hardNos");
+        }
+
+        HardNos = distinct;
+    }
 
     public static RoomMember ForUser(Guid roomId, Guid userId, int seat, DateTimeOffset now) =>
         userId == Guid.Empty ? throw new DomainException(ErrorCodes.Validation, "userId is required.") : Create(roomId, userId, null, seat, now);

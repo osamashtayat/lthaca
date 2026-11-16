@@ -61,6 +61,37 @@ export function findMockAccount(email: string, password: string): CurrentUserDto
   return account && account.password === password ? account.user : undefined
 }
 
+/** When the mock accounts "joined" (api-contract §14 `createdAt`). */
+export const MOCK_CREATED_AT = '2026-11-01T09:00:00Z'
+
+function sessionAccount(): Account | undefined {
+  return session?.kind === 'user' ? accounts.get(session.email ?? '') : undefined
+}
+
+export function isMockPassword(password: string): boolean {
+  return sessionAccount()?.password === password
+}
+
+export function setMockDisplayName(displayName: string): CurrentUserDto | undefined {
+  const account = sessionAccount()
+  if (!account) return undefined
+  account.user = { ...account.user, displayName }
+  writeSession(account.user)
+  return account.user
+}
+
+export function setMockPassword(password: string) {
+  const account = sessionAccount()
+  if (account) account.password = password
+}
+
+/** Removes the signed-in account (its email can register again) and signs out. */
+export function deleteMockAccount() {
+  const account = sessionAccount()
+  if (account) accounts.delete(account.user.email ?? '')
+  writeSession(null)
+}
+
 export function isMockEmailTaken(email: string): boolean {
   return accounts.has(email.trim().toLowerCase())
 }
@@ -75,6 +106,17 @@ export function addMockAccount(email: string, password: string, displayName: str
   }
   accounts.set(user.email ?? '', { user, password })
   return user
+}
+
+/** The one reset link the mock accepts (the "emailed" token); any other token is expired or used (api-contract §4). */
+export const MOCK_RESET_TOKEN = 'mock-reset-token'
+
+/** Sets that account's password and returns the user, or undefined when there is no such account. */
+export function resetMockPassword(email: string, password: string): CurrentUserDto | undefined {
+  const account = accounts.get(email.trim().toLowerCase())
+  if (!account) return undefined
+  account.password = password
+  return account.user
 }
 
 /** Called from src/test/setup.ts after every test. */

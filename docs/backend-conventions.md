@@ -7,13 +7,13 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
 - `[ApiController]`, `[Route("api/<plural>")]`, `[Tags("<Feature>")]`, sealed, primary-constructor injection of **services only**.
 - One action = one service call, then `this.ToActionResult(result)` (200), `this.ToCreatedResult(result, v => url)` (201) or
   `this.ToActionResult(result)` for a non-generic `Result` (204). Nothing else: no `if`, no mapping, no try/catch.
-- **Contract stubs** (BE-01): an endpoint whose task hasn't landed has its final route, DTOs and statuses, plus
-  `[ContractStub]` (documents 501), and its service method returns `ContractStub.Of<T>()` / `ContractStub.Command()`
-  (501 `server.not_implemented`). Implementing it: replace the body, drop `[ContractStub]` and the CA1822 suppression,
-  remove its row from `ContractStubEndpointTests`, re-export the contract.
-- **A stubbed enum value on a live endpoint** (BE-14a: `source: "taste"`, `mode: "taste"`): the action keeps working and
-  carries `[ContractStub]`; the service returns `ContractStub.NotImplemented` at the top for that value; the value has its
-  own row in `ContractStubEndpointTests`. Implementing it removes all three (guard, attribute, row).
+- **Contract stubs** (BE-01 to BE-16, ADR-0021): endpoints whose task hadn't landed answered 501
+  `server.not_implemented` through `ContractStub` and documented it with `[ContractStub]`. BE-17 deleted all three once
+  every endpoint was live; a later contract-first task that needs stubs re-adds them (api-contract.md §2, §10).
+- **Rate limits** (BE-19): an action that signs in, joins, creates a deck or an import, or calls the AI carries
+  `[EnableRateLimiting(RateLimitPolicies.X)]` and `[ProducesResponseType<ProblemDetails>(429)]`. The policies, their
+  per-person / per-IP partitioning and the 429 `rate.limited` + `Retry-After` answer live in `Api/RateLimiting/`; the limits
+  in the `RateLimits` config section (api-contract.md §2). Tests turn them off (`OfflineProviders`) except `RateLimitTests`.
 - List queries derive from `PageRequest` and bind camelCase names (`CamelCaseBindingMetadataProvider`).
 - Declare `[ProducesResponseType]` for every status; they feed `contracts/openapi.json` and the frontend types.
 - Route constraints (`{tmdbId:int:min(1)}`) and DataAnnotations on `…Request` records do input-shape validation
@@ -56,7 +56,8 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
 - Reads: `AsNoTracking()` + `Select(new XDto(...))`, order before paging, `Paging.ToPagedResultAsync(page, ct)` for lists
   (`PageRequest` is the base of every list query; `PagedResult<T>` is the response).
 - Writes: load, call entity methods, `SaveChangesAsync` **once**, then publish realtime. Exception: a resumable batch job
-  (e.g. `CatalogSyncService`) may save once per batch; say so in the service's doc comment.
+  (e.g. `CatalogSyncService`) may save once per batch; say so in the service's doc comment. Exception: `RoomReferee`
+  decides a room with its own save after the triggering request's commit (ADR-0026).
 - Configurations: `Infrastructure/Persistence/Configurations/<Entity>Configuration.cs`, explicit table and index names,
   snake_case via `EFCore.NamingConventions`. Vectors: `HasColumnType($"vector({N})")` + converter from `float[]` + HNSW index.
 - Migrations: `/new-migration` or AGENTS.md §1. Generated files are `generated_code` in `.editorconfig`; never edit an
@@ -65,7 +66,20 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
 ## Configuration
 - One options class per section, implementing `IConfigSection` (`static string SectionName`), next to its consumer.
 - Register with `services.AddValidatedOptions<T>(configuration)` (binds, validates DataAnnotations, fails at startup).
+  Application's options are registered in `AddInfrastructure`; the Api's own (`RateLimitOptions`) in its setup method.
 - Defaults in `appsettings.json`; secrets only via env vars / user-secrets; every key in `.env.example` with a placeholder.
+
+## File uploads (BE-15)
+- The one upload so far is the Letterboxd import (api-contract.md §13). Copy it: the `IFormFile` request record lives
+  next to its controller (Api), the action converts it with one helper into an Application record (`ImportUpload`:
+  stream, name, length) and calls one service method.
+- Limits: `[RequestSizeLimit]` from a constant + `[ReadFormFirst]` (413 `request.too_large` as ProblemDetails);
+  `[RequestFormLimits(MemoryBufferThreshold = …)]` at the same size so the form is buffered in memory, never to a temp
+  file. Everything else is checked by the service while reading: type by content (signature/header, never extension or
+  `Content-Type`), archive entry count, decompressed bytes counted as they are read (never trust archive headers), row
+  caps. Limits that may change are an options class (`ImportOptions`).
+- **Never store an upload.** Parse it in memory, keep only the fields the feature needs, and let the stream go before
+  the response. Never log its content (titles reveal what someone watches).
 
 ## Logging
 - JSON console logs. Use `[LoggerMessage]` source-generated methods. Never log user free text, mood text, emails or keys.

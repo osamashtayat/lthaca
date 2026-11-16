@@ -1,0 +1,47 @@
+{
+  "id": "rank-candidates.v2.cozy-night",
+  "kind": "representative",
+  "description": "a cozy comedy mood puts the warm animated comedy first",
+  "prompt": "rank-candidates.v2",
+  "variables": {
+    "audience": "one person",
+    "limit": "3"
+  },
+  "input": "{\"taste\": {\"moodGenres\": [\"Comedy\", \"Family\"], \"moodKeywords\": [\"cozy\"], \"maxRuntimeMinutes\": 120, \"likedGenres\": [\"animated film\"], \"dislikedGenres\": [\"horror film\"]}, \"candidates\": [{\"tmdbId\": 493922, \"genres\": [\"horror film\", \"drama film\"], \"subjects\": [\"grief\", \"family\", \"occult\"], \"directors\": [\"Ari Aster\"], \"cast\": [\"Toni Collette\", \"Alex Wolff\"], \"countries\": [\"United States\"], \"languages\": [\"English\"], \"year\": 2018, \"runtimeMinutes\": 127, \"awards\": []}, {\"tmdbId\": 14160, \"genres\": [\"animated film\", \"comedy film\", \"adventure film\"], \"subjects\": [\"old age\", \"balloon\", \"grief\"], \"directors\": [\"Pete Docter\"], \"cast\": [\"Ed Asner\", \"Jordan Nagai\"], \"countries\": [\"United States\"], \"languages\": [\"English\"], \"year\": 2009, \"runtimeMinutes\": 96, \"awards\": [\"Academy Award for Best Animated Feature\"]}, {\"tmdbId\": 550, \"genres\": [\"drama film\", \"thriller film\"], \"subjects\": [\"dissociative identity disorder\", \"insomnia\", \"consumerism\"], \"directors\": [\"David Fincher\"], \"cast\": [\"Brad Pitt\", \"Edward Norton\", \"Helena Bonham Carter\"], \"countries\": [\"United States\"], \"languages\": [\"English\"], \"year\": 1999, \"runtimeMinutes\": 139, \"awards\": []}]}",
+  "candidates": [
+    493922,
+    14160,
+    550
+  ],
+  "recordedResponse": {
+    "ranked": [
+      {
+        "tmdbId": 14160,
+        "reason": "Warm, funny and under two hours, just the cozy night you asked for."
+      },
+      {
+        "tmdbId": 550,
+        "reason": "A sharp Fincher drama if you want something with more bite."
+      },
+      {
+        "tmdbId": 493922,
+        "reason": "Toni Collette is superb, though it's far darker than tonight's mood."
+      }
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "idsFromCandidates"
+    },
+    {
+      "type": "maxReasonLength",
+      "value": 200
+    },
+    {
+      "type": "reasonForEveryCandidate"
+    }
+  ]
+}

@@ -217,6 +217,9 @@ public sealed class FilmTrailerTests(PostgresFixture postgres) : IAsyncLifetime
         public Task<Result<TmdbFilmDetails?>> GetFilmDetailsAsync(int tmdbId, CancellationToken ct) =>
             throw new InvalidOperationException("The trailer service never fetches details.");
 
+        public Task<Result<IReadOnlyList<TmdbSearchResult>>> SearchFilmsAsync(string title, int? year, CancellationToken ct) =>
+            throw new InvalidOperationException("The trailer service never searches.");
+
         public async Task<Result<IReadOnlyList<TmdbVideo>>> GetTrailersAsync(int tmdbId, CancellationToken ct)
         {
             Calls++;

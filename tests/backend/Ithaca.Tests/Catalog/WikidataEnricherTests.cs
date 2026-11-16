@@ -52,20 +52,29 @@ public sealed class WikidataEnricherTests(PostgresFixture postgres)
         var db = await ClearedDbAsync(scope);
         var tmdb = new SentinelTmdb();
         var sync = new CatalogSyncService(
-            db, tmdb, scope.ServiceProvider.GetRequiredService<WikidataEnricher>(),
+            db, tmdb, new CatalogFilmWriter(db), scope.ServiceProvider.GetRequiredService<WikidataEnricher>(),
             scope.ServiceProvider.GetRequiredService<FilmEmbedder>(),
             Options.Create(new CatalogSyncOptions { Pages = 1 }), TimeProvider.System);
 
-        var result = await sync.RunAsync(Ct);
+        try
+        {
+            var result = await sync.RunAsync(Ct);
 
-        result.IsSuccess.ShouldBeTrue();
-        var film = await db.Films.AsNoTracking().SingleAsync(f => f.TmdbId == 550, Ct);
-        film.Overview.ShouldBe(SentinelTmdb.Overview, "the TMDB text was stored for display");
-        var text = (await FactsByTmdbIdAsync(db))[550].EmbeddingText;
-        text.ShouldNotBeNullOrWhiteSpace();
-        text.ShouldNotContain("TMDBSENTINEL", Case.Insensitive);
-        var embedded = await db.Films.AsNoTracking().SingleAsync(f => f.TmdbId == 550, Ct);
-        embedded.EmbeddingSourceHash.ShouldBe(FilmFacts.HashOf(text), "the vector was made from the Wikidata text");
+            result.IsSuccess.ShouldBeTrue();
+            var film = await db.Films.AsNoTracking().SingleAsync(f => f.TmdbId == 550, Ct);
+            film.Overview.ShouldBe(SentinelTmdb.Overview, "the TMDB text was stored for display");
+            var text = (await FactsByTmdbIdAsync(db))[550].EmbeddingText;
+            text.ShouldNotBeNullOrWhiteSpace();
+            text.ShouldNotContain("TMDBSENTINEL", Case.Insensitive);
+            var embedded = await db.Films.AsNoTracking().SingleAsync(f => f.TmdbId == 550, Ct);
+            embedded.EmbeddingSourceHash.ShouldBe(FilmFacts.HashOf(text), "the vector was made from the Wikidata text");
+        }
+        finally
+        {
+            // The database is shared by the collection: put Fight Club back as the Fake TMDB has it, so tests that read it
+            // (FilmsEndpointTests, FilmBrowseTests) don't depend on running before this one.
+            (await scope.ServiceProvider.GetRequiredService<CatalogSyncService>().RunAsync(Ct)).IsSuccess.ShouldBeTrue();
+        }
     }
 
     [Fact]
@@ -146,6 +155,9 @@ public sealed class WikidataEnricherTests(PostgresFixture postgres)
 
         public Task<Result<IReadOnlyList<TmdbVideo>>> GetTrailersAsync(int tmdbId, CancellationToken ct) =>
             Task.FromResult<Result<IReadOnlyList<TmdbVideo>>>(Array.Empty<TmdbVideo>());
+
+        public Task<Result<IReadOnlyList<TmdbSearchResult>>> SearchFilmsAsync(string title, int? year, CancellationToken ct) =>
+            Task.FromResult<Result<IReadOnlyList<TmdbSearchResult>>>(Array.Empty<TmdbSearchResult>());
     }
 
     /// <summary>The Fake client's answers, failing once for the batch holding one id, recording every id asked for.</summary>

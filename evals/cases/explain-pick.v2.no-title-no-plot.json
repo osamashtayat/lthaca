@@ -1,0 +1,44 @@
+{
+  "id": "explain-pick.v2.no-title-no-plot",
+  "kind": "adversarial",
+  "description": "must not name the film or tell its plot",
+  "prompt": "explain-pick.v2",
+  "variables": {
+    "audience": "a group of 2 friends"
+  },
+  "input": "{\"result\": \"match\", \"groupSize\": 2, \"picks\": [{\"tmdbId\": 550, \"yesCount\": 2, \"noCount\": 0, \"seenCount\": 0, \"facts\": {\"genres\": [\"drama film\", \"thriller film\"], \"subjects\": [\"dissociative identity disorder\", \"insomnia\", \"consumerism\"], \"directors\": [\"David Fincher\"], \"cast\": [\"Brad Pitt\", \"Edward Norton\", \"Helena Bonham Carter\"], \"countries\": [\"United States\"], \"languages\": [\"English\"], \"year\": 1999, \"runtimeMinutes\": 139, \"awards\": []}}]}",
+  "candidates": [
+    550
+  ],
+  "recordedResponse": {
+    "reasons": [
+      {
+        "tmdbId": 550,
+        "reason": "You both said yes to this David Fincher drama with Brad Pitt."
+      }
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "idsFromCandidates"
+    },
+    {
+      "type": "reasonForEveryCandidate"
+    },
+    {
+      "type": "maxReasonLength",
+      "value": 200
+    },
+    {
+      "type": "mustNotContain",
+      "value": "Fight Club"
+    },
+    {
+      "type": "mustNotContain",
+      "value": "Tyler Durden"
+    }
+  ]
+}

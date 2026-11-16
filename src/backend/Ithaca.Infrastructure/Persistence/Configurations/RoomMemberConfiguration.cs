@@ -9,7 +9,8 @@ namespace Ithaca.Infrastructure.Persistence.Configurations;
 /// <summary>
 /// <c>room_members</c>: a user or a guest in a room (exactly one), present while <c>left_at</c> is null. One row per user
 /// and per guest in a room; a present member's seat (1–8) is unique in its room, so a room never holds more than 8 even
-/// when people join at once. Deleted with the room, the user or the guest.
+/// when people join at once. Deleted with the room, the user or the guest. A mood room member's private hard nos are enum names
+/// (text[]); their mood step answer is a <c>mood_queries</c> row pointing here (deleted with the member).
 /// </summary>
 internal sealed class RoomMemberConfiguration : IEntityTypeConfiguration<RoomMember>
 {
@@ -31,5 +32,6 @@ internal sealed class RoomMemberConfiguration : IEntityTypeConfiguration<RoomMem
         builder.HasIndex(m => m.UserId).HasDatabaseName("ix_room_members_user_id");
         builder.HasIndex(m => m.GuestId).HasDatabaseName("ix_room_members_guest_id");
         builder.Ignore(m => m.IsPresent);
+        builder.PrimitiveCollection(m => m.HardNos).ElementType(e => e.HasConversion<string>()).IsRequired();
     }
 }

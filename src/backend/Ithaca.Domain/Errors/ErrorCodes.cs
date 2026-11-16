@@ -11,14 +11,14 @@ public static class ErrorCodes
     public const string Conflict = "conflict";
     public const string ServerError = "server.error";
 
-    /// <summary>Contract stub (BE-01): the endpoint exists, its backlog task hasn't landed. Deleted by BE-17.</summary>
-    public const string ServerNotImplemented = "server.not_implemented";
-
     public const string AuthAntiforgeryFailed = "auth.antiforgery_failed";
     public const string AuthUnauthenticated = "auth.unauthenticated";
     public const string AuthInvalidCredentials = "auth.invalid_credentials";
     public const string AuthForbidden = "auth.forbidden";
     public const string AuthEmailTaken = "auth.email_taken";
+
+    /// <summary>A password reset token that is malformed, unknown, expired or already used, never saying which (api-contract.md §4).</summary>
+    public const string AuthInvalidResetToken = "auth.invalid_reset_token";
 
     public const string FilmNotFound = "film.not_found";
 
@@ -32,6 +32,9 @@ public static class ErrorCodes
 
     /// <summary>The request body is over the endpoint's limit; the pipeline refuses it before any service runs.</summary>
     public const string RequestTooLarge = "request.too_large";
+
+    /// <summary>Password change or account deletion with a wrong current password (api-contract.md §14).</summary>
+    public const string ProfileWrongPassword = "profile.wrong_password";
 
     public const string ImportNotFound = "import.not_found";
     public const string ImportInvalidFile = "import.invalid_file";
@@ -51,6 +54,15 @@ public static class ErrorCodes
 
     /// <summary>Mood text isn't a mood (unclear or off-topic) and no chips were tapped; nothing is created (ADR-0022).</summary>
     public const string MoodUnclear = "mood.unclear";
+
+    /// <summary>
+    /// Mood text we couldn't read right now (the AI failed or the daily AI budget is used up) and no chips were tapped;
+    /// nothing is created. The screens ask for a few moods instead (BE-19).
+    /// </summary>
+    public const string MoodTextUnavailable = "mood.text_unavailable";
+
+    /// <summary>Too many requests from one person or address for this kind of call; the response carries <c>Retry-After</c> (BE-19).</summary>
+    public const string RateLimited = "rate.limited";
 
     public const string AiInvalidOutput = "ai.invalid_output";
     public const string AiUnavailable = "ai.unavailable";
