@@ -733,27 +733,65 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   the Worker (route `<domain>/api/*` and `<domain>/hubs/*` → the VPS origin, WebSocket pass-through, in the repo with its
   own small test); the VPS reachable only through Cloudflare (firewall allows Cloudflare's IP ranges); production secrets on the server (never in the repo or CI logs), `ASPNETCORE_ENVIRONMENT=Production`
   (Secure cookies, no dev seed, no `/dev/*`), migrations run before the new API starts (the existing `migrate` service),
-  a manual-approval deploy job from CI, a documented rollback. Out: backups (OPS-08), monitoring (OPS-09).
+  a manual-approval deploy job from CI, a documented rollback; Sentry in production (ADR-0028): `Sentry__Dsn` on the
+  server, `VITE_SENTRY_DSN` and the release name at the Pages build, and the SPA's source maps uploaded to Sentry at
+  build time (`SENTRY_AUTH_TOKEN` as a CI secret, maps not served publicly). Out: backups (OPS-08), monitoring (OPS-09).
 - **Acceptance:** the domain serves the app from Pages over HTTPS; sign-in works through the Worker (Secure cookies,
   antiforgery); a room works across two phones (WebSockets through the Worker); the VPS refuses direct traffic; site and
-  API rollbacks were each rehearsed once.
+  API rollbacks were each rehearsed once; a production frontend error shows readable source lines in Sentry.
 - **Tests:** the Docker smoke test against the production compose file in CI.
 
 ### OPS-08 — Production data: backups, nightly sync, catalog size · `Todo`
 - **Objective:** user data survives a broken server; the catalog is fresh and big enough for good decks.
 - **Deps:** OPS-07, BE-03, BE-04. **Modules:** server scripts, `appsettings.Production.json` (no secrets), `docs/`.
-- **Scope:** in: nightly `pg_dump` to off-server storage (e.g. Cloudflare R2) with retention, a tested restore;
+- **Scope:** in: nightly `pg_dump` to off-server storage (e.g. Cloudflare R2) with retention, a tested restore, and a
+  heartbeat (a Sentry cron check-in or an uptime-monitor heartbeat) that alerts when a backup didn't run (ADR-0028);
   `CatalogSync:Enabled=true`; a catalog size target (L6) and the sync settings to reach it within TMDB's rate limits;
   embeddings for the whole catalog within Voyage limits (OPS-10). Out: analytics.
 - **Acceptance:** a restore into a fresh database was done once and is documented; the catalog meets L6.
 
 ### OPS-09 — Monitoring and alerts · `Todo`
 - **Objective:** know about errors and downtime before users report them.
-- **Deps:** OPS-07. **Modules:** API logging setup, server, `docs/`.
-- **Scope:** in: uptime check on `/api/health` with alerts to the owner; error tracking (the JSON logs shipped somewhere
-  searchable, or an error service: L7); disk and memory alerts on the VPS; AI/TMDB/Voyage failure counts visible. Never
-  log emails, mood text or keys (backend-conventions.md). Out: product analytics.
+- **Deps:** OPS-07, BE-21, FE-21. **Modules:** Sentry and uptime-monitor settings (owner's accounts), server, `docs/`.
+- **Scope:** in (ADR-0028; error capture itself is BE-21/FE-21): an uptime monitor on `https://<domain>/api/health/ready`
+  every minute with response-time alerts (Better Stack free tier, or Sentry Uptime); Sentry alert rules (new issue →
+  email; production only; warning counts above a threshold, e.g. AI or TMDB failures per hour; the catalog-sync cron
+  monitor); disk and memory alerts on the VPS; where the owner gets alerts (L7) written down in `docs/`. Never log
+  emails, mood text or keys (backend-conventions.md). Out: product analytics.
 - **Acceptance:** a forced 500 and a stopped API both reach the owner within minutes.
+
+### BE-21 — Sentry in the API, readiness check, container health (ADR-0028) · `Todo`
+- **Objective:** every backend error reaches Sentry with what happened, and the API reports whether it can serve.
+- **Deps:** OPS-17. **Modules:** `Ithaca.Api` (Sentry setup, options, readiness action), `Ithaca.Application` (readiness
+  service), `Ithaca.Infrastructure/Jobs/CatalogSyncJob.cs` (cron check-in), `ErrorCodes`, `ErrorStatusCodes`,
+  `problem.ts` (own code), `docker-compose.yml`, `.env.example`, `docs/backend-conventions.md`.
+- **Contract:** §1 adds `GET /api/health/ready` (200 `{ status: "ok" }`, 503 `health.database_unavailable`); additive, no
+  FE task waits on it.
+- **Scope:** in: Sentry.AspNetCore configured from a `Sentry` options section (off without a DSN; environment and release
+  set; traces 1.0 in Development, 0.1 otherwise; `SendDefaultPii` off, no request bodies, cookies or auth headers; the
+  user as internal id only); Error-and-above logs from anywhere (requests, jobs, hub) as issues and Warning-and-above to
+  Sentry Logs; a cron check-in around each catalog-sync run; the readiness check (database reachable); the `api`
+  container's healthcheck on it, `restart: unless-stopped` and log rotation for every service. Out: alert rules and
+  uptime (OPS-09), production DSN (OPS-07).
+- **Acceptance:** with a DSN, a forced exception from the running API arrives in `ithaca-server` with its stack trace,
+  route and internal user id, and nothing personal; without one, nothing is sent; ready answers 503 with the database
+  stopped; `docker compose ps` shows the api healthy.
+- **Tests:** options and scrubbing (a captured event has no cookies, body or email); readiness ok and unavailable;
+  error-code mapping.
+
+### FE-21 — Sentry in the SPA and a crash screen (ADR-0028) · `Todo`
+- **Objective:** errors on users' phones reach Sentry, and a crash shows a friendly screen instead of a blank page.
+- **Deps:** OPS-17. **Modules:** `src/main.tsx` or `src/app/` (Sentry init, error boundary, router error element),
+  `src/shared/` (the init, so `@sentry/react` is only imported there), `.env.example`, `docs/frontend-conventions.md`.
+- **Contract:** none.
+- **Scope:** in: `@sentry/react` initialised from `VITE_SENTRY_DSN` (off without it, so tests and mocks send nothing);
+  environment from the build mode; browser tracing (1.0 in development, 0.1 in production, traces propagated to
+  same-origin `/api` only); Session Replay on errors only with all text and inputs masked and media blocked; no default
+  PII; the user as internal id only, set when the session is known; a crash screen in the brand style (tokens only, a
+  "Reload" action) for render errors and router errors. Out: source-map upload (OPS-07).
+- **Acceptance:** with a DSN, a forced render error from the running SPA arrives in `ithaca-frontend` and the crash
+  screen shows at 375px; without one, nothing is sent; the bundle-size change is recorded in the PR.
+- **Tests:** the crash screen renders for a throwing child and a router error; init does nothing without a DSN.
 
 ### OPS-10 — Paid API accounts, keys and budgets · `Todo` (owner)
 - **Objective:** production keys with spending limits, so a busy day can't run up a surprise bill.
@@ -840,7 +878,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 | L4 | Email provider for password reset | **Decided (2026-11-15): Resend**, sending from a subdomain (e.g. `no-reply@mail.<domain>`), SPF/DKIM on Cloudflare DNS. Behind `IEmailSender`, so Postmark stays a one-class swap. The owner creates the account and key (user-secrets locally, `.env` on the VPS). Only BE-18 needs it; BE-18a doesn't |
 | L5 | Terms and Privacy texts | Written or approved by you (not legal advice from agents) |
 | L6 | Catalog size at launch | Enough for varied decks, e.g. several thousand films (843 today). Not a prerequisite for the Letterboxd import (ADR-0024 Q4, decided) |
-| L7 | Error tracking: logs only or an error service | Start with logs + uptime alerts; add a service if errors are hard to find |
+| L7 | Error tracking: logs only or an error service | **Decided (2026-11-16): Sentry** (EU region, org `osama-vz`, projects `ithaca-server` and `ithaca-frontend`) for errors, logs, traces, cron check-ins and masked error replays; users reported by internal id only; an uptime monitor on `/api/health/ready` (OPS-09). Alerts by email. ADR-0028 |
 | L8 | Analytics at launch? | None at launch (no cookie banner needed); decide later |
 | P-02 | Google / Apple sign-in at launch? | Not required for launch; email works |
 
