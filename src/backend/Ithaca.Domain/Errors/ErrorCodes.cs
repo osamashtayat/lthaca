@@ -11,9 +11,6 @@ public static class ErrorCodes
     public const string Conflict = "conflict";
     public const string ServerError = "server.error";
 
-    /// <summary>Contract stub (BE-01): the endpoint exists, its backlog task hasn't landed. Deleted by BE-17.</summary>
-    public const string ServerNotImplemented = "server.not_implemented";
-
     public const string AuthAntiforgeryFailed = "auth.antiforgery_failed";
     public const string AuthUnauthenticated = "auth.unauthenticated";
     public const string AuthInvalidCredentials = "auth.invalid_credentials";

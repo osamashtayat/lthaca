@@ -6,12 +6,11 @@ using Ithaca.Tests.Harness;
 namespace Ithaca.Tests.Contract;
 
 /// <summary>
-/// BE-01: request validation at the contract's edge (camelCase field names, enums as strings, required fields). The 501
-/// stub rows are gone: BE-14 implemented the last stubbed endpoints (BE-17 removes <c>ContractStub</c> itself). Requests
+/// BE-01: request validation at the contract's edge (camelCase field names, enums as strings, required fields). Requests
 /// come from a signed-in browser client (session cookie + XSRF header, BE-02), so access rules don't hide the answer.
 /// </summary>
 [Collection(DatabaseCollectionDefinition.Name)]
-public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsyncLifetime
+public sealed class ContractRequestValidationTests(PostgresFixture postgres) : IAsyncLifetime
 {
     private const string Deck = "/api/decks/0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b";
     private const string Item = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5c";

@@ -11,7 +11,6 @@ export const PROBLEM_MESSAGES = {
   conflict: 'That changed in the meantime. Refresh and try again.',
   'server.error': 'Something went wrong on our side. Try again in a moment.',
   'film.not_found': "This film isn't in our catalog yet.",
-  'server.not_implemented': "This part of Ithaca isn't ready yet. Check back soon.",
   'auth.antiforgery_failed': 'Your session needs a refresh. Reload the page and try again.',
   'auth.unauthenticated': 'Sign in to keep going.',
   'auth.invalid_credentials': "That email and password don't match. Try again.",
