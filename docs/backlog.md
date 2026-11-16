@@ -669,6 +669,11 @@ lint, test, build.
 - **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L4, BE-18a, BE-18).
 - **Contract:** none. **Scope:** in: docs only. **Tests:** none (docs).
 
+### OPS-16 — Record the AI budget (L3) and the AI fallback rule · `Done`
+- **Objective:** record L3 ($25/month) and the owner's rule for when the AI fails, so BE-19 can start.
+- **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L3, BE-19).
+- **Contract:** none here (BE-19 makes the mood change). **Scope:** in: docs only. **Tests:** none (docs).
+
 ### BE-17 — Remove the contract-stub plumbing · `Done` (PR #67)
 - **Objective:** no stubs left. **Deps:** BE-12, BE-14, BE-15, BE-16. **Modules:** `ErrorCodes.cs`,
   `ErrorStatusCodes.cs`, `problem.ts`, stub test.
@@ -754,16 +759,25 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 
 ### BE-19 — Rate limits and AI spend cap · `Todo`
 - **Objective:** one person or a bot can't flood the API or burn the AI budget.
-- **Deps:** BE-09, L3. **Modules:** `Program.cs` (ASP.NET Core rate limiter), `Application/Ai`, `ErrorCodes`,
-  `ErrorStatusCodes`, `problem.ts`, options class.
-- **Contract:** §2 adds 429 `rate.limited` with `Retry-After` (contract change in this task; no FE task waits on it).
+- **Deps:** BE-09, L3 (decided: $25/month). **Modules:** `Program.cs` (ASP.NET Core rate limiter), `Application/Ai`,
+  `Application/Moods`, `ErrorCodes`, `ErrorStatusCodes`, `problem.ts`, options class.
+- **Contract:** §2 adds 429 `rate.limited` with `Retry-After`; §5/§6 (mood) say what happens when the AI can't read the
+  text (below), additively, so the client can tell "not a mood" from "AI unavailable" (contract changes in this task;
+  no FE task waits on them, the screens show the new case in a follow-up).
 - **Scope:** in: per-user and per-IP limits on sign-in/register, room join, deck creation, **import creation**
   (`POST /api/imports`, e.g. 5 per user per day; ADR-0024) and every AI-backed call;
-  a daily global AI budget counter that switches mood parsing off (chips still work, ADR-0022) when reached; limits in
-  config. Out: billing.
-- **Acceptance:** exceeding a limit → 429 `rate.limited` with `Retry-After`; when the budget is reached, mood text gets
-  `textIgnored` with chips or a clear message without.
-- **Tests:** limiter slice tests with `FakeTimeProvider`; budget switch.
+  a daily global AI budget counter (the monthly L3 budget, **$25**, as a daily share; in config) that switches mood
+  parsing off (chips still work, ADR-0022) when reached; limits in config.
+  **AI fallback (owner, 2026-11-16):** when mood parsing fails for any reason (provider down or timing out, refusal,
+  invalid reply, or the budget reached), a solo deck or a room mood **with chips** is built from the chips and says the
+  text was not used (like `textIgnored`); **without chips** it answers one clear code the screens turn into "mood text
+  isn't available right now, pick a few moods instead", with nothing saved. No second AI provider as a standby. AI picks
+  (reasons → null) and By taste (stored vectors, no live embedding call) already degrade this way; keep them so.
+  Out: billing.
+- **Acceptance:** exceeding a limit → 429 `rate.limited` with `Retry-After`; when the budget is reached or the model
+  fails, mood text with chips still gives a deck (text marked unused) and without chips a clear code, never a 5xx.
+- **Tests:** limiter slice tests with `FakeTimeProvider`; budget switch; mood with a failing Fake LLM, with and without
+  chips (solo and room).
 
 ### BE-18a — Password reset contract and stubs · `Done` (PR #59)
 - **Objective:** unblock FE-16. **Deps:** BE-02 (the contract doesn't depend on the provider; L4 is only BE-18's). **Modules:** `docs/api-contract.md` (§4), DTOs, stubs, contracts.
@@ -780,7 +794,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Acceptance:** reset works end to end on staging; unknown emails get the same response; tokens expire.
 - **Tests:** stub email sender; token expiry and reuse.
 
-### FE-16 — Forgot / reset password screens · `Todo`
+### FE-16 — Forgot / reset password screens · `Done` (PR #65)
 - **Objective:** the screens for BE-18. **Deps:** BE-18a, FE-03. **Modules:** `src/features/auth/`, `src/mocks/`.
 - **Scope:** in: "Forgot password?" on `/sign-in`, `/reset-password?token=…`. **Acceptance:** with mocks, both flows and
   their errors.
@@ -817,7 +831,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 |---|---|---|
 | L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker (db, migrate, api), behind Cloudflare.** Provider still to choose (OPS-06) |
 | L2 | Where the site runs | **Decided (2026-11-13): Cloudflare Pages + a Worker routing `/api` and `/hubs` to the VPS (B1).** |
-| L3 | Monthly AI budget (Anthropic + Voyage) | A hard cap you're comfortable with; BE-19 enforces a daily share of it |
+| L3 | Monthly AI budget (Anthropic + Voyage) | **Decided (2026-11-16): $25 per month.** BE-19 enforces a daily share of it (and falls back to the mood chips when it's reached or the AI fails); OPS-10 sets each provider's dashboard limit at or below it |
 | L4 | Email provider for password reset | **Decided (2026-11-15): Resend**, sending from a subdomain (e.g. `no-reply@mail.<domain>`), SPF/DKIM on Cloudflare DNS. Behind `IEmailSender`, so Postmark stays a one-class swap. The owner creates the account and key (user-secrets locally, `.env` on the VPS). Only BE-18 needs it; BE-18a doesn't |
 | L5 | Terms and Privacy texts | Written or approved by you (not legal advice from agents) |
 | L6 | Catalog size at launch | Enough for varied decks, e.g. several thousand films (843 today). Not a prerequisite for the Letterboxd import (ADR-0024 Q4, decided) |

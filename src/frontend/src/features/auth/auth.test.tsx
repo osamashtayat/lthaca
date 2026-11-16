@@ -5,9 +5,11 @@ import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { afterEach, describe, expect, it } from 'vitest'
-import { MOCK_GUEST, setMockSession } from '@/mocks/authStore'
+import { MOCK_GUEST, MOCK_RESET_TOKEN, setMockSession } from '@/mocks/authStore'
 import { RequireUser } from './components/RequireUser'
 import { SessionAction } from './components/SessionAction'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SignInPage } from './pages/SignInPage'
 
 afterEach(cleanup)
@@ -126,5 +128,73 @@ describe('SessionAction', () => {
     renderAt('/', <SessionAction />)
     await userEvent.click(await screen.findByRole('button', { name: /Sign out/ }))
     expect(await screen.findByRole('link', { name: 'Sign in' })).toBeTruthy()
+  })
+})
+
+const resetRoutes = (
+  <Routes>
+    <Route path="/sign-in" element={<SignInPage />} />
+    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <Route path="/" element={<p>home</p>} />
+  </Routes>
+)
+
+describe('Forgot password', () => {
+  it('is linked from the sign-in form', async () => {
+    setMockSession(null)
+    renderAt('/sign-in', resetRoutes)
+    await userEvent.click(await screen.findByRole('link', { name: 'Forgot password?' }))
+    expect(await screen.findByRole('heading', { name: 'Forgot your password?' })).toBeTruthy()
+  })
+
+  it('gives the same answer for any well-formed email', async () => {
+    setMockSession(null)
+    renderAt('/forgot-password', resetRoutes)
+    await userEvent.type(await screen.findByLabelText('Email'), 'nobody@example.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Send reset link' }))
+    expect((await screen.findByRole('status')).textContent).toContain('If an account exists')
+  })
+
+  it('shows a 400 under the email field', async () => {
+    setMockSession(null)
+    renderAt('/forgot-password', resetRoutes)
+    await userEvent.type(await screen.findByLabelText('Email'), 'nope')
+    await userEvent.click(screen.getByRole('button', { name: 'Send reset link' }))
+    await waitFor(() => expect(screen.getByLabelText('Email').getAttribute('aria-invalid')).toBe('true'))
+  })
+})
+
+describe('Reset password', () => {
+  it('sets the password, signs in and goes home', async () => {
+    setMockSession(null)
+    renderAt(`/reset-password?token=${MOCK_RESET_TOKEN}`, resetRoutes)
+    await userEvent.type(await screen.findByLabelText('New password'), 'brand-new-pass')
+    await userEvent.click(screen.getByRole('button', { name: 'Save password' }))
+    expect(await screen.findByText('home')).toBeTruthy()
+  })
+
+  it('shows the field error for a short password', async () => {
+    setMockSession(null)
+    renderAt(`/reset-password?token=${MOCK_RESET_TOKEN}`, resetRoutes)
+    await userEvent.type(await screen.findByLabelText('New password'), 'short')
+    await userEvent.click(screen.getByRole('button', { name: 'Save password' }))
+    await waitFor(() => expect(screen.getByLabelText('New password').getAttribute('aria-invalid')).toBe('true'))
+  })
+
+  it('explains an expired or used link and offers a new one', async () => {
+    setMockSession(null)
+    renderAt('/reset-password?token=stale', resetRoutes)
+    await userEvent.type(await screen.findByLabelText('New password'), 'brand-new-pass')
+    await userEvent.click(screen.getByRole('button', { name: 'Save password' }))
+    expect((await screen.findByRole('alert')).textContent).toContain('expired or was already used')
+    await userEvent.click(screen.getByRole('link', { name: 'Ask for a new link' }))
+    expect(await screen.findByRole('heading', { name: 'Forgot your password?' })).toBeTruthy()
+  })
+
+  it('handles a link without a token', async () => {
+    setMockSession(null)
+    renderAt('/reset-password', resetRoutes)
+    expect((await screen.findByRole('alert')).textContent).toContain('incomplete')
   })
 })

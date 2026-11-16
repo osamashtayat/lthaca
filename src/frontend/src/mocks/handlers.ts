@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import { addMockAccount, deleteMockAccount, findMockAccount, getMockSession, isMockEmailTaken, isMockPassword, MOCK_CREATED_AT, setMockDisplayName, setMockPassword, setMockSession } from './authStore'
+import { addMockAccount, deleteMockAccount, findMockAccount, getMockSession, isMockEmailTaken, isMockPassword, MOCK_CREATED_AT, MOCK_RESET_TOKEN, MOCK_USER, resetMockPassword, setMockDisplayName, setMockPassword, setMockSession } from './authStore'
 import { findMockFilm, mockFilms, mockTrailers } from './fixtures'
 import { createMockDeck, mockDeckDto, parseMockMood, mockDeckTop, nextMockBatch, recordMockSwipe } from './deckStore'
 import { createMockImport, hasActiveMockImport, listMockImports, mockImportOutcome, mockNotFound, readMockImport } from './importStore'
@@ -100,6 +100,22 @@ const authHandlers = [
     if (!user) return problem(401, 'auth.invalid_credentials')
     setMockSession(user)
     return HttpResponse.json<ResponseOf<'/api/auth/sign-in', 'post', 200>>(user)
+  }),
+  // Always 204 for a well-formed email, account or not (api-contract §4). Dev: the "email" is `MOCK_RESET_TOKEN` at /reset-password?token=…
+  http.post(apiPath('/api/auth/forgot-password'), async ({ request }) => {
+    const body = (await request.json()) as RequestOf<'/api/auth/forgot-password', 'post'>
+    if (!body.email.includes('@') || body.email.length > 256) return problem(400, 'validation', { email: ['Enter a valid email address.'] })
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.post(apiPath('/api/auth/reset-password'), async ({ request }) => {
+    const body = (await request.json()) as RequestOf<'/api/auth/reset-password', 'post'>
+    if (body.newPassword.length < 8 || body.newPassword.length > 128) return problem(400, 'validation', { newPassword: ['Use 8 to 128 characters.'] })
+    if (body.token !== MOCK_RESET_TOKEN) return problem(400, 'auth.invalid_reset_token')
+    // The mock is single-account: its one valid token resets the default mock user, whatever email was asked for.
+    const user = resetMockPassword(MOCK_USER.email ?? '', body.newPassword)
+    if (!user) return problem(400, 'auth.invalid_reset_token')
+    setMockSession(user)
+    return HttpResponse.json<ResponseOf<'/api/auth/reset-password', 'post', 200>>(user)
   }),
   http.post(apiPath('/api/auth/sign-out'), () => {
     setMockSession(null)

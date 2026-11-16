@@ -108,6 +108,17 @@ export function addMockAccount(email: string, password: string, displayName: str
   return user
 }
 
+/** The one reset link the mock accepts (the "emailed" token); any other token is expired or used (api-contract §4). */
+export const MOCK_RESET_TOKEN = 'mock-reset-token'
+
+/** Sets that account's password and returns the user, or undefined when there is no such account. */
+export function resetMockPassword(email: string, password: string): CurrentUserDto | undefined {
+  const account = accounts.get(email.trim().toLowerCase())
+  if (!account) return undefined
+  account.password = password
+  return account.user
+}
+
 /** Called from src/test/setup.ts after every test. */
 export function resetMockAuth() {
   accounts = initialAccounts()
