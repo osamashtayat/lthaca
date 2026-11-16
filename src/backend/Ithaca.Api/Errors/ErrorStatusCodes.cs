@@ -27,6 +27,7 @@ public static class ErrorStatusCodes
         [ErrorCodes.AuthInvalidCredentials] = StatusCodes.Status401Unauthorized,
         [ErrorCodes.AuthForbidden] = StatusCodes.Status403Forbidden,
         [ErrorCodes.AuthEmailTaken] = StatusCodes.Status409Conflict,
+        [ErrorCodes.AuthInvalidResetToken] = StatusCodes.Status400BadRequest,
         [ErrorCodes.DeckNotFound] = StatusCodes.Status404NotFound,
         [ErrorCodes.DeckItemNotFound] = StatusCodes.Status404NotFound,
         [ErrorCodes.DeckAlreadySwiped] = StatusCodes.Status409Conflict,

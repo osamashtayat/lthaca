@@ -1,18 +1,21 @@
 using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
+using Ithaca.Api.OpenApi;
 using Ithaca.Application.Auth;
+using Ithaca.Application.Users;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ithaca.Api.Controllers;
 
 /// <summary>
 /// Cookie sessions for users and guests (api-contract.md §4, ADR-0012). Every action issues a fresh <c>XSRF-TOKEN</c>:
-/// <c>me</c> hands out the first one, the others change the caller the token is bound to.
+/// <c>me</c> hands out the first one, the others change the caller the token is bound to. Forgot-password changes nobody,
+/// so it doesn't. Password reset is <see cref="PasswordResetService"/>'s (BE-18; contract stubs until then).
 /// </summary>
 [ApiController]
 [Route("api/auth")]
 [Tags("Auth")]
-public sealed class AuthController(AuthService auth) : ControllerBase
+public sealed class AuthController(AuthService auth, PasswordResetService passwordReset) : ControllerBase
 {
     [HttpGet("me")]
     [IssueXsrfToken]
@@ -42,4 +45,19 @@ public sealed class AuthController(AuthService auth) : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<ActionResult> SignOut(CancellationToken ct) =>
         this.ToActionResult(await auth.SignOutAsync(ct));
+
+    [HttpPost("forgot-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ContractStub]
+    public async Task<ActionResult> ForgotPassword(ForgotPasswordRequest request, CancellationToken ct) =>
+        this.ToActionResult(await passwordReset.ForgotPasswordAsync(request, ct));
+
+    [HttpPost("reset-password")]
+    [IssueXsrfToken]
+    [ProducesResponseType<CurrentUserDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ContractStub]
+    public async Task<ActionResult<CurrentUserDto>> ResetPassword(ResetPasswordRequest request, CancellationToken ct) =>
+        this.ToActionResult(await passwordReset.ResetPasswordAsync(request, ct));
 }

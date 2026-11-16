@@ -20,6 +20,9 @@ public static class ErrorCodes
     public const string AuthForbidden = "auth.forbidden";
     public const string AuthEmailTaken = "auth.email_taken";
 
+    /// <summary>A password reset token that is malformed, unknown, expired or already used, never saying which (api-contract.md §4).</summary>
+    public const string AuthInvalidResetToken = "auth.invalid_reset_token";
+
     public const string FilmNotFound = "film.not_found";
 
     public const string DeckNotFound = "deck.not_found";
