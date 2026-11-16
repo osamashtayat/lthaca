@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Ithaca.Tests.Harness;
 
@@ -12,9 +13,13 @@ namespace Ithaca.Tests.Harness;
 /// </summary>
 public sealed class IthacaApiFactory(string connectionString, IReadOnlyDictionary<string, string>? settings = null) : WebApplicationFactory<Program>
 {
+    /// <summary>Exceptions the API logged as errors, for failure messages (see <see cref="ServerErrorLog"/>).</summary>
+    public ServerErrorLog ServerErrors { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        builder.ConfigureLogging(logging => logging.AddProvider(ServerErrors));
         builder.UseOfflineProviders();
         builder.UseSetting("ConnectionStrings:Ithaca", connectionString);
         foreach (var (key, value) in settings ?? new Dictionary<string, string>())
