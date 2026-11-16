@@ -941,7 +941,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   banner (only essential cookies are used; revisit if analytics are added, L8).
 - **Acceptance:** pages reachable from Welcome and the footer; deletion removes the account and signs out.
 
-### FE-18 — Link previews for shared rooms and films · `Todo`
+### FE-18 — Link previews for shared rooms and films · `In progress`
 - **Objective:** a room link pasted into WhatsApp or iMessage shows a proper title and image.
 - **Deps:** OPS-06. **Modules:** `index.html`, an Open Graph image, (option B) the Worker.
 - **Scope:** in: site-wide Open Graph/Twitter tags and image, app icons and theme colour. Per-room or per-film previews
