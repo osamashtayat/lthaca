@@ -674,6 +674,11 @@ lint, test, build.
 - **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L3, BE-19).
 - **Contract:** none here (BE-19 makes the mood change). **Scope:** in: docs only. **Tests:** none (docs).
 
+### OPS-17 — Error tracking and monitoring: decision and tasks (ADR-0028) · `In progress`
+- **Objective:** record L7 (Sentry for errors and logs, an uptime monitor) and plan the work, so BE-21 and FE-21 can start.
+- **Deps:** OPS-05. **Modules:** `docs/decisions/0028-…`, `docs/backlog.md` (L7, BE-21, FE-21, OPS-07, OPS-08, OPS-09).
+- **Contract:** none here (BE-21 adds the readiness check). **Scope:** in: docs only. **Tests:** none (docs).
+
 ### BE-17 — Remove the contract-stub plumbing · `Done` (PR #67)
 - **Objective:** no stubs left. **Deps:** BE-12, BE-14, BE-15, BE-16. **Modules:** `ErrorCodes.cs`,
   `ErrorStatusCodes.cs`, `problem.ts`, stub test.
