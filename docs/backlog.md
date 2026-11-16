@@ -32,6 +32,7 @@ flowchart LR
   BE09 --> BE11
   BE03 & BE08 --> BE13[BE-13 AI picks]
   BE04 --> BE14a[BE-14a taste contract] --> BE14[BE-14 taste]
+  BE14 & BE17 --> BE14b[BE-14b picker contract] --> BE14c[BE-14c picker + taste readiness]
   OPS12[OPS-12 import + half-star decision] --> BE15a[BE-15a import contract] --> BE15[BE-15 import]
   BE05 --> OPS12
   BE05 --> BE20[BE-20 half-star ratings] --> BE15
@@ -47,6 +48,7 @@ flowchart LR
   FE06 --> FE10
   FE05 & FE07 & FE09 --> FE12[FE-12 Tonight]
   BE14a --> FE13[FE-13 taste]
+  BE14b & FE13 & FE09 --> FE23[FE-23 film picker]
   BE15a --> FE14[FE-14 import]
   FE03 --> FE14
   OPS12 --> FE20[FE-20 half-stub rating]
@@ -63,8 +65,8 @@ backend and can start at once (FE-01 after the owner approves the asset). Ops: O
 
 | Lane | Order | Notes |
 |---|---|---|
-| Backend | BE-01 → BE-09a → BE-02 → BE-03 → BE-04 → BE-05 → BE-06 → **BE-20** → BE-07 → BE-08 → BE-09 → BE-10 → BE-11 → BE-12 → BE-13 → BE-14a → BE-14 → BE-15a → BE-15 → BE-16a → BE-16 → BE-17 | BE-09a is a tiny contract task done early so FE-06 isn't blocked; BE-20 (half stars) goes next because it changes merged work; BE-15a needs only OPS-12 and may be pulled earlier; BE-06/BE-07 need only BE-01; the `a` contract tasks are small and may be pulled earlier so FE-13–15 can start |
-| Frontend | FE-01 (when approved) · FE-02 → FE-03 → FE-04 → FE-05 → FE-06 → FE-07 → FE-08 → FE-09 → **FE-20** → FE-10 → FE-11 → FE-12 → FE-13 → FE-14 → FE-15 | all on mocks |
+| Backend | BE-01 → BE-09a → BE-02 → BE-03 → BE-04 → BE-05 → BE-06 → **BE-20** → BE-07 → BE-08 → BE-09 → BE-10 → BE-11 → BE-12 → BE-13 → BE-14a → BE-14 → BE-15a → BE-15 → BE-16a → BE-16 → BE-17 → BE-14b → BE-14c | BE-09a is a tiny contract task done early so FE-06 isn't blocked; BE-20 (half stars) goes next because it changes merged work; BE-15a needs only OPS-12 and may be pulled earlier; BE-06/BE-07 need only BE-01; the `a` contract tasks are small and may be pulled earlier so FE-13–15 can start |
+| Frontend | FE-01 (when approved) · FE-02 → FE-03 → FE-04 → FE-05 → FE-06 → FE-07 → FE-08 → FE-09 → **FE-20** → FE-10 → FE-11 → FE-12 → FE-13 → FE-14 → FE-15 → FE-23 | all on mocks |
 
 With a second agent per side, tasks with no path between them can also run in parallel (BE-05 ‖ BE-06, FE-07 ‖ FE-08).
 Two backend tasks that add EF migrations merge one at a time: the later one deletes its migration, updates from `main`,
@@ -325,6 +327,36 @@ lint, test, build.
   them on that scale; imported `UserFilm`s count like any other (ADR-0024 decision 9). Out: import (BE-15).
 - **Acceptance:** per §12. **Tests:** slice tests; deterministic vector test with the Fake embedding client.
 
+### BE-14b — Film picker contract and stubs (ADR-0029) · `Todo`
+- **Objective:** unblock FE-23 before the picker logic exists.
+- **Deps:** BE-14, BE-17. **Modules:** `Application/Taste` (`TastePicksRequest`), `TasteController`, `RoomsController`,
+  `contracts/openapi.json`, `schema.d.ts`, `docs/api-contract.md` §12 (as built), and the 501 plumbing BE-17 removed
+  (`server.not_implemented` in `ErrorCodes`, `ErrorStatusCodes`, `problem.ts`; the stub attribute and test), re-added
+  as api-contract.md §10.4 says.
+- **Contract:** §12: `POST /api/taste/picks`, `PUT /api/rooms/{code}/taste` with every documented status.
+- **Scope:** in: as BE-01 for the two rows (DTOs, actions, 501 stubs, user-only / member access as §12 says). Out: logic
+  (BE-14c).
+- **Acceptance:** both endpoints in `openapi.json`, answering 501; a guest gets 401 on `POST /api/taste/picks`.
+  **Tests:** stub slice test.
+
+### BE-14c — Film picker and taste-room readiness (ADR-0029) · `Todo`
+- **Objective:** the picker rows work, and guests count in group taste.
+- **Deps:** BE-14b. **Modules:** `Domain/Rooms` (`RoomMember`: a guest's picks), `Application/Taste`
+  (`TasteService`, `TasteProfileReader`), `Application/Rooms` (`RoomReader`, `RoomDeckService`, `GuestUpgrade`),
+  `RoomEvents.cs` + `contracts/realtime-events.json` (`memberReady` description), `docs/realtime.md`, migration.
+- **Contract:** §12 (picker rows, readiness in taste rooms); no shape change.
+- **Scope:** in, on top of what BE-14 built (§12 as built): `POST /api/taste/picks` marks each film `liked` (only adds)
+  and answers the updated `TasteDto`; `PUT /api/rooms/{code}/taste` routes a user's picks to likes and stores a guest's
+  on their `RoomMember` (replacing earlier ones; gone with the row); `RoomReader.IsReady` in taste rooms: a user who
+  meets A16 (`TasteProfileReader.IsReady`) or a guest with picks (today every taste-room member is ready); the room
+  blend in `RoomDeckService` adds a guest's picks as liked films (+1 each, as `TasteProfileReader` weighs likes);
+  `memberReady` after a `PUT …/taste` that makes the member ready; `GuestUpgrade` turns a guest's picks into likes in
+  both of its branches (moved or ended membership); remove the two 501 stubs and, once nothing returns it, the 501
+  plumbing again (as BE-17). Out: the screens (FE-23).
+- **Acceptance:** per §12. **Tests:** picks (10–20, repeated ids, unknown film → nothing saved, user vs guest, replace,
+  only adds); taste-room readiness for users and guests; a guest's picks lean the shared deck; `memberReady` published
+  once; upgrade moves guest picks to likes; grep finds no `server.not_implemented`.
+
 ### FE-13 — By taste screen · `Done`
 - **Objective:** the "Solo — by taste" board, and no dead end for people without history.
 - **Deps:** BE-14a, FE-05. **Modules:** `src/features/taste/`, `src/mocks/`, and
@@ -338,6 +370,19 @@ lint, test, build.
 - **Acceptance:** with mocks: not ready → the import screen, its "?" opens the steps, both buttons navigate; ready → the
   board as designed; the decision comes only from the API.
 - **Tests:** ready vs not-ready rendering; "?" opens and closes the sheet (focus returns to the button).
+
+### FE-23 — Film picker and taste-room lobby (ADR-0029) · `Todo`
+- **Objective:** "pick 10–20 films you love" for anyone without history, solo and in taste rooms.
+- **Deps:** BE-14b, FE-13, FE-09. **Modules:** `src/features/taste/`, `src/features/rooms/`, `src/mocks/`.
+- **Contract:** §12 (picker rows, `isReady` in taste rooms), §9 (search).
+- **Scope:** in: a picker screen (search + popular films from `GET /api/films`, tap to select, "7 of 10" counter, submit
+  enabled at 10–20); the `/taste` empty state's third option ("Pick films you love") next to import and "Just swipe
+  instead"; in taste rooms, a lobby step for members who aren't ready (picker) and the note that their taste isn't in
+  the blend yet; the host sees who isn't ready before starting; `taste` in the room mode options. No design board:
+  follow the visual language (frontend-conventions.md → Design reference). Out: the logic (BE-14c).
+- **Acceptance:** with mocks: the picker submits only at 10–20; solo not-ready → three options; a guest in a taste
+  room picks and becomes ready; readiness comes only from the API.
+- **Tests:** picker limits; empty state options; lobby step for a not-ready member.
 
 ## Rooms
 
@@ -678,6 +723,14 @@ lint, test, build.
 - **Objective:** turn ADR-0024's open questions into decisions in the ADR, contract and backlog.
 - **Deps:** OPS-12. **Modules:** `docs/decisions/0024-…`, `docs/api-contract.md` §11, `docs/backlog.md`.
 - **Contract:** A15–A17 become decided (no shape changes). **Scope:** in: docs only. **Tests:** none (docs).
+
+### OPS-14 — Taste readiness and the film picker: decision and contract design (ADR-0029) · `Done` (PR #44)
+- **Objective:** record the owner's decisions on group taste (A11) and a "pick films you love" path for people without
+  history, so BE-14b, BE-14c and FE-23 can start from one design.
+- **Deps:** BE-14a. **Modules:** `docs/decisions/0029-…`, `docs/api-contract.md` §11–§12, `docs/backlog.md`.
+- **Scope:** in: ADR-0029; §12 design (readiness in taste rooms, the picker, guest picks, the warning count); A11
+  decided; new BE-14b, BE-14c and FE-23 (BE-14 merged first, so the picker logic is BE-14c; the FE-13 follow-up
+  is in FE-23). Out: code (BE-14b, BE-14c, FE-23). **Tests:** none (docs).
 
 ### OPS-15 — Record the owner's email-provider decision (L4) · `Done`
 - **Objective:** record L4 and stop it blocking the password-reset contract.
