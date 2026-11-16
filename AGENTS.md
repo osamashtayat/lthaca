@@ -15,6 +15,7 @@ This file is the single source of truth for every agent (Claude, Codex, Cursorâ€
 | [docs/frontend-conventions.md](docs/frontend-conventions.md) | Any frontend change |
 | [docs/ai.md](docs/ai.md) | LLM, prompts, embeddings, evals |
 | [docs/realtime.md](docs/realtime.md) | Rooms, RoomHub, events |
+| [docs/deployment.md](docs/deployment.md) | Production: server, Cloudflare, deploys, rollback (ADR-0030) |
 | [docs/glossary.md](docs/glossary.md) | Domain names â€” use them exactly |
 | [docs/decisions/](docs/decisions/README.md) | Why things are the way they are (ADRs) |
 

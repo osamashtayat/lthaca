@@ -46,7 +46,7 @@ logic (docs/realtime.md). The nightly catalog sync: `CatalogSyncJob` (schedules)
 | PostgreSQL 17 + pgvector | `localhost:5433` | service `db` (`pgvector/pgvector:pg17`) | service `db` on the OVHcloud VPS-2 (Frankfurt), port never public; nightly dump off the server (OPS-08) |
 | Migrations | `dotnet ef database update` | one-shot `migrate` (EF bundle) before `api` starts | the same `migrate` service on the VPS, before the new `api` starts |
 | API | `http://localhost:5280` | service `api`, port 8080, not published | service `api` on the VPS (`Production`: Secure cookies); HTTPS with a Cloudflare origin certificate (Kestrel or a proxy: OPS-07), open to Cloudflare's IPs only |
-| SPA | Vite `http://localhost:5273` (proxies `/api`, `/hubs`) | service `web` (nginx) `http://localhost:8080` | Cloudflare Pages on `https://<domain>`; no `web` container |
+| SPA | Vite `http://localhost:5273` (proxies `/api`, `/hubs`) | service `web` (nginx) `http://localhost:8080` | Cloudflare Pages on `https://ithacamovies.com`; no `web` container |
 | `/api`, `/hubs` on the site's origin | Vite proxy | nginx in `web` | a Cloudflare Worker on `<domain>/api/*` and `<domain>/hubs/*` → the VPS (cookies, `X-XSRF-TOKEN`, WebSockets passed through); Pages previews on `*.pages.dev` have no API |
 | TLS | none (plain HTTP, ADR-0009) | none | Cloudflare proxied DNS, "Full (strict)" |
 
@@ -58,7 +58,11 @@ or user-secrets. Providers (`Ai:LlmProvider`, `Ai:EmbeddingProvider`, `Tmdb:Clie
 ```
 AGENTS.md CLAUDE.md          agent instructions (AGENTS.md is the source of truth)
 .claude/                     settings, slash commands, architecture-reviewer agent, launch.json
-.github/workflows/ci.yml     CI: backend, frontend, Docker stack smoke
+.github/workflows/ci.yml     CI: backend, frontend, Docker stack smoke (dev and production compose files), Worker test
+.github/workflows/deploy.yml production deploy with manual approval, Pages previews (docs/deployment.md)
+deploy/                      cloudflare-worker/ (/api, /hubs → VPS) · pages/_headers · server/ (VPS setup, firewall)
+docker-compose.yml           local/CI stack: db, migrate, api, web (nginx)
+docker-compose.prod.yml      production stack on the VPS: db, migrate, api (ADR-0030)
 contracts/                   openapi.json (generated), realtime-events.json (hub contract, hand-written)
 prompts/                     versioned LLM prompts: <name>.v<N>.md
 docs/                        this documentation, backlog.md (tasks), api-contract.md (design contract), decisions/ (ADRs)

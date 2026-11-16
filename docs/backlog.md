@@ -831,6 +831,31 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   antiforgery); a room works across two phones (WebSockets through the Worker); the VPS refuses direct traffic; site and
   API rollbacks were each rehearsed once; a production frontend error shows readable source lines in Sentry.
 - **Tests:** the Docker smoke test against the production compose file in CI.
+- **Owner decision (2026-11-16):** the repo parts land first (production compose file, Worker + test, Pages headers,
+  server setup, deploy workflow, CI smoke, docs/deployment.md); the PR stays open until the owner has done the account
+  steps in docs/deployment.md and the acceptance has been checked on the live domain. Going live also needs BE-22 and
+  BE-23 (backend code, so not in this task).
+
+### BE-22 — Persist the Data Protection keys (issue #64) · `Todo`
+- **Objective:** sessions, antiforgery tokens and reset links survive restarts and deploys.
+- **Deps:** none (must be `Done` before OPS-07 goes live). **Modules:** `Ithaca.Infrastructure` (Identity/DI), a
+  migration, `docker-compose*.yml` only if a volume is chosen.
+- **Contract:** none. **Scope:** in: one of #64's options (recommended there: keys in PostgreSQL, so the OPS-08 dumps
+  cover them), application name `Ithaca`. Out: key encryption at rest (decide with OPS-08 if wanted).
+- **Acceptance:** sign in on the Docker stack, `docker compose restart api` (and a recreate), still signed in; a reset
+  link sent before the restart still works. **Tests:** a slice test that a cookie survives a new host on the same
+  database (or the volume), `Fixes #64`.
+
+### BE-23 — Real client IPs behind Cloudflare (issue #74) · `Todo`
+- **Objective:** per-IP rate limits see each user, not a Cloudflare address.
+- **Deps:** none (must be `Done` before OPS-07 goes live). **Modules:** `Ithaca.Api/RateLimiting`, `appsettings*.json`,
+  `docs/backend-conventions.md`.
+- **Contract:** none. **Scope:** in: production trusts Cloudflare's published ranges for `X-Forwarded-For` (the Worker
+  sets it from `CF-Connecting-IP`, ADR-0030 §1), kept current without a code change (config or a refreshed list);
+  development unchanged. Out: anything in the Worker (OPS-07).
+- **Acceptance:** two clients behind the Worker get separate limits; a spoofed `X-Forwarded-For` from outside
+  Cloudflare is ignored. **Tests:** `RateLimitSetup` tests for a Cloudflare range and an untrusted address,
+  `Fixes #74`.
 
 ### OPS-08 — Production data: backups, nightly sync, catalog size · `Todo`
 - **Objective:** user data survives a broken server; the catalog is fresh and big enough for good decks.
