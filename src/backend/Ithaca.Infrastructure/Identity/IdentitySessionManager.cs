@@ -149,7 +149,7 @@ internal sealed class IdentitySessionManager(
         }
 
         // The caller checked the current password (CheckPasswordAsync).
-        return await SetPasswordAndSignInAsync(user, newPassword, liftLockout: false);
+        return await SetPasswordAndSignInAsync(user, newPassword, reset: false);
     }
 
     public async Task<PasswordResetTicket?> CreatePasswordResetAsync(string email, CancellationToken ct)
@@ -177,7 +177,7 @@ internal sealed class IdentitySessionManager(
             return PasswordResetErrors.InvalidToken; // account gone, or the password changed since (the token was used)
         }
 
-        var reset = await SetPasswordAndSignInAsync(user, newPassword, liftLockout: true);
+        var reset = await SetPasswordAndSignInAsync(user, newPassword, reset: true);
         return reset.IsSuccess ? user.Id : reset.Error;
     }
 
@@ -196,9 +196,10 @@ internal sealed class IdentitySessionManager(
     /// <summary>
     /// One update: the new hash, a new security stamp (which ends every other session, since the stamp is checked on every
     /// request, ADR-0027, and invalidates every reset token) and, for a reset, a lifted lockout. Then this caller gets a
-    /// fresh cookie as the user. A <c>validation</c> error on <c>newPassword</c> with nothing changed.
+    /// fresh cookie as the user. A <c>validation</c> error on <c>newPassword</c> with nothing changed. For a reset, a write
+    /// that lost a race with another change of the same account (two resets with one link) is <c>auth.invalid_reset_token</c>.
     /// </summary>
-    private async Task<Result> SetPasswordAndSignInAsync(ApplicationUser user, string newPassword, bool liftLockout)
+    private async Task<Result> SetPasswordAndSignInAsync(ApplicationUser user, string newPassword, bool reset)
     {
         foreach (var validator in users.PasswordValidators)
         {
@@ -210,13 +211,18 @@ internal sealed class IdentitySessionManager(
         }
 
         user.PasswordHash = users.PasswordHasher.HashPassword(user, newPassword);
-        if (liftLockout)
+        if (reset)
         {
             user.AccessFailedCount = 0;
             user.LockoutEnd = null;
         }
 
         var changed = await users.UpdateSecurityStampAsync(user);
+        if (reset && changed.Errors.Any(e => e.Code == nameof(IdentityErrorDescriber.ConcurrencyFailure)))
+        {
+            return PasswordResetErrors.InvalidToken; // the other request used the link first
+        }
+
         if (!changed.Succeeded)
         {
             throw new InvalidOperationException($"Setting the password failed: {string.Join(", ", changed.Errors.Select(e => e.Code))}");

@@ -1,7 +1,10 @@
 using System.Net;
 using System.Text.Json;
 using Ithaca.Application.Email;
+using Ithaca.Infrastructure;
 using Ithaca.Infrastructure.Email;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -57,6 +60,7 @@ public sealed class EmailTests
         {
             ["displayName"] = "<Lina>",
             ["link"] = "http://localhost:5273/reset-password?token=abc&x=1",
+            ["expiresIn"] = "1 hour",
         });
 
         message.To.ShouldBe("lina@example.com");
@@ -67,6 +71,38 @@ public sealed class EmailTests
         message.Html.ShouldContain("Hi &lt;Lina&gt;,");
         message.Html.ShouldContain("token=abc&amp;x=1");
         message.Html.ShouldNotContain("{{");
+    }
+
+    [Fact]
+    public void Startup_ResendWithoutAKey_FailsWithAClearMessage()
+    {
+        using var services = Services(new() { ["Email:Provider"] = "Resend" });
+
+        var error = Should.Throw<OptionsValidationException>(() => services.GetRequiredService<IOptions<EmailOptions>>().Value);
+
+        error.Message.ShouldContain("Email:ApiKey is required when Email:Provider is 'Resend'");
+    }
+
+    [Fact]
+    public void Startup_ResendWithAKey_UsesTheResendClient()
+    {
+        using var services = Services(new() { ["Email:Provider"] = "Resend", ["Email:ApiKey"] = "re_test" });
+
+        services.GetRequiredService<IEmailSender>().ShouldBeOfType<ResendEmailSender>();
+    }
+
+    [Fact]
+    public void Startup_UnknownProvider_IsRefused()
+    {
+        using var services = Services(new() { ["Email:Provider"] = "Carrier pigeon" });
+
+        Should.Throw<InvalidOperationException>(() => services.GetRequiredService<IOptions<EmailOptions>>().Value);
+    }
+
+    private static ServiceProvider Services(Dictionary<string, string?> settings)
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        return new ServiceCollection().AddLogging().AddSingleton(TimeProvider.System).AddInfrastructure(configuration).BuildServiceProvider();
     }
 
     private static ResendEmailSender Sender(StubHandler handler) => new(

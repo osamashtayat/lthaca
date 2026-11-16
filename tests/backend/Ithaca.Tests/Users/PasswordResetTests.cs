@@ -51,6 +51,7 @@ public sealed partial class PasswordResetTests(PostgresFixture postgres) : IAsyn
         var message = Outbox.Sent.Single(m => m.To == email);
         message.Subject.ShouldBe("Reset your Ithaca password");
         message.Text.ShouldContain("Hi Lina,");
+        message.Text.ShouldContain("expires in 1 hour");
         message.Text.ShouldContain("http://localhost:5273/reset-password?token=");
         message.Html.ShouldContain("http://localhost:5273/reset-password?token=");
     }

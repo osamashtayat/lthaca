@@ -37,6 +37,7 @@ public sealed partial class PasswordResetService(
         {
             ["displayName"] = ticket.DisplayName,
             ["link"] = link,
+            ["expiresIn"] = Describe(PasswordResetTicket.Lifetime),
         });
 
         if (!await email.SendAsync(message, ct))
@@ -50,7 +51,8 @@ public sealed partial class PasswordResetService(
 
     /// <summary>
     /// Sets the new password if the token is valid, lifts any lockout, ends the user's other sessions and signs this caller
-    /// in (a guest caller is upgraded, as at sign-in). <c>auth.invalid_reset_token</c> otherwise.
+    /// in (a guest caller is upgraded, as at sign-in). <c>auth.invalid_reset_token</c> otherwise. Like sign-in it may save
+    /// twice: Identity writes the account, then a guest's membership moves (backend-conventions.md, one save per use case).
     /// </summary>
     public async Task<Result<CurrentUserDto>> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct)
     {
@@ -59,6 +61,10 @@ public sealed partial class PasswordResetService(
         var reset = await sessions.ResetPasswordAsync(request.Token, request.NewPassword, ct);
         return reset.IsSuccess ? await completion.CompleteAsync(previous, reset.Value, ct) : reset.Error;
     }
+
+    private static string Describe(TimeSpan span) => span.TotalMinutes % 60 == 0
+        ? span.TotalHours == 1 ? "1 hour" : $"{span.TotalHours:0} hours"
+        : $"{span.TotalMinutes:0} minutes";
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "A password reset email could not be sent")]
     private static partial void LogNotSent(ILogger logger);
