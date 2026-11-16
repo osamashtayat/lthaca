@@ -784,7 +784,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Scope:** in: this section and decisions L1–L8. Out: doing any of it.
 - **Acceptance:** every launch gap has a task or a decision. **Tests:** none (docs).
 
-### OPS-06 — Hosting decision (ADR) · `Todo` (L1, L2 and the VPS provider decided: Pages + Worker + OVHcloud VPS-2)
+### OPS-06 — Hosting decision (ADR) · `Done` (ADR-0030, accepted 2026-11-16: Pages + Worker + OVHcloud VPS-2; domain ithacamovies.com)
 - **Objective:** an ADR fixing where the API, database and site run, and how they stay one origin.
 - **Deps:** owner decisions L1, L2. **Modules:** `docs/decisions/`, `docs/architecture.md` (Runtime table).
 - **Contract:** none.
@@ -963,8 +963,8 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 ### Launch decisions for the owner
 | Id | Decision | Recommendation |
 |---|---|---|
-| L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker (db, migrate, api), behind Cloudflare.** Provider (2026-11-16): **OVHcloud VPS-2, Frankfurt** (OPS-06 records it in the ADR) |
-| L2 | Where the site runs | **Decided (2026-11-13): Cloudflare Pages + a Worker routing `/api` and `/hubs` to the VPS (B1).** |
+| L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker (db, migrate, api), behind Cloudflare.** Provider (2026-11-16): **OVHcloud VPS-2, Frankfurt**. ADR-0030 |
+| L2 | Where the site runs | **Decided (2026-11-13): Cloudflare Pages + a Worker routing `/api` and `/hubs` to the VPS (B1).** ADR-0030 |
 | L3 | Monthly AI budget (Anthropic + Voyage) | **Decided (2026-11-16): $25 per month.** BE-19 enforces a daily share of it (and falls back to the mood chips when it's reached or the AI fails); OPS-10 sets each provider's dashboard limit at or below it |
 | L4 | Email provider for password reset | **Decided (2026-11-15): Resend**, sending from a subdomain (e.g. `no-reply@mail.<domain>`), SPF/DKIM on Cloudflare DNS. Behind `IEmailSender`, so Postmark stays a one-class swap. The owner creates the account and key (user-secrets locally, `.env` on the VPS). Only BE-18 needs it; BE-18a doesn't |
 | L5 | Terms and Privacy texts | **Decided (2026-11-16): the short texts under "L5 texts" below**, drafted by an agent and kept by the owner (not legal advice). The owner fills [name or company], [email], [country] and [date] before launch |
