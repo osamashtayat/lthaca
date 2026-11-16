@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router'
+import { filmFacts } from '@/features/films'
 import { ApiError } from '@/shared/api'
 import { ErrorState, LoadingState, MonoLabel, Poster, TicketCard, tmdbImageUrl } from '@/shared/ui'
 import { useDeckTop } from '../api/useDeckTop'
@@ -49,7 +50,7 @@ export function DeckTopPage() {
                     </Link>
                   </h2>
                   <p className="font-mono text-xs text-ink-muted">
-                    {[film.releaseYear, film.runtimeMinutes ? `${film.runtimeMinutes} min` : null].filter(Boolean).join(' · ')}
+                    {filmFacts(film, { genres: 0, score: false })}
                   </p>
                   {reason && <p className="text-sm">{reason}</p>}
                 </div>
