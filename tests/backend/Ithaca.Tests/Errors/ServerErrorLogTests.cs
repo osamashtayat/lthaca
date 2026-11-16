@@ -4,12 +4,13 @@ using Ithaca.Application.Tmdb;
 using Ithaca.Tests.Harness;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Ithaca.Tests.Errors;
 
 /// <summary>
 /// The harness's <see cref="ServerErrorLog"/> (#68): a 500 leaves its exception there, so a flaky test can report the cause
-/// instead of just the status. Handled outcomes (4xx) leave nothing.
+/// instead of just the status. Errors other categories log (EF's handled write conflicts) leave nothing.
 /// </summary>
 [Collection(DatabaseCollectionDefinition.Name)]
 public sealed class ServerErrorLogTests(PostgresFixture postgres)
@@ -24,9 +25,10 @@ public sealed class ServerErrorLogTests(PostgresFixture postgres)
         using var client = factory.WithWebHostBuilder(b => b.ConfigureTestServices(s => s.AddSingleton<ITmdbClient>(new ThrowingTmdb())))
             .CreateClient();
 
-        using var notFound = await client.GetAsync(new Uri("/api/films/999999999", UriKind.Relative), Ct);
-        notFound.StatusCode.ShouldBe(HttpStatusCode.NotFound);
-        factory.ServerErrors.Errors.ShouldBeEmpty("a handled 404 is not a server error");
+        // EF logs every handled write conflict at Error with its exception; that must not land in the log.
+        factory.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Microsoft.EntityFrameworkCore.Update")
+            .Log(LogLevel.Error, default, "An exception occurred while saving changes.", new InvalidOperationException("handled conflict"), (state, _) => state);
+        factory.ServerErrors.Errors.ShouldBeEmpty("only what reaches ProblemDetailsExceptionHandler counts");
 
         using var response = await client.GetAsync(new Uri("/api/films/550/trailer", UriKind.Relative), Ct);
 
