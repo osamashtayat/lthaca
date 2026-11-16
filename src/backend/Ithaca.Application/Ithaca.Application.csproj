@@ -10,6 +10,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Email copy (EmailTemplates): files, not C# strings. -->
+    <EmbeddedResource Include="Email/Templates/*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Ithaca.Domain\Ithaca.Domain.csproj" />
   </ItemGroup>
 

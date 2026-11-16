@@ -1,6 +1,9 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
+using Ithaca.Application.Users;
 using Ithaca.Domain.Common;
 using Microsoft.AspNetCore.Authentication;
 using Ithaca.Infrastructure.Persistence;
@@ -16,7 +19,8 @@ namespace Ithaca.Infrastructure.Identity;
 /// store and the services share the one scoped <see cref="AppDbContext"/>, which is what lets a deletion be staged.
 /// </summary>
 internal sealed class IdentitySessionManager(
-    UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn, AppDbContext db, TimeProvider time) : ISessionManager
+    UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn, AppDbContext db, TimeProvider time, PasswordResetTokens resetTokens)
+    : ISessionManager
 {
     public async Task<Result<Guid>> RegisterAsync(string email, string password, string displayName, CancellationToken ct)
     {
@@ -144,28 +148,37 @@ internal sealed class IdentitySessionManager(
             return AuthErrors.Unauthenticated;
         }
 
-        foreach (var validator in users.PasswordValidators)
+        // The caller checked the current password (CheckPasswordAsync).
+        return await SetPasswordAndSignInAsync(user, newPassword, reset: false);
+    }
+
+    public async Task<PasswordResetTicket?> CreatePasswordResetAsync(string email, CancellationToken ct)
+    {
+        var user = await users.FindByEmailAsync(email);
+        if (user?.Email is null)
         {
-            var valid = await validator.ValidateAsync(users, user, newPassword);
-            if (!valid.Succeeded)
-            {
-                return Error.Validation("newPassword", valid.Errors.FirstOrDefault()?.Description ?? "That password can't be used.");
-            }
+            return null;
         }
 
-        // The caller checked the current password (CheckPasswordAsync). One update: the new hash and a new security stamp,
-        // which ends every other session (the stamp is checked on every request, AuthSetup).
-        user.PasswordHash = users.PasswordHasher.HashPassword(user, newPassword);
-        var changed = await users.UpdateSecurityStampAsync(user);
-        if (!changed.Succeeded)
+        return new PasswordResetTicket(resetTokens.Create(user.Id, await users.GetSecurityStampAsync(user)), user.Email, user.DisplayName);
+    }
+
+    public async Task<Result<Guid>> ResetPasswordAsync(string token, string newPassword, CancellationToken ct)
+    {
+        if (resetTokens.Read(token) is not { } claims)
         {
-            throw new InvalidOperationException($"Changing the password failed: {string.Join(", ", changed.Errors.Select(e => e.Code))}");
+            return PasswordResetErrors.InvalidToken;
         }
 
-        // This session carries the old stamp: issue a fresh cookie so the caller stays signed in.
-        await signIn.SignInAsync(user, isPersistent: true);
-        await UseUserPrincipalAsync(user);
-        return Result.Success();
+        var user = await users.FindByIdAsync(claims.UserId.ToString());
+        if (user is null || !CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(await users.GetSecurityStampAsync(user)), Encoding.UTF8.GetBytes(claims.SecurityStamp)))
+        {
+            return PasswordResetErrors.InvalidToken; // account gone, or the password changed since (the token was used)
+        }
+
+        var reset = await SetPasswordAndSignInAsync(user, newPassword, reset: true);
+        return reset.IsSuccess ? user.Id : reset.Error;
     }
 
     public async Task<bool> StageAccountDeletionAsync(Guid userId, CancellationToken ct)
@@ -178,6 +191,46 @@ internal sealed class IdentitySessionManager(
 
         db.Users.Remove(user);
         return true;
+    }
+
+    /// <summary>
+    /// One update: the new hash, a new security stamp (which ends every other session, since the stamp is checked on every
+    /// request, ADR-0027, and invalidates every reset token) and, for a reset, a lifted lockout. Then this caller gets a
+    /// fresh cookie as the user. A <c>validation</c> error on <c>newPassword</c> with nothing changed. For a reset, a write
+    /// that lost a race with another change of the same account (two resets with one link) is <c>auth.invalid_reset_token</c>.
+    /// </summary>
+    private async Task<Result> SetPasswordAndSignInAsync(ApplicationUser user, string newPassword, bool reset)
+    {
+        foreach (var validator in users.PasswordValidators)
+        {
+            var valid = await validator.ValidateAsync(users, user, newPassword);
+            if (!valid.Succeeded)
+            {
+                return Error.Validation("newPassword", valid.Errors.FirstOrDefault()?.Description ?? "That password can't be used.");
+            }
+        }
+
+        user.PasswordHash = users.PasswordHasher.HashPassword(user, newPassword);
+        if (reset)
+        {
+            user.AccessFailedCount = 0;
+            user.LockoutEnd = null;
+        }
+
+        var changed = await users.UpdateSecurityStampAsync(user);
+        if (reset && changed.Errors.Any(e => e.Code == nameof(IdentityErrorDescriber.ConcurrencyFailure)))
+        {
+            return PasswordResetErrors.InvalidToken; // the other request used the link first
+        }
+
+        if (!changed.Succeeded)
+        {
+            throw new InvalidOperationException($"Setting the password failed: {string.Join(", ", changed.Errors.Select(e => e.Code))}");
+        }
+
+        await signIn.SignInAsync(user, isPersistent: true);
+        await UseUserPrincipalAsync(user);
+        return Result.Success();
     }
 
     /// <summary>The cookie is written for the response; this request's principal switches too (antiforgery binds to it).</summary>

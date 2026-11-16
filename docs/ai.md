@@ -19,6 +19,7 @@ The LLM is used **only at the edges**: (1) parse mood text into filters, (2) ran
 | Prompts | `IPromptLibrary.RenderAsync(PromptId, variables)` → text + output schema | `FilePromptLibrary` (reads `prompts/`) | `Ai:PromptsPath` |
 | Typed output | `StructuredOutput.Parse<T>(response) → Result<T>` | — | — |
 | Movie data | `ITmdbClient` (returns `Result`) | `FakeTmdbClient`, `TmdbHttpClient` | `Tmdb:Client`, `Tmdb:Language`, `Tmdb:ApiKey` |
+| Transactional email (not AI; same provider rules) | `IEmailSender.SendAsync(EmailMessage) → bool` | `FakeEmailSender`, `ResendEmailSender` (L4) | `Email:Provider`, `Email:From`, `Email:SiteUrl`, `Email:ApiKey` |
 | AI-safe film facts | `IWikidataClient.GetFilmsAsync(tmdbIds)` (returns `Result`) | `FakeWikidataClient`, `WikidataHttpClient` (SPARQL) | `Wikidata:Client`, `Wikidata:Endpoint`, `Wikidata:UserAgent`, `Wikidata:BatchSize`, `Wikidata:RefreshDays` (no key) |
 
 Provider selection happens once, in `Infrastructure/DependencyInjection.cs → AddExternalClients`. Callers never know which

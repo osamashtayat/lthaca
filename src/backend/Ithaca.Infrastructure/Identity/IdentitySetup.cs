@@ -35,6 +35,7 @@ internal static class IdentitySetup
             .AddSignInManager()
             .AddEntityFrameworkStores<AppDbContext>();
 
+        services.AddSingleton<PasswordResetTokens>();
         services.AddScoped<ISessionManager, IdentitySessionManager>();
         return services;
     }

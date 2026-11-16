@@ -14,6 +14,7 @@ internal static class OfflineProviders
         ["Ai:EmbeddingProvider"] = "Fake",
         ["Tmdb:Client"] = "Fake",
         ["Wikidata:Client"] = "Fake",
+        ["Email:Provider"] = "Fake",
         ["CatalogSync:Enabled"] = "false",
     };
 

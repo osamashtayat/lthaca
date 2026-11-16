@@ -771,7 +771,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   `POST /api/auth/reset-password` (token + new password).
 - **Scope:** in: as BE-01. **Acceptance:** both in `openapi.json`, answering 501.
 
-### BE-18 — Password reset by email · `Todo`
+### BE-18 — Password reset by email · `Done` (PR #63)
 - **Objective:** users who forget their password can get back in.
 - **Deps:** BE-18a, the owner's Resend account, sending domain and API key (L4). **Modules:** `Application/Users`, an `IEmailSender` (Application) + provider client
   (Infrastructure), options, templates.
