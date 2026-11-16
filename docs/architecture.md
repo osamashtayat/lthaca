@@ -49,7 +49,7 @@ logic (docs/realtime.md). The nightly catalog sync: `CatalogSyncJob` (schedules)
 | SPA | Vite `http://localhost:5273` (proxies `/api`, `/hubs`) | service `web` (nginx) `http://localhost:8080` |
 
 Configuration: `appsettings.json` holds non-secret defaults; secrets come from env vars (`.env`, see `.env.example`)
-or user-secrets. Providers (`Ai:LlmProvider`, `Ai:EmbeddingProvider`, `Tmdb:Client`) default to `Fake`.
+or user-secrets. Providers (`Ai:LlmProvider`, `Ai:EmbeddingProvider`, `Tmdb:Client`, `Wikidata:Client`, `Email:Provider`) default to `Fake`.
 
 ## Folder map
 

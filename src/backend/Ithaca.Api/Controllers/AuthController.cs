@@ -1,6 +1,5 @@
 using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
-using Ithaca.Api.OpenApi;
 using Ithaca.Application.Auth;
 using Ithaca.Application.Users;
 using Microsoft.AspNetCore.Mvc;
@@ -49,7 +48,6 @@ public sealed class AuthController(AuthService auth, PasswordResetService passwo
     [HttpPost("forgot-password")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
-    [ContractStub]
     public async Task<ActionResult> ForgotPassword(ForgotPasswordRequest request, CancellationToken ct) =>
         this.ToActionResult(await passwordReset.ForgotPasswordAsync(request, ct));
 
@@ -57,7 +55,6 @@ public sealed class AuthController(AuthService auth, PasswordResetService passwo
     [IssueXsrfToken]
     [ProducesResponseType<CurrentUserDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
-    [ContractStub]
     public async Task<ActionResult<CurrentUserDto>> ResetPassword(ResetPasswordRequest request, CancellationToken ct) =>
         this.ToActionResult(await passwordReset.ResetPasswordAsync(request, ct));
 }

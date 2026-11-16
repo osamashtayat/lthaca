@@ -177,9 +177,19 @@ code and 501 stubs; BE-18 the logic (`PasswordResetService` in `Application/User
   and the caller is **signed in** as that user: 200 `CurrentUserDto`, a session cookie and a new `XSRF-TOKEN`, as after
   sign-in. A guest caller is upgraded exactly as at sign-in (ADR-0012).
 
-**As built (BE-18a):** both actions exist with the shapes above and answer 501 `server.not_implemented` until BE-18. Like
-every unsafe endpoint they need `X-XSRF-TOKEN` (no exemption, ADR-0023). Reset re-issues `XSRF-TOKEN` (checked on the stub
-answer); forgot-password changes nobody and doesn't.
+**As built (BE-18a, BE-18):** like every unsafe endpoint both need `X-XSRF-TOKEN` (no exemption, ADR-0023). Reset
+re-issues `XSRF-TOKEN` on every answer it gives; forgot-password changes nobody and doesn't.
+- **The token** is about 200 URL-safe characters (base64url, well under the 1,024 limit): the user id, the issue time and the account's security
+  stamp, encrypted and signed with ASP.NET Data Protection. Any password change changes the stamp, which is what makes a
+  link single-use and kills the others. The link URL-encodes it; send it back decoded, as it was.
+- **The email** (Resend, L4): from `Email:From` (`Ithaca <no-reply@mail.ithacamovies.com>`), subject "Reset your Ithaca
+  password", plain text + HTML from `Application/Email/Templates/password-reset.*`; the link is
+  `Email:SiteUrl` + `/reset-password?token=…` (`http://localhost:5273` by default, `:8080` in Docker).
+- **Same answer, every case:** 204 for an unknown email, and also 204 when the provider refuses or is down (logged, with
+  no address or token; the user asks again). Response *timing* may differ (a real address waits for the send), which we
+  accept: registration already answers 409 `auth.email_taken` for a known email. Logs never carry addresses or tokens.
+- `Email:Provider=Fake` (tests, local development, the default) sends nothing; in Development it logs the email text so
+  the link can be opened by hand. Production sets `Resend` and `Email__ApiKey` (a sending-only key).
 
 ## 5. Solo deck and swipes (incl. by mood)
 

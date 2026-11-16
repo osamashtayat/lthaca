@@ -37,7 +37,8 @@ public static class DependencyInjection
         services.AddScoped<RoomAccess>(); // collaborator of RoomService, RoomDeckService and RoomMembershipService, not a use-case service
         services.AddScoped<RoomReader>(); // collaborator of RoomService, RoomDeckService and RoomReferee, not a use-case service
         services.AddScoped<RoomReferee>(); // collaborator of RoomDeckService, RoomService and RoomResultService, not a use-case service
-        services.AddScoped<GuestUpgrade>(); // collaborator of AuthService, not a use-case service
+        services.AddScoped<GuestUpgrade>(); // collaborator of SignInCompletion, not a use-case service
+        services.AddScoped<SignInCompletion>(); // collaborator of AuthService and PasswordResetService
         services.AddScoped<RoomService>();
         services.AddScoped<RoomDeckService>();
         services.AddScoped<RoomResultService>();
