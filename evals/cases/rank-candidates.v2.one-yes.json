@@ -1,0 +1,37 @@
+{
+  "id": "rank-candidates.v2.one-yes",
+  "kind": "edge",
+  "description": "a single yes still gets ranked and explained, and nothing is added",
+  "prompt": "rank-candidates.v2",
+  "variables": {
+    "audience": "one person",
+    "limit": "3"
+  },
+  "input": "{\"taste\": {\"moodGenres\": [], \"moodKeywords\": [], \"maxRuntimeMinutes\": null, \"likedGenres\": [], \"dislikedGenres\": []}, \"candidates\": [{\"tmdbId\": 14160, \"genres\": [\"animated film\", \"comedy film\", \"adventure film\"], \"subjects\": [\"old age\", \"balloon\", \"grief\"], \"directors\": [\"Pete Docter\"], \"cast\": [\"Ed Asner\", \"Jordan Nagai\"], \"countries\": [\"United States\"], \"languages\": [\"English\"], \"year\": 2009, \"runtimeMinutes\": 96, \"awards\": [\"Academy Award for Best Animated Feature\"]}]}",
+  "candidates": [
+    14160
+  ],
+  "recordedResponse": {
+    "ranked": [
+      {
+        "tmdbId": 14160,
+        "reason": "An Oscar-winning Pixar adventure you already said yes to."
+      }
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "idsFromCandidates"
+    },
+    {
+      "type": "maxReasonLength",
+      "value": 200
+    },
+    {
+      "type": "reasonForEveryCandidate"
+    }
+  ]
+}

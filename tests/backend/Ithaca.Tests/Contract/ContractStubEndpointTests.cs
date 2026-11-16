@@ -6,9 +6,9 @@ using Ithaca.Tests.Harness;
 namespace Ithaca.Tests.Contract;
 
 /// <summary>
-/// BE-01: every first-wave endpoint whose task hasn't landed answers 501 ProblemDetails <c>server.not_implemented</c>.
-/// When a feature task implements an endpoint, it removes that row here and adds its own slice tests. Requests come from
-/// a signed-in browser client (session cookie + XSRF header, BE-02), so access rules don't hide the stub.
+/// BE-01: request validation at the contract's edge (camelCase field names, enums as strings, required fields). The 501
+/// stub rows are gone: BE-14 implemented the last stubbed endpoints (BE-17 removes <c>ContractStub</c> itself). Requests
+/// come from a signed-in browser client (session cookie + XSRF header, BE-02), so access rules don't hide the answer.
 /// </summary>
 [Collection(DatabaseCollectionDefinition.Name)]
 public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsyncLifetime
@@ -30,31 +30,6 @@ public sealed class ContractStubEndpointTests(PostgresFixture postgres) : IAsync
     {
         _user.Dispose();
         return _factory.DisposeAsync();
-    }
-
-    /// <summary>Method, path, and a valid JSON body (so model validation passes and the stub answers).</summary>
-    public static TheoryData<string, string, string?> Stubs => new()
-    {
-        { "POST", "/api/auth/forgot-password", """{"email":"someone@example.com"}""" },
-        { "POST", "/api/auth/reset-password", """{"token":"opaque-token","newPassword":"battery staple"}""" },
-    };
-
-    [Theory]
-    [MemberData(nameof(Stubs))]
-    public async Task Stub_AnswersNotImplementedProblem(string method, string path, string? body)
-    {
-        using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(path, UriKind.Relative));
-        if (body is not null)
-        {
-            request.Content = new StringContent(body, Encoding.UTF8, "application/json");
-        }
-
-        using var response = await _user.SendAsync(request, TestContext.Current.CancellationToken);
-
-        response.StatusCode.ShouldBe(HttpStatusCode.NotImplemented, await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
-        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
-        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
-        problem.RootElement.GetProperty("code").GetString().ShouldBe("server.not_implemented");
     }
 
     [Fact]

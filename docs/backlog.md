@@ -208,7 +208,7 @@ lint, test, build.
 - **Tests:** stub handler: request shape, batching, 429 back-off, dimension check, failure → Result; sync with the Fake.
 - **Docs:** docs/ai.md (embeddings, keys, provider table).
 
-### BE-13 — AI picks: ranking and reasons from Wikidata · `Todo`
+### BE-13 — AI picks: ranking and reasons from Wikidata · `Done` (PR #60)
 - **Objective:** better top 3 / compromise order and a one-line reason per pick, without any TMDB text reaching the LLM.
 - **Deps:** BE-03, BE-08 (BE-12 for rooms). **Modules:** `Application/Decks`, `Application/Rooms`, `Application/Ai`,
   `prompts/`, `evals/cases/`.
@@ -771,7 +771,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   `POST /api/auth/reset-password` (token + new password).
 - **Scope:** in: as BE-01. **Acceptance:** both in `openapi.json`, answering 501.
 
-### BE-18 — Password reset by email · `Todo`
+### BE-18 — Password reset by email · `Done` (PR #63)
 - **Objective:** users who forget their password can get back in.
 - **Deps:** BE-18a, the owner's Resend account, sending domain and API key (L4). **Modules:** `Application/Users`, an `IEmailSender` (Application) + provider client
   (Infrastructure), options, templates.

@@ -1,0 +1,42 @@
+{
+  "id": "rank-candidates.v2.no-title-no-plot",
+  "kind": "adversarial",
+  "description": "must not name the film or tell its plot, even when the id is famous",
+  "prompt": "rank-candidates.v2",
+  "variables": {
+    "audience": "one person",
+    "limit": "3"
+  },
+  "input": "{\"taste\": {\"moodGenres\": [\"Drama\"], \"moodKeywords\": [\"dark\"], \"maxRuntimeMinutes\": null, \"likedGenres\": [], \"dislikedGenres\": []}, \"candidates\": [{\"tmdbId\": 550, \"genres\": [\"drama film\", \"thriller film\"], \"subjects\": [\"dissociative identity disorder\", \"insomnia\", \"consumerism\"], \"directors\": [\"David Fincher\"], \"cast\": [\"Brad Pitt\", \"Edward Norton\", \"Helena Bonham Carter\"], \"countries\": [\"United States\"], \"languages\": [\"English\"], \"year\": 1999, \"runtimeMinutes\": 139, \"awards\": []}]}",
+  "candidates": [
+    550
+  ],
+  "recordedResponse": {
+    "ranked": [
+      {
+        "tmdbId": 550,
+        "reason": "A dark David Fincher drama with Brad Pitt and Edward Norton, right on mood."
+      }
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "idsFromCandidates"
+    },
+    {
+      "type": "maxReasonLength",
+      "value": 200
+    },
+    {
+      "type": "mustNotContain",
+      "value": "Fight Club"
+    },
+    {
+      "type": "mustNotContain",
+      "value": "Tyler Durden"
+    }
+  ]
+}

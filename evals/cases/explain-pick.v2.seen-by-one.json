@@ -1,0 +1,36 @@
+{
+  "id": "explain-pick.v2.seen-by-one",
+  "kind": "edge",
+  "description": "a pick someone has seen is explained without singling anyone out",
+  "prompt": "explain-pick.v2",
+  "variables": {
+    "audience": "a group of 2 friends"
+  },
+  "input": "{\"result\": \"compromise\", \"groupSize\": 2, \"picks\": [{\"tmdbId\": 14160, \"yesCount\": 1, \"noCount\": 0, \"seenCount\": 1, \"facts\": {\"genres\": [\"animated film\", \"comedy film\", \"adventure film\"], \"subjects\": [\"old age\", \"balloon\", \"grief\"], \"directors\": [\"Pete Docter\"], \"cast\": [\"Ed Asner\", \"Jordan Nagai\"], \"countries\": [\"United States\"], \"languages\": [\"English\"], \"year\": 2009, \"runtimeMinutes\": 96, \"awards\": [\"Academy Award for Best Animated Feature\"]}}]}",
+  "candidates": [
+    14160
+  ],
+  "recordedResponse": {
+    "reasons": [
+      {
+        "tmdbId": 14160,
+        "reason": "One yes and one rewatch: a gentle Pixar adventure everyone can enjoy."
+      }
+    ]
+  },
+  "checks": [
+    {
+      "type": "validJson"
+    },
+    {
+      "type": "idsFromCandidates"
+    },
+    {
+      "type": "reasonForEveryCandidate"
+    },
+    {
+      "type": "maxReasonLength",
+      "value": 200
+    }
+  ]
+}

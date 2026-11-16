@@ -1,3 +1,4 @@
+using Ithaca.Application.Ai;
 using Ithaca.Application.Auth;
 using Ithaca.Application.Catalog;
 using Ithaca.Application.Decks;
@@ -33,13 +34,16 @@ public static class DependencyInjection
         services.AddScoped<MoodInterpreter>(); // collaborator of DeckService and RoomDeckService, not a use-case service
         services.AddScoped<DeckDealer>(); // collaborator of DeckService and RoomDeckService, not a use-case service
         services.AddScoped<DeckItemReader>(); // collaborator of DeckService and RoomDeckService, not a use-case service
+        services.AddScoped<PickAdvisor>(); // collaborator of DeckService and RoomPickExplainer, not a use-case service
         services.AddScoped<DeckService>();
         services.AddScoped<RoomAccess>(); // collaborator of RoomService, RoomDeckService and RoomMembershipService, not a use-case service
         services.AddScoped<RoomReader>(); // collaborator of RoomService, RoomDeckService and RoomReferee, not a use-case service
         services.AddScoped<RoomReferee>(); // collaborator of RoomDeckService, RoomService and RoomResultService, not a use-case service
-        services.AddScoped<GuestUpgrade>(); // collaborator of AuthService, not a use-case service
+        services.AddScoped<GuestUpgrade>(); // collaborator of SignInCompletion, not a use-case service
+        services.AddScoped<SignInCompletion>(); // collaborator of AuthService and PasswordResetService, not a use-case service
         services.AddScoped<RoomService>();
         services.AddScoped<RoomDeckService>();
+        services.AddScoped<RoomPickExplainer>(); // collaborator of RoomResultService only, not a use-case service
         services.AddScoped<RoomResultService>();
         services.AddScoped<RoomMembershipService>();
         services.AddScoped<LibraryService>();

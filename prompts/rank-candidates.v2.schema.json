@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "ranked": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tmdbId": { "type": "integer" },
+          "reason": { "type": "string" }
+        },
+        "required": ["tmdbId", "reason"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["ranked"],
+  "additionalProperties": false
+}

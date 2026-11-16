@@ -23,6 +23,7 @@ internal sealed class RoomConfiguration : IEntityTypeConfiguration<Room>
         builder.PrimitiveCollection(r => r.ResultPicks).IsRequired();
         builder.PrimitiveCollection(r => r.ResultMembers).IsRequired();
         builder.PrimitiveCollection(r => r.ResultVotes).IsRequired();
+        builder.PrimitiveCollection(r => r.ResultReasons); // null until the AI explained the picks (BE-13)
 
         // Postgres' xmin as an optimistic concurrency token (no column of ours): a start that races a close (or the last
         // member leaving) can't overwrite the other's status; the loser sees a write conflict and decides again (BE-11).

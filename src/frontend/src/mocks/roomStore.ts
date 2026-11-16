@@ -239,7 +239,7 @@ function pickFor(room: StoredRoom, position: number, rank: number): RoomPickDto 
   const votes = room.votes[itemId(room, position)] ?? {}
   if (!film) return undefined
   const ids = (direction: SwipeDirection) => room.members.filter((m) => votes[m.id]?.direction === direction).map((m) => m.id)
-  return { rank, film, yesCount: ids('right').length, noCount: ids('left').length, yes: ids('right'), seen: ids('up') }
+  return { rank, film, yesCount: ids('right').length, noCount: ids('left').length, yes: ids('right'), seen: ids('up'), reason: null }
 }
 
 /** Scripts the match (every member said yes). The `roomMatched` event is the test's to fire. */
@@ -252,7 +252,7 @@ export function matchMockRoom(code: string, tmdbId: number) {
   const everyone = room.members.map((m) => m.id)
   room.result = {
     kind: 'match',
-    picks: [{ rank: 1, film, yesCount: everyone.length, noCount: 0, yes: everyone, seen: [] }],
+    picks: [{ rank: 1, film, yesCount: everyone.length, noCount: 0, yes: everyone, seen: [], reason: null }],
     memberCount: room.members.length,
     decidedAt: new Date().toISOString(),
   }

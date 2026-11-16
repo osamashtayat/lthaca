@@ -7,8 +7,8 @@ using Ithaca.Tests.Harness;
 namespace Ithaca.Tests.Users;
 
 /// <summary>
-/// BE-18a: the password reset contract (api-contract.md §4) before its logic. Both actions are open to anyone with an
-/// XSRF token and answer 501 until BE-18; input is validated first; only the reset (which signs in) issues a fresh token.
+/// BE-18a: the password reset contract (api-contract.md §4): both actions are open to anyone with an XSRF token; input is
+/// validated first; only the reset (which signs in) issues a fresh token. The behaviour is in <see cref="PasswordResetTests"/>.
 /// </summary>
 [Collection(DatabaseCollectionDefinition.Name)]
 public sealed class PasswordResetContractTests(PostgresFixture postgres) : IAsyncLifetime
@@ -30,19 +30,6 @@ public sealed class PasswordResetContractTests(PostgresFixture postgres) : IAsyn
         { ForgotPassword, """{"email":"someone@example.com"}""" },
         { ResetPassword, """{"token":"opaque-token","newPassword":"battery staple"}""" },
     };
-
-    [Theory]
-    [MemberData(nameof(Actions))]
-    public async Task Action_Anonymous_ReachesTheStub(string path, string body)
-    {
-        using var visitor = await BrowserClient.StartAsync(_factory, Ct);
-
-        using var response = await visitor.SendAsync(Post(path, body), Ct);
-
-        response.StatusCode.ShouldBe(HttpStatusCode.NotImplemented, await response.Content.ReadAsStringAsync(Ct));
-        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
-        (await CodeAsync(response)).ShouldBe("server.not_implemented");
-    }
 
     [Theory]
     [InlineData(ForgotPassword, """{"email":""}""", "email")]

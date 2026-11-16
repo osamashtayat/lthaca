@@ -8,4 +8,5 @@ Solo decks (`Deck`, `DeckItem`, `Swipe`; api-contract.md §5). Built: "Just swip
   holds the hard limits (a mood, or a room's combined moods and hard nos).
 - `DeckSampler`: pure picking logic (sampler variety, fit with signals, top-3 ranking), unit-tested without a database.
 - `DeckSignals`: how much each swipe or library row counts.
+- The top 3 is our order, then re-ranked with a reason each by `PickAdvisor` (Application/Ai, BE-13; docs/ai.md → AI picks).
 - Films come from our own `films` table (ADR-0003). Deck items reference films, so the sync never purges them (ADR-0019).

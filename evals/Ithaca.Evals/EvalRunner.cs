@@ -33,7 +33,8 @@ internal sealed class EvalRunner(IPromptLibrary prompts, ILlmClient? liveClient)
     {
         var id = ParsePromptId(evalCase.Prompt);
         var prompt = await prompts.RenderAsync(id, evalCase.Variables ?? [], ct);
-        var input = evalCase.Candidates is { } candidates ? JsonSerializer.Serialize(candidates) : evalCase.Input;
+        // A case may send the real input (e.g. rank-candidates.v2's JSON object) and still list the candidate ids for checks.
+        var input = evalCase.Candidates is { } candidates && string.IsNullOrEmpty(evalCase.Input) ? JsonSerializer.Serialize(candidates) : evalCase.Input;
         string reply;
         if (liveClient is null)
         {
