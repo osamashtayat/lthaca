@@ -30,7 +30,7 @@ What each part sends:
 - **Frontend (FE-21):**
   - unhandled errors and React render errors, with an error boundary that shows a friendly screen;
   - page-load and navigation traces;
-  - Session Replay of the moments before an error only, with all text and inputs masked.
+  - ~~Session Replay of the moments before an error~~ — dropped in FE-21 (see Amendments).
 
 **Privacy (owner: "only the internal id"):**
 - `SendDefaultPii` is off.
@@ -69,3 +69,11 @@ What each part sends:
 ## Revisit when
 The free quota is regularly exceeded, the owner wants a single vendor for uptime and errors, or the Privacy review (L5)
 needs data kept elsewhere.
+
+## Amendments
+- **2026-11-16 (FE-21): no Session Replay.** The replay recorder stores full page URLs (e.g. `/reset-password?token=…`,
+  `?search=…`) in recording events that the SDK can't modify before sending, so it would break the privacy rule above.
+  Errors, failed route loads and traces are sent; replay can come back once tokens no longer sit in URLs and Sentry's
+  server-side scrubbing of recordings is verified. Also from FE-21: the IP-derived location is removed by a project
+  data-scrubbing rule (`$user.geo.**`), and both projects have "prevent storing IP addresses" on.
+

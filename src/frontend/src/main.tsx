@@ -1,14 +1,18 @@
+// First, so Sentry runs before the router is created and before anything else can throw (ADR-0028).
+import '@/shared/monitoring/init'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
 import { AppProviders } from '@/app/providers'
+import { CrashPage } from '@/app/pages/CrashPage'
 import { router } from '@/app/router'
 import { API_MOCKS_ENABLED } from '@/shared/api'
+import { CrashBoundary, reactErrorHandlers } from '@/shared/monitoring'
 import '@/shared/styles/global.css'
 
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Root element #root not found')
-const root = createRoot(rootElement)
+const root = createRoot(rootElement, reactErrorHandlers)
 
 /**
  * On the dev server the API is mocked (MSW, ADR-0020) so frontend work never waits for the backend; set
@@ -36,9 +40,11 @@ void enableMocking().then(async (mocksOk) => {
   root.render(
     <StrictMode>
       {MockApiFailedBanner && <MockApiFailedBanner />}
-      <AppProviders>
-        <RouterProvider router={router} />
-      </AppProviders>
+      <CrashBoundary fallback={<CrashPage />}>
+        <AppProviders>
+          <RouterProvider router={router} />
+        </AppProviders>
+      </CrashBoundary>
     </StrictMode>,
   )
 })
