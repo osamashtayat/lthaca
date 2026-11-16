@@ -17,6 +17,7 @@ export const PROBLEM_MESSAGES = {
   'auth.invalid_credentials': "That email and password don't match. Try again.",
   'auth.forbidden': "You don't have access to that.",
   'auth.email_taken': 'That email already has an account. Sign in instead.',
+  'auth.invalid_reset_token': 'That reset link has expired or was already used. Ask for a new one.',
   'deck.not_found': "We couldn't find that deck. Start a new one.",
   'deck.item_not_found': "That card isn't in this deck anymore. Refresh and keep swiping.",
   'deck.already_swiped': 'You already swiped this one.',

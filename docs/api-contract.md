@@ -56,6 +56,7 @@ BE-01 adds all of them at once, so mocks and screens can use them from day one.
 | 404 | `deck.item_not_found` | the deck item isn't in this deck / room |
 | 404 | `room.not_found` | no open or recent room with that code |
 | 409 | `auth.email_taken` | register with an email that has an account |
+| 400 | `auth.invalid_reset_token` | password reset with a token that is malformed, unknown, expired or already used, never saying which (§4) — BE-18a |
 | 409 | `deck.already_swiped` | a different `swipeId` for an item already swiped |
 | 409 | `room.already_voted` | a different `voteId` for an item this member already voted on |
 | 409 | `room.closed` | the room is closed (or finished) and takes no joins, votes or changes |
@@ -126,10 +127,14 @@ sign-in, sign-out, room join, and a guest's room leave) re-issues it.
 | `POST /api/auth/register` | anon | `RegisterRequest` | 201 `CurrentUserDto`, signed in | 400, 409 `auth.email_taken` |
 | `POST /api/auth/sign-in` | anon | `SignInRequest` | 200 `CurrentUserDto` | 400, 401 `auth.invalid_credentials` |
 | `POST /api/auth/sign-out` | user or guest | — | 204 (cookie cleared) | — |
+| `POST /api/auth/forgot-password` | anon | `ForgotPasswordRequest` | 204, always | 400 `validation` |
+| `POST /api/auth/reset-password` | anon | `ResetPasswordRequest` | 200 `CurrentUserDto`, signed in, new `XSRF-TOKEN` | 400 `validation` / `auth.invalid_reset_token` |
 
 ```ts
 type RegisterRequest = { email: string; password: string; displayName: string }  // password 8–128; name 1–40
 type SignInRequest   = { email: string; password: string }
+type ForgotPasswordRequest = { email: string }                     // a valid email, ≤ 256
+type ResetPasswordRequest  = { token: string; newPassword: string } // token ≤ 1024, opaque; new password 8–128
 type CurrentUserDto  = {
   kind: "user" | "guest"; id: string; displayName: string;
   email: string | null;      // users only
@@ -153,6 +158,28 @@ type CurrentUserDto  = {
 - User-only endpoints (Access **user** in §5–§7: decks, library, `POST /api/rooms`) answer 401 `auth.unauthenticated`
   to anonymous callers **and to guests**. Member and host rules arrive with the room tasks.
 - Emails are matched case-insensitively and trimmed; display names are trimmed.
+
+### Password reset (BE-18a)
+
+"Forgot password?" on `/sign-in` and the emailed link's page `/reset-password?token=…` (FE-16). BE-18a adds the DTOs, the
+code and 501 stubs; BE-18 the logic (`PasswordResetService` in `Application/Users`) and the email (Resend, L4).
+
+**Rules** (owner, 2026-11-16; BE-18 builds them, until then both answer 501 `server.not_implemented`):
+- **Forgot password:** always 204 for a well-formed email, whether or not it has an account, and for any caller (visitor,
+  guest or user), so the answer never reveals an account. When it has one, the server emails a link to
+  `<site>/reset-password?token=<token>`. Asking again sends a new link; earlier links stay valid until they expire or one
+  is used. How often a caller may ask is BE-19's (rate limits).
+- **The token** is opaque to the client: send it back exactly as it came in the link (URL-decoded). It is valid for
+  **1 hour** and **one use**. Any password change (a reset, or §14's change) also invalidates every outstanding link.
+- **Reset:** input validation first (400 `validation`), then the token; a bad token is 400 `auth.invalid_reset_token`
+  with nothing changed. On success the new password is set (length is the only rule, as at registration), a sign-in
+  **lockout is lifted** and the failure count cleared, every other session of the user ends (security stamp, ADR-0027),
+  and the caller is **signed in** as that user: 200 `CurrentUserDto`, a session cookie and a new `XSRF-TOKEN`, as after
+  sign-in. A guest caller is upgraded exactly as at sign-in (ADR-0012).
+
+**As built (BE-18a):** both actions exist with the shapes above and answer 501 `server.not_implemented` until BE-18. Like
+every unsafe endpoint they need `X-XSRF-TOKEN` (no exemption, ADR-0023). Reset re-issues `XSRF-TOKEN` (checked on the stub
+answer); forgot-password changes nobody and doesn't.
 
 ## 5. Solo deck and swipes (incl. by mood)
 
