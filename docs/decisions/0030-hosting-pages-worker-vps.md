@@ -1,7 +1,7 @@
 # ADR-0030: Hosting: Cloudflare Pages for the site, a Worker for `/api` and `/hubs`, the API and database on one OVHcloud VPS
 
-- **Status:** Proposed (OPS-06). The owner decided L1, L2 and the provider on 2026-11-13 and 2026-11-16; this becomes
-  Accepted when the owner accepts the ADR, before OPS-06 merges.
+- **Status:** Accepted (owner, 2026-11-16; OPS-06). The owner decided L1, L2 and the provider on 2026-11-13 and
+  2026-11-16, and confirmed the domain `ithacamovies.com`.
 - **Date:** 2026-11-16
 - **Decides:** L1 and L2 (backlog, Launch decisions) and the VPS provider. Provisioning is OPS-07.
 
@@ -89,9 +89,9 @@ database need a server. The domain is registered at Cloudflare, and Cloudflare s
   latest dump, point the Worker's origin and the origin DNS record at the new server.** Pages, the Worker, the domain
   and the users' URLs don't change, and users stay signed in once #64 keeps the keys in the database.
 
-### 5. Open for the owner
-- **The production domain.** `ithacamovies.com` is proposed; the owner confirms it (or names another) before OPS-07
-  configures Pages, the Worker routes, `Email:SiteUrl` and the email sending subdomain (L4).
+### 5. Production domain
+- **`ithacamovies.com`** (owner, 2026-11-16). OPS-07 uses it for Pages, the Worker routes (`ithacamovies.com/api/*`,
+  `ithacamovies.com/hubs/*`), `Email:SiteUrl` and the email sending subdomain (L4).
 
 ## Consequences
 + One origin: no CORS, no preflights, no cookie or antiforgery changes, no frontend changes.
