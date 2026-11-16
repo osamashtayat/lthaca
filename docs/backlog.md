@@ -814,7 +814,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Acceptance:** ADR accepted by the owner (records B1, the VPS provider and its region); architecture.md Runtime table
   has a "Production" column.
 
-### OPS-07 — Production deployment · `Todo`
+### OPS-07 — Production deployment · `In progress`
 - **Objective:** the site runs on the domain over HTTPS and every merge to `main` can be deployed safely.
 - **Deps:** OPS-06. **Modules:** `docker-compose.prod.yml` (or override; no `web` service in production),
   `.github/workflows/deploy.yml`, `deploy/cloudflare-worker/`, `docs/`.
