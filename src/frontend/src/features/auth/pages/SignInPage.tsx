@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Navigate, useNavigate, useSearchParams } from 'react-router'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router'
 import { serverFieldError, toUserMessage } from '@/shared/api'
 import { Button, LoadingState, SegmentedControl, TextField, TicketCard } from '@/shared/ui'
 import { useCurrentUser } from '../api/useCurrentUser'
@@ -96,6 +96,11 @@ export function SignInPage() {
           <Button type="submit" size="lg" disabled={action.isPending} className="w-full">
             {mode === 'sign-in' ? 'Sign in' : 'Create account'}
           </Button>
+          {mode === 'sign-in' && (
+            <Link to="/forgot-password" className="inline-flex min-h-11 items-center justify-center font-bold text-ink underline">
+              Forgot password?
+            </Link>
+          )}
         </form>
       </TicketCard>
 
