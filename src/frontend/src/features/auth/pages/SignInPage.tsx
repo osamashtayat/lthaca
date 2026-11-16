@@ -104,6 +104,18 @@ export function SignInPage() {
         </form>
       </TicketCard>
 
+      <p className="text-center text-sm text-ink-muted">
+        By continuing you accept the{' '}
+        <Link to="/terms" className="font-bold underline">
+          Terms
+        </Link>{' '}
+        and{' '}
+        <Link to="/privacy" className="font-bold underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
+
       <RoomCodeForm />
     </div>
   )

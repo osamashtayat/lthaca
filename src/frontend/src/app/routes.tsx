@@ -1,6 +1,8 @@
 import type { RouteObject } from 'react-router'
 import { AppShell } from '@/app/layout/AppShell'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
+import { PrivacyPage } from '@/app/pages/PrivacyPage'
+import { TermsPage } from '@/app/pages/TermsPage'
 import { ForgotPasswordPage, RequireUser, ResetPasswordPage, SignInPage } from '@/features/auth'
 import { DeckPage, DeckStartPage, DeckTopPage } from '@/features/deck'
 import { MoodPage } from '@/features/mood'
@@ -40,6 +42,8 @@ export const routes: RouteObject[] = [
       { path: '/rooms/:code', element: <RoomPage /> },
       { path: '/rooms/:code/swipe', element: <RoomSwipePage /> },
       { path: '/rooms/:code/result', element: <RoomResultPage /> },
+      { path: '/terms', element: <TermsPage /> },
+      { path: '/privacy', element: <PrivacyPage /> },
       { path: '/browse', element: <BrowsePage /> },
       { path: '/sign-in', element: <SignInPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
