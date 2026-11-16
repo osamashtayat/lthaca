@@ -1,0 +1,16 @@
+# Cloudflare Worker that keeps one origin (ADR-0030): ithacamovies.com/api/* and /hubs/* → the VPS.
+# Deployed by .github/workflows/deploy.yml (`wrangler deploy` from this folder); see docs/deployment.md.
+name = "ithaca-api-proxy"
+main = "src/worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = false
+preview_urls = false
+
+routes = [
+  { pattern = "ithacamovies.com/api/*", zone_name = "ithacamovies.com" },
+  { pattern = "ithacamovies.com/hubs/*", zone_name = "ithacamovies.com" },
+]
+
+[vars]
+# Proxied DNS record for the VPS (Full (strict), Cloudflare origin certificate). Not a secret.
+ORIGIN = "https://origin.ithacamovies.com"

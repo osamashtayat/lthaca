@@ -1,0 +1,12 @@
+# Cloudflare Pages response headers (ADR-0030): what src/frontend/docker/nginx.conf does locally, for production.
+# The deploy workflow copies this file into dist/ before `wrangler pages deploy`. Keep the CSP in step with nginx.conf.
+# Pages serves index.html for unknown paths on its own (SPA fallback, because there is no 404.html).
+
+/*
+  Content-Security-Policy: default-src 'self'; connect-src 'self' wss: https://*.ingest.de.sentry.io; img-src 'self' data: https://image.tmdb.org; style-src 'self' 'unsafe-inline'; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Cache-Control: no-cache
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

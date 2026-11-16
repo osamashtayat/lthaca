@@ -148,3 +148,65 @@ jobs:
       - name: Stop
         if: always()
         run: docker compose down -v
+
+  # The production compose file (ADR-0030, OPS-07): db + migrate + api, Production settings, HTTPS through Kestrel with
+  # a throwaway self-signed certificate in place of the Cloudflare origin certificate.
+  stack-prod:
+    name: Production stack smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      POSTGRES_PASSWORD: ci-only-not-a-secret
+      ITHACA_CERT_DIR: ${{ github.workspace }}/ci-certs
+      ITHACA_HTTPS_PORT: "8443"
+      ITHACA_TAG: ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Self-signed certificate (CI only)
+        run: |
+          mkdir -p "$ITHACA_CERT_DIR"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost \
+            -keyout "$ITHACA_CERT_DIR/origin.key" -out "$ITHACA_CERT_DIR/origin.pem" 2>/dev/null
+          chmod 644 "$ITHACA_CERT_DIR/origin.key"
+
+      - name: Build and start
+        run: docker compose -f docker-compose.prod.yml up -d --build --wait --wait-timeout 240
+
+      - name: Smoke checks over HTTPS
+        run: |
+          set -euo pipefail
+          base=https://localhost:8443
+          curl -fksS --retry 30 --retry-delay 2 --retry-all-errors "$base/api/health" | grep -q '"status":"ok"'
+          test "$(curl -ks -o /dev/null -w '%{http_code}' "$base/api/health/ready")" = 200
+          # Production: no dev seed, no OpenAPI document.
+          test "$(curl -ks -o /dev/null -w '%{http_code}' "$base/api/films/550")" = 404
+          test "$(curl -ks -o /dev/null -w '%{http_code}' "$base/openapi/v1.json")" = 404
+          # Secure, Lax cookies (ADR-0012/0023).
+          curl -ksS -D - -o /dev/null "$base/api/auth/me" | grep -i '^set-cookie: XSRF-TOKEN=' | grep -qi 'secure; samesite=lax'
+          curl -fksS -X POST "$base/hubs/rooms/negotiate?negotiateVersion=1" | grep -q connectionId
+          # The public port speaks HTTPS only.
+          if curl -fsS --max-time 5 "http://localhost:8443/api/health" >/dev/null 2>&1; then echo "::error::plain HTTP answered"; exit 1; fi
+          docker compose -f docker-compose.prod.yml exec -T db psql -U ithaca -d ithaca -tAc "select 1 from pg_extension where extname = 'vector'" | grep -q 1
+          echo "Production stack smoke passed."
+
+      - name: Stack logs
+        if: failure()
+        run: docker compose -f docker-compose.prod.yml logs --no-color
+
+      - name: Stop
+        if: always()
+        run: docker compose -f docker-compose.prod.yml down -v
+
+  worker:
+    name: Cloudflare Worker test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test
+        working-directory: deploy/cloudflare-worker
+        run: node --test

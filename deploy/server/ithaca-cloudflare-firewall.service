@@ -1,0 +1,14 @@
+# Installed by deploy/server/setup.sh to /etc/systemd/system/. Re-applies the Cloudflare-only rule for the API port
+# after Docker (re)starts and on boot. A weekly timer refreshes Cloudflare's IP list.
+[Unit]
+Description=Ithaca: allow only Cloudflare to reach the API HTTPS port
+After=docker.service network-online.target
+Wants=network-online.target
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ithaca-cloudflare-firewall
+
+[Install]
+WantedBy=multi-user.target docker.service
