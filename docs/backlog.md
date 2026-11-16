@@ -742,6 +742,12 @@ lint, test, build.
 - **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L3, BE-19).
 - **Contract:** none here (BE-19 makes the mood change). **Scope:** in: docs only. **Tests:** none (docs).
 
+### OPS-18 — Record two owner decisions: `Deck`/`Swipe` names and type-only mock fixes · `Done`
+- **Objective:** close #35 and #62 with the owner's answers (2026-11-16).
+- **Deps:** OPS-05. **Modules:** `AGENTS.md` §3 and §4.3, `docs/glossary.md`, `docs/api-contract.md` (§10, A12),
+  `docs/backlog.md`.
+- **Contract:** none (A12 becomes decided; no shape changes). **Scope:** in: docs only. **Tests:** none (docs).
+
 ### OPS-17 — Error tracking and monitoring: decision and tasks (ADR-0028) · `Done` (PR #71)
 - **Objective:** record L7 (Sentry for errors and logs, an uptime monitor) and plan the work, so BE-21 and FE-21 can start.
 - **Deps:** OPS-05. **Modules:** `docs/decisions/0028-…`, `docs/backlog.md` (L7, BE-21, FE-21, OPS-07, OPS-08, OPS-09).
@@ -966,5 +972,4 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 ## Open questions for the owner
 
 Contract assumptions A1–A14 are in [api-contract.md §11](api-contract.md#11-open-questions). Also:
-- **Glossary:** the solo deck's parent record and the solo swipe need names (BE-08 proposes them, A12).
 - **Task order:** Wikidata and Voyage (BE-03, BE-04) come right after auth as requested, although only BE-13 and BE-14 need them.
