@@ -709,7 +709,7 @@ type DeleteAccountRequest  = { password: string }                             //
   (ADR-0014), appearance (a client setting), privacy and group history have no API yet.
 
 **As built (BE-16):** all four actions are live. The security stamp is checked on every user request
-(`SecurityStampValidatorOptions.ValidationInterval = 0`, AuthSetup), so a password change ends the user's other sessions
+(`SecurityStampValidatorOptions.ValidationInterval = 0`, AuthSetup, ADR-0027), so a password change ends the user's other sessions
 at once and a deleted account's sessions answer 401 at once. A wrong password on password change or deletion counts toward
 the sign-in lockout and is saved before anything else happens. Deletion closes the open rooms the user hosts and removes
 the account in one commit (room memberships, votes and everything else by FK cascade), then signs out and publishes

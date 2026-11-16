@@ -32,3 +32,4 @@ ADRs marked *deviation* record where Ithaca differs from the FlowOps reference p
 | [0024](0024-letterboxd-import-and-half-star-ratings.md) | Letterboxd import by file upload (never stored, missing films added from TMDB in the background, never removes, Ithaca wins) and half-star ratings 0.5–5 |
 | [0025](0025-room-events-in-application.md) | `RoomEvents` (event names) live in Application so services can publish them; amends ADR-0007 |
 | [0026](0026-room-decision-after-commit.md) | A room is decided after the commit that triggers it (`RoomReferee`, its own save), so concurrent last votes can't miss the match |
+| [0027](0027-security-stamp-every-request.md) | The security stamp is checked on every user request, so a password change or account deletion ends other sessions at once |

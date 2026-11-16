@@ -48,7 +48,7 @@ public static class AuthSetup
         });
 
         // The security stamp is checked on every user request (Identity's default is every 30 minutes): a password change
-        // ends the user's other sessions at once and a deleted account's sessions stop working (api-contract.md §14).
+        // ends the user's other sessions at once and a deleted account's sessions stop working (api-contract.md §14, ADR-0027).
         services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.Zero);
 
         services.AddAntiforgery(options =>
