@@ -542,8 +542,8 @@ type FilmTrailerDto = { trailer: { site: "YouTube"; key: string; name: string } 
 Mirrors FlowOps (ADR-0021):
 1. **Backend owns the contract.** A change the frontend waits for is its own merged task (contract + 501 stubs, e.g.
    BE-14a); otherwise it may ride in the backend task that needs it. Either way: update this file, the
-   DTOs/controllers, `./scripts/export-openapi.sh`, `cd src/frontend && npm run api:types`, and list it under
-   **Contract change** in the PR. CI fails if `contracts/openapi.json` or `schema.d.ts` drift from the code.
+   DTOs/controllers, `./scripts/export-openapi.sh`, `cd src/frontend && npm run api:types`, the type-only mock fixes the
+   new types need (AGENTS.md §4.3), and list it under **Contract change** in the PR. CI fails if `contracts/openapi.json` or `schema.d.ts` drift from the code.
 2. **The frontend agent never edits** this file, `contracts/` or `schema.d.ts` by hand. Missing field or endpoint → open an
    issue (`contract` label, AGENTS.md §4) and mock nothing that isn't in the contract.
 3. **Breaking changes** (rename, remove, retype, new required input) go additive first: add, migrate consumers, remove in a
@@ -575,7 +575,7 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
 | A9 | "Watching" shelf and "Keep watching · 42 min left" | **Decided: dropped.** No Watching state, shelf or Tonight row |
 | A10 | Room codes `POP-428` vs the board's share link `ithaca.app/r/pop-428` | Links use the existing route `/rooms/POP-428`; a `/r/:code` short link is optional later |
 | A11 | Group taste ("Blend your histories") with guests who have no history | ⚠ Assumed in §12 (BE-14a), built so by BE-14: the host must be ready; members without history add no taste; films any present user has seen are skipped (guests have no library, so they add none) |
-| A12 | The glossary has no names for a solo deck's parent record or a solo swipe (`Vote` is a room member's) | **Proposed by BE-08:** `Deck` (table `decks`) and `Swipe` (table `swipes`), in the glossary; owner to confirm |
+| A12 | The glossary has no names for a solo deck's parent record or a solo swipe (`Vote` is a room member's) | **Decided (owner, 2026-11-16):** `Deck` (table `decks`) and `Swipe` (table `swipes`), as BE-08 proposed; in the glossary and AGENTS.md §3 |
 | A13 | Room mood has no `language` (solo mood does); is it stored as a `MoodQuery`? | No language in rooms; stored per member as a `MoodQuery` |
 | A14 | ADR-0019's "unavailable" films (TMDB 404) have no flag in `FilmDto` | Add `isAvailable` additively in BE-05 if screens need it |
 | A15 | Can guests import (ADR-0024 Q1)? Guests have no library (ADR-0012) | **Decided: no.** `/api/imports` is user-only; `/import` sends guests to sign in or create an account |

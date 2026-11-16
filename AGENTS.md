@@ -86,7 +86,7 @@ Plumbing check page: `/dev/status` on the Vite dev server only (:5273; not in pr
 
 ## 3. Naming and where new code goes
 
-- Domain names exactly as [docs/glossary.md](docs/glossary.md): `User`, `Guest`, `Film`, `UserFilm`, `Room`, `RoomMember`, `DeckItem`, `Vote`, `TasteProfile`, `MoodQuery`, `ImportJob`.
+- Domain names exactly as [docs/glossary.md](docs/glossary.md): `User`, `Guest`, `Film`, `UserFilm`, `Room`, `RoomMember`, `Deck`, `DeckItem`, `Swipe`, `Vote`, `TasteProfile`, `MoodQuery`, `ImportJob`.
 - C#: inputs `…Request`, outputs `…Dto`, services `…Service` (sealed), errors `<Feature>Errors`, async methods `…Async(…, CancellationToken ct)`. Tables snake_case plural.
 - TS: hooks `useX` in `api/`, pages `XPage.tsx` in `pages/`, components PascalCase in `components/`.
 
@@ -144,7 +144,7 @@ Backend and frontend agents work **in parallel** from [docs/backlog.md](docs/bac
 | Path | Owner | Others |
 |---|---|---|
 | `src/backend/**`, `tests/backend/**`, `prompts/**`, `evals/**`, `contracts/**`, `docs/api-contract.md` | backend tasks | read |
-| `src/frontend/**` (`schema.d.ts` only via `npm run api:types`) | frontend tasks | backend tasks: `npm run api:types` after a contract change, and the entries for their own error codes in `src/shared/api/problem.ts` (§2); nothing else |
+| `src/frontend/**` (`schema.d.ts` only via `npm run api:types`) | frontend tasks | backend tasks: `npm run api:types` after a contract change, the entries for their own error codes in `src/shared/api/problem.ts` (§2), and type-only fixes in `src/mocks/` so the mocks compile with the new types (a field their change adds, set to `null` or empty; no new behaviour, owner 2026-11-16, #62); nothing else |
 | `docs/backend-conventions.md`, `docs/ai.md`, `docs/realtime.md` · `docs/frontend-conventions.md` | backend · frontend tasks, for what the task changes | propose via an issue |
 | `docs/glossary.md` | the task that introduces or refines the term | — |
 | `docs/backlog.md` | the task's own status line | — |
