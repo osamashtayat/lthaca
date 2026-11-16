@@ -2,4 +2,5 @@
 export { FilmPage } from './pages/FilmPage'
 export { useFilm } from './api/useFilm'
 export type { Film } from './types'
+export { filmFacts } from './filmFacts'
 export { useGenres } from './api/useGenres'

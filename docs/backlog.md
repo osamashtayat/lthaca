@@ -249,7 +249,7 @@ lint, test, build.
 - **Tests:** gesture → direction (pure), swipe idempotency, flow with MSW.
 - **Docs:** none (routes decided, A4).
 
-### FE-22 — The story on the swipe card · `In progress`
+### FE-22 — The story on the swipe card · `Done` (PR #73)
 - **Objective:** people decide from the story, so the swipe card shows it, as the "Solo — the deck" board does (poster,
   tear line, facts, title, synopsis). Owner request, 2026-11-16.
 - **Deps:** FE-05, FE-11. **Modules:** `src/features/deck/` (`SwipeCard`, a film-story sheet), `src/mocks/` if a fixture

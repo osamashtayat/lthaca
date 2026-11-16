@@ -1,6 +1,5 @@
-import type { Film } from '@/features/films'
+import { filmFacts, type Film } from '@/features/films'
 import { MonoLabel, Sheet } from '@/shared/ui'
-import { filmFacts } from '../filmFacts'
 
 /**
  * The whole story of the film on the card, without leaving the deck (FE-22). The overview is TMDB's, shown as is
@@ -10,7 +9,7 @@ export function FilmStorySheet({ film, open, onClose }: { film: Film; open: bool
   return (
     <Sheet open={open} onClose={onClose} title={film.title}>
       <div className="flex flex-col gap-3">
-        <MonoLabel>{filmFacts(film, 2)}</MonoLabel>
+        <MonoLabel>{filmFacts(film, { genres: 2 })}</MonoLabel>
         <p className="text-base leading-relaxed">{film.overview ?? 'No story for this one yet.'}</p>
       </div>
     </Sheet>

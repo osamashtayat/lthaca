@@ -104,7 +104,7 @@ describe('solo deck', () => {
     const user = userEvent.setup()
     renderAt(`/deck/${deck.id}`)
     const first = await title()
-    await user.click(screen.getByRole('button', { name: `The story of ${first}` }))
+    await user.click(screen.getByRole('button', { name: `More: the story of ${first}` }))
     expect(await screen.findByRole('dialog', { name: first ?? '' })).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Close' }))
     expect(await title()).toBe(first)

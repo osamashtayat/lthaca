@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { Poster, tmdbImageUrl } from '@/shared/ui'
-import type { Film } from '@/features/films'
-import { filmFacts } from '../filmFacts'
+import { filmFacts, type Film } from '@/features/films'
 import { useSwipeGesture } from '../useSwipeGesture'
 import { FilmStorySheet } from './FilmStorySheet'
 import type { SwipeDirection } from '../types'
@@ -86,7 +85,7 @@ export function SwipeCard({ film, onSwipe, allowed = ['right', 'left', 'up'], di
             <h2 className="min-w-0 flex-1 truncate text-2xl leading-tight font-extrabold tracking-tight">{film.title}</h2>
             <button
               type="button"
-              aria-label={`The story of ${film.title}`}
+              aria-label={`More: the story of ${film.title}`}
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => setStoryOpen(true)}
               className="inline-flex min-h-11 shrink-0 items-center rounded-full border-2 border-ink px-4 text-sm font-bold"

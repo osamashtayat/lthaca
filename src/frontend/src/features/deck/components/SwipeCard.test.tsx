@@ -2,12 +2,16 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { mockFilms } from '@/mocks/fixtures'
+import { findMockFilm } from '@/mocks/fixtures'
 import { SwipeCard } from './SwipeCard'
 
 afterEach(cleanup)
 
-const film = mockFilms[0]!
+const film = (() => {
+  const found = findMockFilm(550)
+  if (!found) throw new Error('Fixture film 550 is missing')
+  return found
+})()
 const longStory = `${'A very long story about a club that meets in a basement. '.repeat(12)}The end.`
 
 describe('SwipeCard story (FE-22)', () => {
@@ -31,7 +35,7 @@ describe('SwipeCard story (FE-22)', () => {
     const user = userEvent.setup()
     render(<SwipeCard film={{ ...film, overview: longStory }} onSwipe={onSwipe} />)
 
-    await user.click(screen.getByRole('button', { name: `The story of ${film.title}` }))
+    await user.click(screen.getByRole('button', { name: `More: the story of ${film.title}` }))
 
     const sheet = await screen.findByRole('dialog', { name: film.title })
     expect(within(sheet).getByText(longStory)).toBeTruthy()
@@ -45,7 +49,7 @@ describe('SwipeCard story (FE-22)', () => {
     const user = userEvent.setup()
     render(<SwipeCard film={{ ...film, overview: null }} onSwipe={() => {}} />)
 
-    await user.click(screen.getByRole('button', { name: `The story of ${film.title}` }))
+    await user.click(screen.getByRole('button', { name: `More: the story of ${film.title}` }))
 
     expect(within(await screen.findByRole('dialog')).getByText('No story for this one yet.')).toBeTruthy()
   })
