@@ -2,6 +2,7 @@ using Ithaca.Api;
 using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
 using Ithaca.Api.Hubs;
+using Ithaca.Api.Monitoring;
 using Ithaca.Api.OpenApi;
 using Ithaca.Application;
 using Ithaca.Application.Realtime;
@@ -10,6 +11,13 @@ using Ithaca.Infrastructure.Jobs;
 using Ithaca.Infrastructure.Seeding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.AspNetCore.SignalR;
+
+// `--probe-ready`: the Docker healthcheck asks the running API whether it is ready, then exits (ADR-0028).
+if (args.Contains(ReadinessProbe.Flag, StringComparer.Ordinal))
+{
+    Environment.ExitCode = await ReadinessProbe.RunAsync();
+    return;
+}
 
 // `--sync-catalog`: run one TMDB catalog sync and exit (a switch, not configuration; removed before config reads args).
 const string SyncCatalogFlag = "--sync-catalog";
@@ -24,6 +32,9 @@ builder.Logging.AddJsonConsole(options =>
     options.UseUtcTimestamp = true;
     options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
 });
+
+// Errors, Warning-and-above logs and traces to Sentry; off without Sentry:Dsn (ADR-0028).
+builder.AddIthacaErrorTracking();
 
 // Validation errors use JSON (camelCase) field paths; query-bound records bind camelCase names.
 builder.Services
@@ -49,6 +60,7 @@ builder.Services.AddSignalR(options =>
     {
         options.EnableDetailedErrors = false;
         options.AddFilter<HubCallerPrincipalFilter>();
+        options.AddFilter<HubErrorLoggingFilter>();
     })
     .AddJsonProtocol(options => JsonSetup.Configure(options.PayloadSerializerOptions));
 builder.Services.AddSingleton<IRoomEventPublisher, SignalRRoomEventPublisher>();
@@ -70,6 +82,7 @@ if (app.Environment.IsDevelopment())
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
+app.UseIthacaErrorTracking();
 app.UseAuthorization();
 
 app.MapControllers();

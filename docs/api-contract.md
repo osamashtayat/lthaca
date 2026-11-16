@@ -32,6 +32,10 @@ They are collected in §11 and in the backlog's open questions; the owner confir
   no-op success; mutations never auto-retry on the client (docs/frontend-conventions.md → Data).
 - **Access** column values: **anon** (no session needed), **user** (signed-in `User`), **member** (a `RoomMember` of that
   room: a user member or a guest whose cookie is scoped to that room), **host** (the member who created the room).
+- **Health** (anon, no body, reveal nothing else; ADR-0028): `GET /api/health` = liveness, always 200 `HealthDto`
+  (`{ status: "ok" }`) while the process answers. `GET /api/health/ready` = readiness, 200 `HealthDto` when the database
+  answers too (within 5 s), else 503 `health.database_unavailable`. The Docker healthcheck and the uptime monitor use
+  ready; the frontend uses neither in production (the dev status page reads liveness). — BE-21
 
 ## 2. Errors
 
@@ -76,6 +80,7 @@ BE-01 adds all of them at once, so mocks and screens can use them from day one.
 | 422 | `mood.unclear` | mood text isn't a mood (unclear or off-topic) and no chips were tapped; nothing created (ADR-0022) |
 | 422 / 502 / 503 | `ai.refused` / `ai.invalid_output` / `ai.unavailable` | mood parsing failed — exist (docs/ai.md) |
 | 503 | `tmdb.unavailable` | trailer lookup failed and nothing is cached — exists |
+| 503 | `health.database_unavailable` | readiness only (`GET /api/health/ready`, §1): the database can't be reached — BE-21 |
 
 **As built (BE-17):** every endpoint is live, so the stub code (501 `server.not_implemented`), `ContractStub` and
 `[ContractStub]` are deleted. A later contract-first task that needs stubs again (ADR-0021) re-adds them with its first

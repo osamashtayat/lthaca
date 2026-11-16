@@ -760,7 +760,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   emails, mood text or keys (backend-conventions.md). Out: product analytics.
 - **Acceptance:** a forced 500 and a stopped API both reach the owner within minutes.
 
-### BE-21 — Sentry in the API, readiness check, container health (ADR-0028) · `In progress`
+### BE-21 — Sentry in the API, readiness check, container health (ADR-0028) · `Done` (PR #72)
 - **Objective:** every backend error reaches Sentry with what happened, and the API reports whether it can serve.
 - **Deps:** OPS-17. **Modules:** `Ithaca.Api` (Sentry setup, options, readiness action), `Ithaca.Application` (readiness
   service), `Ithaca.Infrastructure/Jobs/CatalogSyncJob.cs` (cron check-in), `ErrorCodes`, `ErrorStatusCodes`,

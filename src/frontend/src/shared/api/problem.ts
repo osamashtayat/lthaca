@@ -10,6 +10,7 @@ export const PROBLEM_MESSAGES = {
   not_found: "We couldn't find that.",
   conflict: 'That changed in the meantime. Refresh and try again.',
   'server.error': 'Something went wrong on our side. Try again in a moment.',
+  'health.database_unavailable': "Ithaca can't reach its database right now. Try again in a moment.",
   'film.not_found': "This film isn't in our catalog yet.",
   'auth.antiforgery_failed': 'Your session needs a refresh. Reload the page and try again.',
   'auth.unauthenticated': 'Sign in to keep going.',
