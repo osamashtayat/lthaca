@@ -1,3 +1,5 @@
+using Ithaca.Domain.Taste;
+
 namespace Ithaca.Application.Decks;
 
 /// <summary>A candidate film for a deck, as the sampler sees it (our own catalog data only).</summary>
@@ -15,6 +17,8 @@ public sealed record DeckSignal(IReadOnlyList<string> Genres, int? RuntimeMinute
 /// <item>No signals yet: the <b>sampler</b>, varied by main genre and decade, more popular first.</item>
 /// <item>With signals: <see cref="ExploitShare"/> of the batch is the best <see cref="Fit"/> (genres, runtime, embeddings
 /// when both sides have them, a little popularity); the rest still comes from the sampler, so the deck keeps exploring.</item>
+/// <item>By taste (BE-14): the same, from the first batch on, with closeness to the <see cref="TasteProfile"/> added to the fit
+/// (<see cref="TasteWeight"/>), so the exploited share is ranked mainly by similarity to the profile.</item>
 /// </list>
 /// A little randomness (<paramref name="random"/>) keeps two decks from being identical.
 /// </summary>
@@ -29,13 +33,20 @@ public static class DeckSampler
     private const double PopularityWeight = 0.15;
     private const double Jitter = 0.05;
 
+    /// <summary>
+    /// Weight of a candidate's closeness to the taste profile (its cosine similarity scaled to 0–1 across the candidates), next
+    /// to <see cref="Fit"/> (at most about 1.1): the profile leads, this deck's swipes still steer.
+    /// </summary>
+    public const double TasteWeight = 1.5;
+
     /// <summary>Relative noise on popularity in the sampler (±10%).</summary>
     private const double SamplerJitter = 0.1;
 
     /// <summary>Runtime difference (minutes) at which the runtime fit reaches 0.</summary>
     private const double RuntimeTolerance = 60;
 
-    public static IReadOnlyList<Guid> Pick(IReadOnlyList<SamplerFilm> candidates, IReadOnlyList<DeckSignal> signals, int count, Random random)
+    public static IReadOnlyList<Guid> Pick(
+        IReadOnlyList<SamplerFilm> candidates, IReadOnlyList<DeckSignal> signals, int count, Random random, TasteProfile? taste = null)
     {
         ArgumentNullException.ThrowIfNull(candidates);
         ArgumentNullException.ThrowIfNull(signals);
@@ -46,13 +57,14 @@ public static class DeckSampler
         }
 
         var picked = new List<Guid>(count);
-        if (signals.Count > 0)
+        if (signals.Count > 0 || taste is not null)
         {
             var profile = ProfileOf(signals);
             var maxPopularity = MaxPopularity(candidates);
+            var closeness = Closeness(candidates, taste);
             var exploit = (int)Math.Ceiling(count * ExploitShare);
             picked.AddRange(candidates
-                .Select(c => (c.Id, Score: Fit(c, profile, maxPopularity) + (random.NextDouble() * Jitter)))
+                .Select(c => (c.Id, Score: Fit(c, profile, maxPopularity) + (TasteWeight * closeness.GetValueOrDefault(c.Id)) + (random.NextDouble() * Jitter)))
                 .OrderByDescending(x => x.Score)
                 .Take(exploit)
                 .Select(x => x.Id));
@@ -188,6 +200,30 @@ public static class DeckSampler
         }
 
         return picked;
+    }
+
+    /// <summary>
+    /// Each candidate's cosine similarity to the taste profile, scaled to 0 (least similar candidate) – 1 (most similar).
+    /// Candidates without a vector of the profile's model get nothing. Empty without a profile.
+    /// </summary>
+    public static IReadOnlyDictionary<Guid, double> Closeness(IReadOnlyList<SamplerFilm> candidates, TasteProfile? taste)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        if (taste is null)
+        {
+            return new Dictionary<Guid, double>();
+        }
+
+        var similarity = candidates
+            .Where(c => c.Embedding is { } v && v.Length == taste.Vector.Length)
+            .ToDictionary(c => c.Id, c => taste.SimilarityTo(c.Embedding!));
+        if (similarity.Count == 0)
+        {
+            return similarity;
+        }
+
+        var (min, max) = (similarity.Values.Min(), similarity.Values.Max());
+        return similarity.ToDictionary(s => s.Key, s => max > min ? (s.Value - min) / (max - min) : 1);
     }
 
     private static double GenreAffinity(IReadOnlyList<string> genres, IReadOnlyDictionary<string, double> weights) =>

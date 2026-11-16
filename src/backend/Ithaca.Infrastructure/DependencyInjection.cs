@@ -4,6 +4,7 @@ using Ithaca.Application.Catalog;
 using Ithaca.Application.Common;
 using Ithaca.Application.Email;
 using Ithaca.Application.Imports;
+using Ithaca.Application.Taste;
 using Ithaca.Application.Tmdb;
 using Ithaca.Application.Wikidata;
 using Ithaca.Infrastructure.Ai;
@@ -50,6 +51,7 @@ public static class DependencyInjection
         services.AddHostedService<CatalogSyncJob>();
         services.AddValidatedOptions<ImportOptions>(configuration);
         services.AddHostedService<ImportJobRunner>();
+        services.AddValidatedOptions<TasteOptions>(configuration);
         return services;
     }
 

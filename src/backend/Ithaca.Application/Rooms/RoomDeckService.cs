@@ -2,6 +2,7 @@ using Ithaca.Application.Common;
 using Ithaca.Application.Decks;
 using Ithaca.Application.Moods;
 using Ithaca.Application.Realtime;
+using Ithaca.Application.Taste;
 using Ithaca.Domain.Decks;
 using Ithaca.Domain.Moods;
 using Ithaca.Domain.Rooms;
@@ -16,7 +17,9 @@ namespace Ithaca.Application.Rooms;
 /// as solo (<c>mood.unclear</c>, <c>textIgnored</c>), but the text isn't kept (issue #51); their hard nos stay private.
 /// Answering makes them ready.</item>
 /// <item>Start (host, lobby only): one shared <see cref="Deck"/> for the room, the first batch dealt from the members'
-/// combined moods (<see cref="DeckFilter.ForRoom"/>), topped up by the sampler, every present member's hard nos excluded.</item>
+/// combined moods (<see cref="DeckFilter.ForRoom"/>), topped up by the sampler, every present member's hard nos excluded.
+/// Taste rooms (BE-14) lean every batch towards the blend of the present users' taste profiles and skip any film a present
+/// user has seen (guests have no library, so they add neither; A11).</item>
 /// <item>Votes: one per card and member, never changed; the same <c>voteId</c> again is a no-op; they never touch the
 /// library (A5). When the voter is <see cref="ExtendWhenLeft"/> cards from the end, the next batch is dealt, up to
 /// <see cref="Deck.RoomMaxItems"/>.</item>
@@ -25,7 +28,16 @@ namespace Ithaca.Application.Rooms;
 /// vote's commit <see cref="RoomReferee"/> decides the room when a match or the end of the deck is reached (BE-12).
 /// </summary>
 public sealed class RoomDeckService(
-    IAppDbContext db, RoomAccess access, RoomReader reader, MoodInterpreter moods, DeckDealer dealer, DeckItemReader cards, RoomReferee referee, IRoomEventPublisher events, TimeProvider time)
+    IAppDbContext db,
+    RoomAccess access,
+    RoomReader reader,
+    MoodInterpreter moods,
+    TasteProfileReader tastes,
+    DeckDealer dealer,
+    DeckItemReader cards,
+    RoomReferee referee,
+    IRoomEventPublisher events,
+    TimeProvider time)
 {
     /// <summary>Cards left for a voter at which the next batch is dealt.</summary>
     public const int ExtendWhenLeft = 3;
@@ -105,18 +117,13 @@ public sealed class RoomDeckService(
 
         var (roomId, memberId, _) = host.Value;
         var room = await db.Rooms.SingleAsync(r => r.Id == roomId, ct);
-        if (room.Mode == RoomMode.Taste)
-        {
-            return ContractStub.NotImplemented; // group taste: BE-14
-        }
-
         if (!room.Start())
         {
             return RoomErrors.InvalidState;
         }
 
         var now = time.GetUtcNow();
-        var deck = Deck.ForRoom(roomId, room.Mode == RoomMode.Mood ? DeckSource.Mood : DeckSource.JustSwipe, now);
+        var deck = Deck.ForRoom(roomId, SourceOf(room.Mode), now);
         db.Decks.Add(deck);
         await DealAsync(deck.Id, roomId, room.Mode, dealt: 0, Deck.BatchSize, now, ct);
         try
@@ -281,6 +288,7 @@ public sealed class RoomDeckService(
     /// <summary>
     /// A batch for the room from its present members' moods (mood rooms) and hard nos; topped up by the sampler, hard nos
     /// still excluded, when the moods leave too few films. The combined mood genres also lean the picks (one strong signal).
+    /// Taste rooms: the picks lean towards the present users' blended taste, and films any present user has seen are skipped.
     /// </summary>
     private async Task<List<DeckItem>> DealAsync(Guid deckId, Guid roomId, RoomMode mode, int dealt, int count, DateTimeOffset now, CancellationToken ct)
     {
@@ -292,8 +300,23 @@ public sealed class RoomDeckService(
         var filter = DeckFilter.ForRoom(memberMoods, hardNos);
         IReadOnlyList<DeckFilter> filters = filter.IsOnlyHardNos ? [filter] : [filter, filter.OnlyHardNos()];
         IReadOnlyList<DeckSignal> signals = filter.IncludeGenres.Count > 0 ? [new DeckSignal(filter.IncludeGenres, null, null, DeckSignals.MoodWeight)] : [];
-        return await dealer.DealAsync(deckId, dealt, count, filters, excludedFilms: null, signals, embeddingModel: null, now, ct);
+        if (mode != RoomMode.Taste)
+        {
+            return await dealer.DealAsync(deckId, dealt, count, filters, excludedFilms: null, signals, embeddingModel: null, taste: null, now, ct);
+        }
+
+        var userIds = present.Where(m => m.UserId != null).Select(m => m.UserId!.Value);
+        var taste = await tastes.BlendAsync(await userIds.ToListAsync(ct), ct);
+        var seen = db.UserFilms.Where(u => u.Seen && userIds.Contains(u.UserId)).Select(u => u.FilmId);
+        return await dealer.DealAsync(deckId, dealt, count, filters, seen, signals, taste?.EmbeddingModel, taste, now, ct);
     }
+
+    private static DeckSource SourceOf(RoomMode mode) => mode switch
+    {
+        RoomMode.Mood => DeckSource.Mood,
+        RoomMode.Taste => DeckSource.Taste,
+        _ => DeckSource.JustSwipe,
+    };
 
     private Task<RoomStatus> StatusAsync(Guid roomId, CancellationToken ct) =>
         db.Rooms.AsNoTracking().Where(r => r.Id == roomId).Select(r => r.Status).SingleAsync(ct);

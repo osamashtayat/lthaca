@@ -131,7 +131,9 @@ Reasons under picks, and the order of the solo top 3. `PickAdvisor` (Application
   429 and 5xx are retried up to 6 attempts, waiting `Retry-After` when sent, else 1, 2, 4… s (capped at 120 s); other
   failures are `ai.unavailable`; the wrong number or size of vectors is `ai.invalid_output`. Texts are never logged.
   Without a payment method Voyage's rate limits are low (not published); keep the batch size modest. First 200M tokens free.
-- `TasteProfile` (taste vector) lives in the same space: build it from embeddings of films the user liked.
+- `TasteProfile` (taste vector, BE-14) lives in the same space: the weighted, normalised sum of the vectors of films the
+  user liked and rated (`TasteProfile.WeightOf`, half-star scale), computed per request; no text is embedded for it
+  (api-contract.md §12 as built). A room blends its present users' profiles.
 - Never compare vectors from different models (`embedding_model` tells them apart).
 
 ## Catalog sync (ADR-0003)

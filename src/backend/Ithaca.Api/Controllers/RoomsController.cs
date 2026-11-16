@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
-using Ithaca.Api.OpenApi;
 using Ithaca.Application.Decks;
 using Ithaca.Application.Rooms;
 using Microsoft.AspNetCore.Authorization;
@@ -23,8 +22,7 @@ public sealed class RoomsController(RoomService rooms, RoomDeckService swiping, 
     [ProducesResponseType<RoomDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)] // taste.not_ready (§12, BE-14)
-    [ContractStub] // mode "taste" only, until BE-14
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)] // taste.not_ready (§12)
     public async Task<ActionResult<RoomDto>> Create(CreateRoomRequest request, CancellationToken ct) =>
         this.ToCreatedResult(await rooms.CreateAsync(request, ct), room => $"/api/rooms/{room.Code}");
 
@@ -70,7 +68,6 @@ public sealed class RoomsController(RoomService rooms, RoomDeckService swiping, 
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    [ContractStub] // mode "taste" only, until BE-14
     public async Task<ActionResult<RoomDto>> Start(string code, CancellationToken ct) =>
         this.ToActionResult(await swiping.StartAsync(code, ct));
 

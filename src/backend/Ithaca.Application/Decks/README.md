@@ -1,6 +1,7 @@
 # Decks
 
-Solo decks (`Deck`, `DeckItem`, `Swipe`; api-contract.md §5). Built: "Just swipe" (BE-08). By mood: BE-09. By taste: BE-14.
+Solo decks (`Deck`, `DeckItem`, `Swipe`; api-contract.md §5). Built: "Just swipe" (BE-08). By mood: BE-09. By taste: BE-14
+(the sampler adds closeness to the user's `TasteProfile`, see `../Taste/`).
 
 - `DeckService`: the use cases (create, get, next batch, swipe, top 3). Reads and writes through `IAppDbContext` only.
 - `DeckDealer`: collaborator that deals a batch for solo decks and rooms' shared decks (`RoomDeckService`); `DeckFilter`

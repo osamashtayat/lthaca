@@ -1,6 +1,7 @@
 using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
 using Ithaca.Application.Realtime;
+using Ithaca.Application.Taste;
 using Ithaca.Domain.Rooms;
 using Ithaca.Domain.Users;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,15 @@ namespace Ithaca.Application.Rooms;
 /// Events are published after the commit; a failed publish never fails the request (<see cref="IRoomEventPublisher"/>).
 /// </summary>
 public sealed class RoomService(
-    IAppDbContext db, ICurrentActor current, RoomAccess access, RoomReader reader, ISessionManager sessions, RoomReferee referee, IRoomEventPublisher events, TimeProvider time)
+    IAppDbContext db,
+    ICurrentActor current,
+    RoomAccess access,
+    RoomReader reader,
+    ISessionManager sessions,
+    RoomReferee referee,
+    TasteProfileReader tastes,
+    IRoomEventPublisher events,
+    TimeProvider time)
 {
     /// <summary>Tries at creating a room when a concurrent request drew the same code.</summary>
     private const int CreateAttempts = 3;
@@ -29,7 +38,10 @@ public sealed class RoomService(
     /// <summary>Tries at closing a room when a concurrent start changed it first (rooms carry a concurrency token).</summary>
     private const int WriteAttempts = 3;
 
-    /// <summary>The creator is the first member, so the host, of a new lobby. Nobody is listening yet: no event.</summary>
+    /// <summary>
+    /// The creator is the first member, so the host, of a new lobby. Nobody is listening yet: no event. A taste room ("Blend
+    /// your histories") needs a host with enough history (<c>taste.not_ready</c>, checked after the name; §12).
+    /// </summary>
     public async Task<Result<RoomDto>> CreateAsync(CreateRoomRequest request, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -38,14 +50,14 @@ public sealed class RoomService(
             return AuthErrors.Unauthenticated;
         }
 
-        if (request.Mode == RoomMode.Taste)
-        {
-            return ContractStub.NotImplemented; // group taste: BE-14 (api-contract.md §12)
-        }
-
         if (string.IsNullOrWhiteSpace(request.Name))
         {
             return Error.Validation("name", "Enter a room name.");
+        }
+
+        if (request.Mode == RoomMode.Taste && !await tastes.IsReadyAsync(actor.Id, ct))
+        {
+            return TasteErrors.NotReady; // no room
         }
 
         for (var attempt = 1; ; attempt++)

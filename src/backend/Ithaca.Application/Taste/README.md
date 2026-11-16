@@ -2,6 +2,9 @@
 
 `TasteProfile` (taste vector) built from likes, ratings and imports; similarity search over `films.embedding`.
 
-- Contract (BE-14a, api-contract.md §12): `TasteService.GetAsync` → `TasteDto` (readiness + taste receipt), `TasteErrors.NotReady`
-  (`taste.not_ready`), and the `taste` values of `DeckSource` / `RoomMode`. All answer 501 until BE-14 builds them.
-- Copy the shape of `../Films/` (the reference slice). See `docs/backend-conventions.md`.
+- `TasteService.GetAsync` → `TasteDto` (readiness + taste receipt; api-contract.md §12). `TasteErrors.NotReady` (`taste.not_ready`).
+- `TasteProfileReader`: collaborator for readiness (`Taste:SignalsNeeded`, `TasteOptions`) and profiles, used by
+  `DeckService` (decks by taste), `RoomService` (host readiness) and `RoomDeckService` (the blended room deck).
+- `TasteReceipt`: pure receipt rules (`topGenres`, `notForYou`), unit-tested.
+- The vector math (`WeightOf`, `Build`, `Blend`) is the domain's `Ithaca.Domain.Taste.TasteProfile`; `DeckSampler.Closeness`
+  turns it into a ranking boost.
