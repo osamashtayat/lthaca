@@ -784,7 +784,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Scope:** in: this section and decisions L1–L8. Out: doing any of it.
 - **Acceptance:** every launch gap has a task or a decision. **Tests:** none (docs).
 
-### OPS-06 — Hosting decision (ADR) · `Todo` (L1, L2 and the VPS provider decided: Pages + Worker + OVHcloud VPS-2)
+### OPS-06 — Hosting decision (ADR) · `In progress` (L1, L2 and the VPS provider decided: Pages + Worker + OVHcloud VPS-2)
 - **Objective:** an ADR fixing where the API, database and site run, and how they stay one origin.
 - **Deps:** owner decisions L1, L2. **Modules:** `docs/decisions/`, `docs/architecture.md` (Runtime table).
 - **Contract:** none.
