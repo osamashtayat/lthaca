@@ -13,7 +13,7 @@ public static class TasteReceipt
     public const int MinTurnedDown = 2;
 
     /// <summary>
-    /// Each genre's share of all genre mentions among the liked films (a film with two genres counts once for each), rounded
+    /// Each genre's share of all genre mentions among the positive-signal films (a film with two genres counts once for each), rounded
     /// to 1–100; up to <see cref="MaxGenres"/>, biggest first, then by name.
     /// </summary>
     public static IReadOnlyList<TasteGenreDto> TopGenres(IReadOnlyList<IReadOnlyList<string>> liked)
@@ -30,7 +30,7 @@ public static class TasteReceipt
 
     /// <summary>
     /// Genres the user turns down: in at least <see cref="MinTurnedDown"/> turned-down films, and a larger share of the
-    /// turned-down films than of the liked ones; never one of <paramref name="topGenres"/>. Up to <see cref="MaxGenres"/>,
+    /// turned-down films than of the positive-signal ones; never one of <paramref name="topGenres"/>. Up to <see cref="MaxGenres"/>,
     /// the biggest difference first, then by name.
     /// </summary>
     public static IReadOnlyList<string> NotForYou(

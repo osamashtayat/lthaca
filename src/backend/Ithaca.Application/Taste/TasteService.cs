@@ -25,15 +25,14 @@ public sealed class TasteService(IAppDbContext db, ICurrentActor current, TasteP
         var userId = actor.Id;
         var signalCount = await profiles.SignalCountAsync(userId, ct);
         var loggedCount = await db.UserFilms.CountAsync(u => u.UserId == userId && (u.Seen || u.RatingHalfStars != null), ct);
-        var ready = signalCount >= profiles.SignalsNeeded;
-        if (!ready)
+        if (!profiles.IsReady(signalCount))
         {
             return new TasteDto(false, signalCount, profiles.SignalsNeeded, loggedCount, [], []);
         }
 
         var library = db.UserFilms.AsNoTracking().Where(u => u.UserId == userId);
         var liked = await library
-            .Where(u => u.Liked || u.RatingHalfStars >= TasteProfile.PositiveRatingHalfStars)
+            .Where(TasteProfile.IsPositiveSignal)
             .Join(db.Films, u => u.FilmId, f => f.Id, (u, f) => f.Genres)
             .ToListAsync(ct);
         var lowRated = await library

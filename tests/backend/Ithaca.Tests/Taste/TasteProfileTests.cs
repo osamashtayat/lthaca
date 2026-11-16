@@ -1,6 +1,7 @@
 using Ithaca.Application.Ai;
 using Ithaca.Application.Decks;
 using Ithaca.Application.Taste;
+using Ithaca.Domain.Library;
 using Ithaca.Domain.Taste;
 using Ithaca.Infrastructure.Ai;
 
@@ -34,8 +35,13 @@ public sealed class TasteProfileTests
     [InlineData(false, (short)7, true)]
     [InlineData(false, (short)6, false)]
     [InlineData(false, null, false)]
-    public void IsPositive_IsLikedOrRatedAtLeast3Point5(bool liked, short? halfStars, bool expected) =>
-        TasteProfile.IsPositive(liked, halfStars).ShouldBe(expected);
+    public void IsPositiveSignal_IsLikedOrRatedAtLeast3Point5(bool liked, short? halfStars, bool expected)
+    {
+        var row = UserFilm.Create(Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UtcNow);
+        row.Set(liked, onWatchlist: false, seen: true, halfStars / 2m, DateTimeOffset.UtcNow);
+
+        TasteProfile.IsPositiveSignal.Compile()(row).ShouldBe(expected);
+    }
 
     [Fact]
     public async Task Build_IsTheNormalisedWeightedSum_OfFakeEmbeddings()
@@ -47,7 +53,6 @@ public sealed class TasteProfileTests
         var expected = Enumerable.Range(0, v[0].Length).Select(i => (2.0 * v[0][i]) + v[1][i] - v[2][i]).ToArray();
         var norm = Math.Sqrt(expected.Sum(x => x * x));
         profile.EmbeddingModel.ShouldBe("fake");
-        profile.FilmCount.ShouldBe(3);
         profile.Vector.Length.ShouldBe(v[0].Length);
         for (var i = 0; i < expected.Length; i++)
         {
@@ -82,7 +87,6 @@ public sealed class TasteProfileTests
         var blend = TasteProfile.Blend([ada, omar, stray])!;
 
         blend.EmbeddingModel.ShouldBe("fake");
-        blend.FilmCount.ShouldBe(2);
         blend.SimilarityTo(v[0]).ShouldBe(blend.SimilarityTo(v[1]), 1e-5, "weights inside a profile don't make a member count more");
         TasteProfile.Blend([]).ShouldBeNull();
     }

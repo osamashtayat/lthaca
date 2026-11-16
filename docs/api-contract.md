@@ -570,7 +570,7 @@ Rules (BE-14 builds them; until then the three rows answer 501 `server.not_imple
 **As built (BE-14):** the three rows are live (no 501 left in §12).
 - **Signals and counts:** `signalCount` = library rows liked (a seen + "loved it" swipe sets liked) or rated ≥ 3.5;
   `loggedCount` = rows seen or rated. `signalsNeeded` is `Taste:SignalsNeeded` (default 10).
-- **`TasteProfile`** (computed per request, not stored): the user's 1,000 most recently changed liked or rated films with
+- **`TasteProfile`** (computed per request, not stored): the user's 200 most recently changed liked or rated films with
   a vector, weighted on the half-star scale (ADR-0024): liked +1, plus (rating − 3) / 2 clamped to ±1 (5 → +1, 3 → 0,
   1 → −1); the weighted sum of their film vectors (one model: the one most of them share), scaled to unit length. Only
   film vectors are used (Wikidata-based, ADR-0017); no text is embedded, so taste makes no AI call.

@@ -12,17 +12,22 @@ namespace Ithaca.Application.Taste;
 /// </summary>
 public sealed class TasteProfileReader(IAppDbContext db, IOptions<TasteOptions> options)
 {
-    /// <summary>Most recently changed liked or rated films a profile is built from.</summary>
-    private const int ProfileFilmLimit = 1_000;
+    /// <summary>
+    /// Most recently changed liked or rated films a profile is built from (as many as "Just swipe" reads from the library):
+    /// each brings a 1024-float vector, and profiles are rebuilt for every batch.
+    /// </summary>
+    private const int ProfileFilmLimit = 200;
 
     public int SignalsNeeded => options.Value.SignalsNeeded;
 
     /// <summary>Films in the user's library with a positive signal: liked ("loved it" sets liked) or rated ≥ 3.5 (A16).</summary>
     public Task<int> SignalCountAsync(Guid userId, CancellationToken ct) =>
-        db.UserFilms.CountAsync(u => u.UserId == userId && (u.Liked || u.RatingHalfStars >= TasteProfile.PositiveRatingHalfStars), ct);
+        db.UserFilms.Where(u => u.UserId == userId).Where(TasteProfile.IsPositiveSignal).CountAsync(ct);
 
-    /// <summary>True when the user has at least <see cref="SignalsNeeded"/> positive signals (api-contract.md §12).</summary>
-    public async Task<bool> IsReadyAsync(Guid userId, CancellationToken ct) => await SignalCountAsync(userId, ct) >= SignalsNeeded;
+    /// <summary>The readiness threshold (api-contract.md §12): at least <see cref="SignalsNeeded"/> positive signals.</summary>
+    public bool IsReady(int signalCount) => signalCount >= SignalsNeeded;
+
+    public async Task<bool> IsReadyAsync(Guid userId, CancellationToken ct) => IsReady(await SignalCountAsync(userId, ct));
 
     /// <summary>
     /// The user's taste from their liked and rated films that have a vector (<see cref="TasteProfile.WeightOf"/>), using the

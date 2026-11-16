@@ -1,14 +1,16 @@
+using System.Linq.Expressions;
+using Ithaca.Domain.Library;
+
 namespace Ithaca.Domain.Taste;
 
 /// <summary>One film behind a <see cref="TasteProfile"/>: its embedding and how much it counts (positive = more like this).</summary>
 public sealed record TasteFilm(float[] Embedding, double Weight);
 
 /// <summary>
-/// A user's (or a room's) taste (glossary: <c>TasteProfile</c>): a unit vector in the film-embedding space of one model, and
-/// how many films built it. Made from the films a user liked and rated (<see cref="WeightOf"/>), imported or not (ADR-0024
+/// A user's (or a room's) taste (glossary: <c>TasteProfile</c>): a unit vector in the film-embedding space of one model. Made from the films a user liked and rated (<see cref="WeightOf"/>), imported or not (ADR-0024
 /// decision 9); a room's is the <see cref="Blend"/> of its members'. Computed when needed, not stored (BE-14).
 /// </summary>
-public sealed record TasteProfile(float[] Vector, string EmbeddingModel, int FilmCount)
+public sealed record TasteProfile(float[] Vector, string EmbeddingModel)
 {
     /// <summary>A rating of at least 3.5 stars (7 half stars) is a positive signal for readiness (A16).</summary>
     public const short PositiveRatingHalfStars = 7;
@@ -22,8 +24,12 @@ public sealed record TasteProfile(float[] Vector, string EmbeddingModel, int Fil
     /// <summary>Half stars between neutral and a full ±1 (2 stars: 5 stars is +1, 1 star is −1).</summary>
     private const double HalfStarsPerUnit = 4;
 
-    /// <summary>True when a library row is a positive signal (A16): liked ("loved it" sets liked) or rated ≥ 3.5.</summary>
-    public static bool IsPositive(bool liked, short? ratingHalfStars) => liked || ratingHalfStars >= PositiveRatingHalfStars;
+    /// <summary>
+    /// The one readiness rule (A16): a library row is a positive signal when liked ("loved it" sets liked) or rated ≥ 3.5.
+    /// An expression so EF translates it; readiness counts and the receipt both use it.
+    /// </summary>
+    public static readonly Expression<Func<UserFilm, bool>> IsPositiveSignal =
+        u => u.Liked || u.RatingHalfStars >= PositiveRatingHalfStars;
 
     /// <summary>
     /// How much a library row counts, on the 0.5–5 scale (ADR-0024): liked +1; a rating adds (rating − 3) / 2, clamped to
@@ -48,7 +54,6 @@ public sealed record TasteProfile(float[] Vector, string EmbeddingModel, int Fil
     {
         ArgumentNullException.ThrowIfNull(films);
         float[]? sum = null;
-        var count = 0;
         foreach (var film in films)
         {
             if (film.Weight == 0 || film.Embedding.Length == 0)
@@ -66,11 +71,9 @@ public sealed record TasteProfile(float[] Vector, string EmbeddingModel, int Fil
             {
                 sum[i] += (float)(film.Embedding[i] * film.Weight);
             }
-
-            count++;
         }
 
-        return sum is not null && Normalised(sum) is { } vector ? new TasteProfile(vector, embeddingModel, count) : null;
+        return sum is not null && Normalised(sum) is { } vector ? new TasteProfile(vector, embeddingModel) : null;
     }
 
     /// <summary>
@@ -88,10 +91,8 @@ public sealed record TasteProfile(float[] Vector, string EmbeddingModel, int Fil
             return null;
         }
 
-        var members = model.Where(p => p.Vector.Length == model.First().Vector.Length).ToList();
-        return Build(members.Select(p => new TasteFilm(p.Vector, 1)), model.Key) is { } blended
-            ? blended with { FilmCount = members.Sum(p => p.FilmCount) }
-            : null;
+        var length = model.First().Vector.Length;
+        return Build(model.Where(p => p.Vector.Length == length).Select(p => new TasteFilm(p.Vector, 1)), model.Key);
     }
 
     /// <summary>Cosine similarity with a film's vector (−1…1); 0 when the lengths differ or a vector is zero.</summary>
