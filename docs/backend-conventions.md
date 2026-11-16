@@ -83,6 +83,22 @@ Rules are in AGENTS.md §2; this page explains how to follow them. Copy the film
 
 ## Logging
 - JSON console logs. Use `[LoggerMessage]` source-generated methods. Never log user free text, mood text, emails or keys.
+- Levels mean something (ADR-0028), because Sentry reads them: **Error** = a bug or an unexpected failure someone must look
+  at (it opens a Sentry issue and emails the owner); **Warning** = a handled failure worth counting (provider down, AI
+  fallback, retry; searchable in Sentry Logs, alertable by count); **Information** and below stay in the console (and
+  become breadcrumbs on the next issue). Don't log an expected outcome (a 4xx, a lost race that is retried) at Error.
+
+## Error tracking (Sentry, ADR-0028)
+- `ErrorTracking` (Api/Monitoring) sets up `Sentry.AspNetCore` from the `Sentry` section (`ErrorTrackingOptions`). Off
+  without `Sentry:Dsn`, so tests and CI send nothing; set the DSN with user-secrets or `.env` to see local errors
+  (environment `development`).
+- What reaches Sentry: unhandled exceptions (via `ProblemDetailsExceptionHandler`'s Error log), every Error log from
+  requests, background jobs and the room hub (`HubErrorLoggingFilter`), Warning-and-above as Sentry Logs, request
+  traces (100% in Development, 10% otherwise), and the catalog-sync cron check-ins (`CatalogSyncJob`). EF Core's own logs
+  are excluded (`Logging:Sentry`): it logs every handled write conflict at Error.
+- Privacy: `SendDefaultPii` off, no request bodies; `SentryScrubber` drops cookies, every header but a short allowlist,
+  user fields but the id, and query strings on outgoing calls (TMDB's `api_key`). The user is the internal id and
+  kind only (`ErrorTrackingUserMiddleware`). Services never call Sentry: they log.
 
 ## Tests
 - `tests/backend/Ithaca.Tests/<Area>/`, xUnit v3 + Shouldly, names `Method_Condition_Result`.

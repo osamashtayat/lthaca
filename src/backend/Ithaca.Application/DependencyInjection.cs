@@ -3,6 +3,7 @@ using Ithaca.Application.Auth;
 using Ithaca.Application.Catalog;
 using Ithaca.Application.Decks;
 using Ithaca.Application.Films;
+using Ithaca.Application.Health;
 using Ithaca.Application.Imports;
 using Ithaca.Application.Library;
 using Ithaca.Application.Moods;
@@ -25,6 +26,7 @@ public static class DependencyInjection
         // All time comes from TimeProvider so tests can substitute a fake clock.
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<FilmQueryService>();
+        services.AddScoped<ReadinessService>();
         services.AddScoped<CatalogSyncService>();
         services.AddScoped<CatalogFilmWriter>(); // collaborator of CatalogSyncService and ImportFilmMatcher, not a use-case service
         services.AddScoped<WikidataEnricher>(); // collaborator of CatalogSyncService only, not a use-case service
