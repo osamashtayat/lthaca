@@ -748,6 +748,11 @@ lint, test, build.
   `docs/backlog.md`.
 - **Contract:** none (A12 becomes decided; no shape changes). **Scope:** in: docs only. **Tests:** none (docs).
 
+### OPS-20 — Record the VPS provider (OVHcloud VPS-2, Frankfurt) · `Done`
+- **Objective:** record the owner's VPS choice so OPS-06 (the hosting ADR) and OPS-07 can go ahead.
+- **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L1, OPS-06).
+- **Contract:** none. **Scope:** in: docs only. **Tests:** none (docs).
+
 ### OPS-17 — Error tracking and monitoring: decision and tasks (ADR-0028) · `Done` (PR #71)
 - **Objective:** record L7 (Sentry for errors and logs, an uptime monitor) and plan the work, so BE-21 and FE-21 can start.
 - **Deps:** OPS-05. **Modules:** `docs/decisions/0028-…`, `docs/backlog.md` (L7, BE-21, FE-21, OPS-07, OPS-08, OPS-09).
@@ -779,7 +784,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Scope:** in: this section and decisions L1–L8. Out: doing any of it.
 - **Acceptance:** every launch gap has a task or a decision. **Tests:** none (docs).
 
-### OPS-06 — Hosting decision (ADR) · `Todo` (L1, L2 decided: Pages + Worker + VPS; VPS provider still open)
+### OPS-06 — Hosting decision (ADR) · `Todo` (L1, L2 and the VPS provider decided: Pages + Worker + OVHcloud VPS-2)
 - **Objective:** an ADR fixing where the API, database and site run, and how they stay one origin.
 - **Deps:** owner decisions L1, L2. **Modules:** `docs/decisions/`, `docs/architecture.md` (Runtime table).
 - **Contract:** none.
@@ -799,6 +804,13 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   VPS, which runs db + migrate + api only. One origin, so ADR-0009/0012 and the app code stay as they are. Rejected:
   everything on the VPS (A: simpler, but the owner prefers Pages); `api.<domain>` subdomain ("B2": CORS, preflights,
   antiforgery-cookie and client changes, a new ADR).
+- **Owner decision (2026-11-16): OVHcloud VPS-2 in Frankfurt (Germany).** 4 vCores, 8 GB RAM, 75 GB NVMe, unlimited
+  traffic, daily automatic backups kept 7 days; billed monthly (about £6.29 + VAT a month when checked, 2026-11-16).
+  Chosen for CPU and RAM per pound and no long commitment; region near the expected users (Europe / Middle East).
+  Compared: Hostinger KVM 2 (runner-up: better-rated support, but 2 vCores and 24 months prepaid), Hetzner (2026 price
+  rises, new servers unavailable), DigitalOcean (≈ $48/month at 8 GB). Weak point: OVH support is slow, so the app must
+  not depend on it: off-server database backups (OPS-08) and the Docker stack keep a move to another VPS to a DNS and
+  Worker change plus a restore. 8 GB, not the 2–4 GB above, for Postgres + pgvector + the API side by side.
 - **Acceptance:** ADR accepted by the owner (records B1, the VPS provider and its region); architecture.md Runtime table
   has a "Production" column.
 
@@ -951,7 +963,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 ### Launch decisions for the owner
 | Id | Decision | Recommendation |
 |---|---|---|
-| L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker (db, migrate, api), behind Cloudflare.** Provider still to choose (OPS-06) |
+| L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker (db, migrate, api), behind Cloudflare.** Provider (2026-11-16): **OVHcloud VPS-2, Frankfurt** (OPS-06 records it in the ADR) |
 | L2 | Where the site runs | **Decided (2026-11-13): Cloudflare Pages + a Worker routing `/api` and `/hubs` to the VPS (B1).** |
 | L3 | Monthly AI budget (Anthropic + Voyage) | **Decided (2026-11-16): $25 per month.** BE-19 enforces a daily share of it (and falls back to the mood chips when it's reached or the AI fails); OPS-10 sets each provider's dashboard limit at or below it |
 | L4 | Email provider for password reset | **Decided (2026-11-15): Resend**, sending from a subdomain (e.g. `no-reply@mail.<domain>`), SPF/DKIM on Cloudflare DNS. Behind `IEmailSender`, so Postmark stays a one-class swap. The owner creates the account and key (user-secrets locally, `.env` on the VPS). Only BE-18 needs it; BE-18a doesn't |
