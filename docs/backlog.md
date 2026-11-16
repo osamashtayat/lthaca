@@ -757,7 +757,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   low rate limits); TMDB terms check for a public, possibly commercial site (ADR-0017); a separate key per environment.
 - **Acceptance:** each provider has a production key and a limit at or below L3.
 
-### BE-19 — Rate limits and AI spend cap · `Todo`
+### BE-19 — Rate limits and AI spend cap · `In progress`
 - **Objective:** one person or a bot can't flood the API or burn the AI budget.
 - **Deps:** BE-09, L3 (decided: $25/month). **Modules:** `Program.cs` (ASP.NET Core rate limiter), `Application/Ai`,
   `Application/Moods`, `ErrorCodes`, `ErrorStatusCodes`, `problem.ts`, options class.
