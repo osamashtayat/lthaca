@@ -674,7 +674,7 @@ lint, test, build.
 - **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L3, BE-19).
 - **Contract:** none here (BE-19 makes the mood change). **Scope:** in: docs only. **Tests:** none (docs).
 
-### OPS-17 — Error tracking and monitoring: decision and tasks (ADR-0028) · `In progress`
+### OPS-17 — Error tracking and monitoring: decision and tasks (ADR-0028) · `Done` (PR #71)
 - **Objective:** record L7 (Sentry for errors and logs, an uptime monitor) and plan the work, so BE-21 and FE-21 can start.
 - **Deps:** OPS-05. **Modules:** `docs/decisions/0028-…`, `docs/backlog.md` (L7, BE-21, FE-21, OPS-07, OPS-08, OPS-09).
 - **Contract:** none here (BE-21 adds the readiness check). **Scope:** in: docs only. **Tests:** none (docs).
@@ -845,8 +845,8 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 ### FE-17 — Terms, Privacy and account deletion · `Todo` (needs L5)
 - **Objective:** the legal pages the Welcome board links to, and a way to delete an account.
 - **Deps:** L5 (the texts), BE-16 (delete account), FE-15. **Modules:** `src/app/pages/`, routes, footer, `/profile`.
-- **Scope:** in: `/terms`, `/privacy` (owner-provided text; mention TMDB, Wikidata, Anthropic, Voyage and the email
-  provider as processors where relevant), footer links, "Delete account" in profile with confirmation. Out: cookie
+- **Scope:** in: `/terms`, `/privacy` (owner-provided text; mention TMDB, Wikidata, Anthropic, Voyage, the email
+  provider and Sentry (EU, ADR-0028) as processors where relevant), footer links, "Delete account" in profile with confirmation. Out: cookie
   banner (only essential cookies are used; revisit if analytics are added, L8).
 - **Acceptance:** pages reachable from Welcome and the footer; deletion removes the account and signs out.
 
