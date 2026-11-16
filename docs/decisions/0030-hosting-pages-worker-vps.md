@@ -1,6 +1,7 @@
 # ADR-0030: Hosting: Cloudflare Pages for the site, a Worker for `/api` and `/hubs`, the API and database on one OVHcloud VPS
 
-- **Status:** Proposed (OPS-06; the owner decided L1, L2 and the provider on 2026-11-13 and 2026-11-16, and accepts this ADR)
+- **Status:** Proposed (OPS-06). The owner decided L1, L2 and the provider on 2026-11-13 and 2026-11-16; this becomes
+  Accepted when the owner accepts the ADR, before OPS-06 merges.
 - **Date:** 2026-11-16
 - **Decides:** L1 and L2 (backlog, Launch decisions) and the VPS provider. Provisioning is OPS-07.
 
@@ -24,11 +25,14 @@ database need a server. The domain is registered at Cloudflare, and Cloudflare s
 ## Decision
 
 ### 1. Site on Cloudflare Pages; a Worker keeps one origin ("B1", owner 2026-11-13)
-- **Cloudflare Pages** builds and serves `src/frontend` (`npm run build`, output `dist`, a preview per PR).
+- **Cloudflare Pages** builds and serves `src/frontend` (`npm run build`, output `dist`, a preview per PR). Previews
+  live on `*.pages.dev`, which the Worker routes don't cover, so a preview has no API: they are for checking the UI
+  only, and OPS-07 decides whether they are built with the mock API on (ADR-0020) or stay UI-only.
 - **A Cloudflare Worker on the same domain** has the routes `<domain>/api/*` and `<domain>/hubs/*`. It forwards each
   request to the VPS origin unchanged: method, path, query, body, the `Cookie` header and `Set-Cookie` in replies,
   `X-XSRF-TOKEN`, and WebSocket upgrades on `/hubs/*` (passed through, not terminated in the Worker). It adds no logic of
-  its own: no auth, caching or rewriting of API responses.
+  its own: no auth, caching or rewriting of API responses. **The one header it sets** is the client's address:
+  `X-Forwarded-For` from `CF-Connecting-IP` (and `X-Forwarded-Proto: https`), so per-IP rate limits see real clients.
 - **The VPS runs `db`, `migrate` and `api` only.** There's no `web` (nginx) container in production; Pages takes its
   place.
 - The browser only ever sees `https://<domain>`, so the SPA, the cookies (host-only, Lax) and antiforgery work exactly
@@ -100,8 +104,9 @@ database need a server. The domain is registered at Cloudflare, and Cloudflare s
   long caching for `/assets/` (a Pages `_headers` file), and the SPA fallback to `index.html`.
 - **Client IPs for rate limits (OPS-07):** requests reach the API from Cloudflare, not from nginx on a private network.
   The API trusts `X-Forwarded-For` only from `RateLimits:TrustedProxyNetworks` (private ranges today), so production
-  must trust Cloudflare's ranges there (or a proxy on the VPS must set the header from `CF-Connecting-IP`); otherwise
-  every user shares the limit of a Cloudflare address.
+  must trust Cloudflare's ranges there (or a proxy on the VPS that does), and the Worker sets the header from
+  `CF-Connecting-IP` (§1); otherwise every user shares the limit of a Cloudflare address. OPS-07 tests that two
+  clients get separate limits through the Worker (issue #74).
 - A single VPS is a single point of failure for the API (accepted at launch; ADR-0016 lists what scaling out needs).
 - OVH support is slow; mitigated only by the backups and the move path above.
 
