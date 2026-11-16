@@ -32,6 +32,7 @@ flowchart LR
   BE09 --> BE11
   BE03 & BE08 --> BE13[BE-13 AI picks]
   BE04 --> BE14a[BE-14a taste contract] --> BE14[BE-14 taste]
+  BE14 & BE17 --> BE14b[BE-14b picker contract] --> BE14c[BE-14c picker + taste readiness]
   OPS12[OPS-12 import + half-star decision] --> BE15a[BE-15a import contract] --> BE15[BE-15 import]
   BE05 --> OPS12
   BE05 --> BE20[BE-20 half-star ratings] --> BE15
@@ -47,6 +48,7 @@ flowchart LR
   FE06 --> FE10
   FE05 & FE07 & FE09 --> FE12[FE-12 Tonight]
   BE14a --> FE13[FE-13 taste]
+  BE14b & FE13 & FE09 --> FE23[FE-23 film picker]
   BE15a --> FE14[FE-14 import]
   FE03 --> FE14
   OPS12 --> FE20[FE-20 half-stub rating]
@@ -63,8 +65,8 @@ backend and can start at once (FE-01 after the owner approves the asset). Ops: O
 
 | Lane | Order | Notes |
 |---|---|---|
-| Backend | BE-01 → BE-09a → BE-02 → BE-03 → BE-04 → BE-05 → BE-06 → **BE-20** → BE-07 → BE-08 → BE-09 → BE-10 → BE-11 → BE-12 → BE-13 → BE-14a → BE-14 → BE-15a → BE-15 → BE-16a → BE-16 → BE-17 | BE-09a is a tiny contract task done early so FE-06 isn't blocked; BE-20 (half stars) goes next because it changes merged work; BE-15a needs only OPS-12 and may be pulled earlier; BE-06/BE-07 need only BE-01; the `a` contract tasks are small and may be pulled earlier so FE-13–15 can start |
-| Frontend | FE-01 (when approved) · FE-02 → FE-03 → FE-04 → FE-05 → FE-06 → FE-07 → FE-08 → FE-09 → **FE-20** → FE-10 → FE-11 → FE-12 → FE-13 → FE-14 → FE-15 | all on mocks |
+| Backend | BE-01 → BE-09a → BE-02 → BE-03 → BE-04 → BE-05 → BE-06 → **BE-20** → BE-07 → BE-08 → BE-09 → BE-10 → BE-11 → BE-12 → BE-13 → BE-14a → BE-14 → BE-15a → BE-15 → BE-16a → BE-16 → BE-17 → BE-14b → BE-14c | BE-09a is a tiny contract task done early so FE-06 isn't blocked; BE-20 (half stars) goes next because it changes merged work; BE-15a needs only OPS-12 and may be pulled earlier; BE-06/BE-07 need only BE-01; the `a` contract tasks are small and may be pulled earlier so FE-13–15 can start |
+| Frontend | FE-01 (when approved) · FE-02 → FE-03 → FE-04 → FE-05 → FE-06 → FE-07 → FE-08 → FE-09 → **FE-20** → FE-10 → FE-11 → FE-12 → FE-13 → FE-14 → FE-15 → FE-23 | all on mocks |
 
 With a second agent per side, tasks with no path between them can also run in parallel (BE-05 ‖ BE-06, FE-07 ‖ FE-08).
 Two backend tasks that add EF migrations merge one at a time: the later one deletes its migration, updates from `main`,
@@ -325,6 +327,36 @@ lint, test, build.
   them on that scale; imported `UserFilm`s count like any other (ADR-0024 decision 9). Out: import (BE-15).
 - **Acceptance:** per §12. **Tests:** slice tests; deterministic vector test with the Fake embedding client.
 
+### BE-14b — Film picker contract and stubs (ADR-0029) · `Todo`
+- **Objective:** unblock FE-23 before the picker logic exists.
+- **Deps:** BE-14, BE-17. **Modules:** `Application/Taste` (`TastePicksRequest`), `TasteController`, `RoomsController`,
+  `contracts/openapi.json`, `schema.d.ts`, `docs/api-contract.md` §12 (as built), and the 501 plumbing BE-17 removed
+  (`server.not_implemented` in `ErrorCodes`, `ErrorStatusCodes`, `problem.ts`; the stub attribute and test), re-added
+  as api-contract.md §10.4 says.
+- **Contract:** §12: `POST /api/taste/picks`, `PUT /api/rooms/{code}/taste` with every documented status.
+- **Scope:** in: as BE-01 for the two rows (DTOs, actions, 501 stubs, user-only / member access as §12 says). Out: logic
+  (BE-14c).
+- **Acceptance:** both endpoints in `openapi.json`, answering 501; a guest gets 401 on `POST /api/taste/picks`.
+  **Tests:** stub slice test.
+
+### BE-14c — Film picker and taste-room readiness (ADR-0029) · `Todo`
+- **Objective:** the picker rows work, and guests count in group taste.
+- **Deps:** BE-14b. **Modules:** `Domain/Rooms` (`RoomMember`: a guest's picks), `Application/Taste`
+  (`TasteService`, `TasteProfileReader`), `Application/Rooms` (`RoomReader`, `RoomDeckService`, `GuestUpgrade`),
+  `RoomEvents.cs` + `contracts/realtime-events.json` (`memberReady` description), `docs/realtime.md`, migration.
+- **Contract:** §12 (picker rows, readiness in taste rooms); no shape change.
+- **Scope:** in, on top of what BE-14 built (§12 as built): `POST /api/taste/picks` marks each film `liked` (only adds)
+  and answers the updated `TasteDto`; `PUT /api/rooms/{code}/taste` routes a user's picks to likes and stores a guest's
+  on their `RoomMember` (replacing earlier ones; gone with the row); `RoomReader.IsReady` in taste rooms: a user who
+  meets A16 (`TasteProfileReader.IsReady`) or a guest with picks (today every taste-room member is ready); the room
+  blend in `RoomDeckService` adds a guest's picks as liked films (+1 each, as `TasteProfileReader` weighs likes);
+  `memberReady` after a `PUT …/taste` that makes the member ready; `GuestUpgrade` turns a guest's picks into likes in
+  both of its branches (moved or ended membership); remove the two 501 stubs and, once nothing returns it, the 501
+  plumbing again (as BE-17). Out: the screens (FE-23).
+- **Acceptance:** per §12. **Tests:** picks (10–20, repeated ids, unknown film → nothing saved, user vs guest, replace,
+  only adds); taste-room readiness for users and guests; a guest's picks lean the shared deck; `memberReady` published
+  once; upgrade moves guest picks to likes; grep finds no `server.not_implemented`.
+
 ### FE-13 — By taste screen · `Done`
 - **Objective:** the "Solo — by taste" board, and no dead end for people without history.
 - **Deps:** BE-14a, FE-05. **Modules:** `src/features/taste/`, `src/mocks/`, and
@@ -338,6 +370,19 @@ lint, test, build.
 - **Acceptance:** with mocks: not ready → the import screen, its "?" opens the steps, both buttons navigate; ready → the
   board as designed; the decision comes only from the API.
 - **Tests:** ready vs not-ready rendering; "?" opens and closes the sheet (focus returns to the button).
+
+### FE-23 — Film picker and taste-room lobby (ADR-0029) · `Todo`
+- **Objective:** "pick 10–20 films you love" for anyone without history, solo and in taste rooms.
+- **Deps:** BE-14b, FE-13, FE-09. **Modules:** `src/features/taste/`, `src/features/rooms/`, `src/mocks/`.
+- **Contract:** §12 (picker rows, `isReady` in taste rooms), §9 (search).
+- **Scope:** in: a picker screen (search + popular films from `GET /api/films`, tap to select, "7 of 10" counter, submit
+  enabled at 10–20); the `/taste` empty state's third option ("Pick films you love") next to import and "Just swipe
+  instead"; in taste rooms, a lobby step for members who aren't ready (picker) and the note that their taste isn't in
+  the blend yet; the host sees who isn't ready before starting; `taste` in the room mode options. No design board:
+  follow the visual language (frontend-conventions.md → Design reference). Out: the logic (BE-14c).
+- **Acceptance:** with mocks: the picker submits only at 10–20; solo not-ready → three options; a guest in a taste
+  room picks and becomes ready; readiness comes only from the API.
+- **Tests:** picker limits; empty state options; lobby step for a not-ready member.
 
 ## Rooms
 
@@ -679,6 +724,14 @@ lint, test, build.
 - **Deps:** OPS-12. **Modules:** `docs/decisions/0024-…`, `docs/api-contract.md` §11, `docs/backlog.md`.
 - **Contract:** A15–A17 become decided (no shape changes). **Scope:** in: docs only. **Tests:** none (docs).
 
+### OPS-14 — Taste readiness and the film picker: decision and contract design (ADR-0029) · `Done` (PR #44)
+- **Objective:** record the owner's decisions on group taste (A11) and a "pick films you love" path for people without
+  history, so BE-14b, BE-14c and FE-23 can start from one design.
+- **Deps:** BE-14a. **Modules:** `docs/decisions/0029-…`, `docs/api-contract.md` §11–§12, `docs/backlog.md`.
+- **Scope:** in: ADR-0029; §12 design (readiness in taste rooms, the picker, guest picks, the warning count); A11
+  decided; new BE-14b, BE-14c and FE-23 (BE-14 merged first, so the picker logic is BE-14c; the FE-13 follow-up
+  is in FE-23). Out: code (BE-14b, BE-14c, FE-23). **Tests:** none (docs).
+
 ### OPS-15 — Record the owner's email-provider decision (L4) · `Done`
 - **Objective:** record L4 and stop it blocking the password-reset contract.
 - **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L4, BE-18a, BE-18).
@@ -688,6 +741,12 @@ lint, test, build.
 - **Objective:** record L3 ($25/month) and the owner's rule for when the AI fails, so BE-19 can start.
 - **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L3, BE-19).
 - **Contract:** none here (BE-19 makes the mood change). **Scope:** in: docs only. **Tests:** none (docs).
+
+### OPS-18 — Record two owner decisions: `Deck`/`Swipe` names and type-only mock fixes · `Done`
+- **Objective:** close #35 and #62 with the owner's answers (2026-11-16).
+- **Deps:** OPS-05. **Modules:** `AGENTS.md` §3 and §4.3, `docs/glossary.md`, `docs/api-contract.md` (§10, A12),
+  `docs/backlog.md`.
+- **Contract:** none (A12 becomes decided; no shape changes). **Scope:** in: docs only. **Tests:** none (docs).
 
 ### OPS-17 — Error tracking and monitoring: decision and tasks (ADR-0028) · `Done` (PR #71)
 - **Objective:** record L7 (Sentry for errors and logs, an uptime monitor) and plan the work, so BE-21 and FE-21 can start.
@@ -708,6 +767,11 @@ lint, test, build.
 Everything here is needed (or flagged optional) before real users get the link. Several tasks start with an owner
 decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so far: the domain is registered at
 **Cloudflare** and Cloudflare will sit in front of the site.
+
+### OPS-19 — Record the Terms and Privacy texts (L5) · `Done`
+- **Objective:** record the owner's short Terms and Privacy texts (L5), so FE-17 can start.
+- **Deps:** OPS-05. **Modules:** `docs/backlog.md` (L5, its texts, FE-17).
+- **Contract:** none. **Scope:** in: docs only. **Tests:** none (docs).
 
 ### OPS-05 — Launch plan in the backlog · `Done`
 - **Objective:** list what going live needs so it is planned, not discovered at the end.
@@ -857,11 +921,11 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Scope:** in: "Forgot password?" on `/sign-in`, `/reset-password?token=…`. **Acceptance:** with mocks, both flows and
   their errors.
 
-### FE-17 — Terms, Privacy and account deletion · `Todo` (needs L5)
+### FE-17 — Terms, Privacy and account deletion · `Todo` (L5 texts below; owner fills the [placeholders] before launch)
 - **Objective:** the legal pages the Welcome board links to, and a way to delete an account.
 - **Deps:** L5 (the texts), BE-16 (delete account), FE-15. **Modules:** `src/app/pages/`, routes, footer, `/profile`.
-- **Scope:** in: `/terms`, `/privacy` (owner-provided text; mention TMDB, Wikidata, Anthropic, Voyage, the email
-  provider and Sentry (EU, ADR-0028) as processors where relevant), footer links, "Delete account" in profile with confirmation. Out: cookie
+- **Scope:** in: `/terms`, `/privacy` with the L5 texts exactly as written under "L5 texts" below (kept short on purpose:
+  providers are described, not named; the [placeholders] stay visible until the owner fills them), footer links, "Delete account" in profile with confirmation. Out: cookie
   banner (only essential cookies are used; revisit if analytics are added, L8).
 - **Acceptance:** pages reachable from Welcome and the footer; deletion removes the account and signs out.
 
@@ -891,11 +955,42 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 | L2 | Where the site runs | **Decided (2026-11-13): Cloudflare Pages + a Worker routing `/api` and `/hubs` to the VPS (B1).** |
 | L3 | Monthly AI budget (Anthropic + Voyage) | **Decided (2026-11-16): $25 per month.** BE-19 enforces a daily share of it (and falls back to the mood chips when it's reached or the AI fails); OPS-10 sets each provider's dashboard limit at or below it |
 | L4 | Email provider for password reset | **Decided (2026-11-15): Resend**, sending from a subdomain (e.g. `no-reply@mail.<domain>`), SPF/DKIM on Cloudflare DNS. Behind `IEmailSender`, so Postmark stays a one-class swap. The owner creates the account and key (user-secrets locally, `.env` on the VPS). Only BE-18 needs it; BE-18a doesn't |
-| L5 | Terms and Privacy texts | Written or approved by you (not legal advice from agents) |
+| L5 | Terms and Privacy texts | **Decided (2026-11-16): the short texts under "L5 texts" below**, drafted by an agent and kept by the owner (not legal advice). The owner fills [name or company], [email], [country] and [date] before launch |
 | L6 | Catalog size at launch | Enough for varied decks, e.g. several thousand films (843 today). Not a prerequisite for the Letterboxd import (ADR-0024 Q4, decided) |
 | L7 | Error tracking: logs only or an error service | **Decided (2026-11-16): Sentry** (EU region, org `osama-vz`, projects `ithaca-server` and `ithaca-frontend`) for errors, logs, traces, cron check-ins and masked error replays; users reported by internal id only; an uptime monitor on `/api/health/ready` (OPS-09). Alerts by email. ADR-0028 |
 | L8 | Analytics at launch? | None at launch (no cookie banner needed); decide later |
 | P-02 | Google / Apple sign-in at launch? | Not required for launch; email works |
+
+### L5 texts
+
+Short on purpose (owner, 2026-11-16): providers are described, not named. Keep a list of them (AI: Anthropic, Voyage;
+email: Resend; errors: Sentry, EU) ready for anyone who asks. The TMDB sentence is required by TMDB's terms (ADR-0017).
+
+**Terms of Use** · *Last updated: [date]*
+
+1. **What Ithaca is.** A free site that helps you pick a film, alone or with friends. Run by [your name or company].
+2. **Accounts.** Solo decks need an account. Keep your password safe. You can delete your account anytime in Profile.
+3. **Rooms.** Anyone with a room link can join as a guest. Share links only with people you want in.
+4. **Be decent.** Don't misuse the site: no spam, scraping, attacks, or flooding it with requests.
+5. **Film info.** Film data and images come from TMDB. This product uses the TMDB API but is not endorsed or certified
+   by TMDB. Recommendations are suggestions, nothing more.
+6. **No guarantees.** We provide Ithaca "as is" and may change or stop it at any time.
+7. **Changes.** We may update these terms. If you keep using Ithaca, you accept the new version.
+8. **Contact.** [email]
+
+**Privacy Policy** · *Last updated: [date]*
+
+1. **What we keep.** Your email, display name, and what you do in the app: swipes, ratings, your watchlist, imports.
+   Guests only give a display name.
+2. **Why.** To run your account, build your decks and room results, and send password-reset emails. Nothing else.
+3. **No selling, no ads.** We don't sell your data or show ads. We use only the cookies needed to keep you signed in.
+4. **Services we use.** These help us run Ithaca, and each gets only what it needs:
+   - an AI provider for mood text and pick reasons, with no account details attached;
+   - an email provider for password resets;
+   - an error-tracking service that sees an internal id, never your name or email.
+5. **Deleting.** Delete your account in Profile and your data goes with it. A guest's data goes when they leave the room.
+6. **Where.** Our servers are in [country].
+7. **Contact.** Questions or requests: [email]
 
 ---
 
@@ -913,5 +1008,4 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 ## Open questions for the owner
 
 Contract assumptions A1–A14 are in [api-contract.md §11](api-contract.md#11-open-questions). Also:
-- **Glossary:** the solo deck's parent record and the solo swipe need names (BE-08 proposes them, A12).
 - **Task order:** Wikidata and Voyage (BE-03, BE-04) come right after auth as requested, although only BE-13 and BE-14 need them.

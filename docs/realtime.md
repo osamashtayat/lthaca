@@ -31,7 +31,8 @@ authorization stays in one place. Group name per room: `RoomEvents.GroupFor(room
   that joins a room (or signs in) over HTTP reconnects before calling `JoinRoom`.
 - Known gap: connections of a member who left, or of a closed room, stay in the group until they disconnect or call
   `LeaveRoom`; events carry only ids, and every refetch is authorized (issue #40).
-- Publishers: `memberJoined`/`memberLeft`/`roomClosed` BE-10; `memberReady` (after `PUT …/mood`, mood rooms only),
+- Publishers: `memberJoined`/`memberLeft`/`roomClosed` BE-10; `memberReady` (after `PUT …/mood` in mood rooms, and
+  after `PUT …/taste` makes a member ready in taste rooms, BE-14c, ADR-0029),
   `roomStarted` (after `POST …/start`), `voteCast`, `deckExtended` BE-11; `roomMatched` BE-12.
 - Built (BE-12): `roomMatched` (`RoomMatchedEvent`: the matched film, or the compromise's #1; `tmdbId` null when the
   compromise has no picks), published once per room by `RoomReferee` after the vote, leave or finish that decided it.
