@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import tmdbLogo from '@/shared/ui/assets/tmdb-logo.svg'
 
 /**
@@ -10,6 +11,14 @@ export function AppFooter() {
     <footer className="mx-auto flex w-full max-w-(--content-max-width) flex-col items-start gap-2 px-5 pt-10 pb-8 font-mono text-xs text-ink-muted lg:px-8">
       <img src={tmdbLogo} alt="TMDB" width={92} height={12} className="h-3 w-auto" />
       <p>This website uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
+      <nav aria-label="Legal" className="flex gap-5">
+        <Link to="/terms" className="inline-flex min-h-11 items-center font-bold underline">
+          Terms
+        </Link>
+        <Link to="/privacy" className="inline-flex min-h-11 items-center font-bold underline">
+          Privacy
+        </Link>
+      </nav>
     </footer>
   )
 }

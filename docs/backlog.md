@@ -933,7 +933,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Scope:** in: "Forgot password?" on `/sign-in`, `/reset-password?token=…`. **Acceptance:** with mocks, both flows and
   their errors.
 
-### FE-17 — Terms, Privacy and account deletion · `Todo` (L5 texts below; owner fills the [placeholders] before launch)
+### FE-17 — Terms, Privacy and account deletion · `Done` (PR #80) (L5 texts below; owner fills the [placeholders] before launch)
 - **Objective:** the legal pages the Welcome board links to, and a way to delete an account.
 - **Deps:** L5 (the texts), BE-16 (delete account), FE-15. **Modules:** `src/app/pages/`, routes, footer, `/profile`.
 - **Scope:** in: `/terms`, `/privacy` with the L5 texts exactly as written under "L5 texts" below (kept short on purpose:
