@@ -25,7 +25,9 @@
           { "name": "openapi-fetch", "message": "Use `api` from @/shared/api/client inside a feature api/ hook." },
           { "name": "msw", "message": "MSW belongs in src/mocks and src/test only (ADR-0020)." },
           { "name": "msw/browser", "message": "MSW belongs in src/mocks and src/test only (ADR-0020)." },
-          { "name": "msw/node", "message": "MSW belongs in src/mocks and src/test only (ADR-0020)." }
+          { "name": "msw/node", "message": "MSW belongs in src/mocks and src/test only (ADR-0020)." },
+          { "name": "@sentry/react", "message": "Use @/shared/monitoring; only it talks to Sentry (ADR-0028)." },
+          { "name": "@sentry/react/react-router", "message": "Use @/shared/monitoring; only it talks to Sentry (ADR-0028)." }
         ]
       }
     ]
@@ -34,7 +36,7 @@
     { "files": ["src/shared/api/**"], "rules": { "no-restricted-globals": "off", "no-restricted-imports": "off" } },
     { "files": ["src/mocks/**"], "rules": { "no-restricted-globals": "off", "no-restricted-imports": "off" } },
     { "files": ["src/test/**"], "rules": { "no-restricted-imports": "off" } },
-    { "files": ["src/shared/notify/**", "src/shared/realtime/**"], "rules": { "no-restricted-imports": "off" } },
+    { "files": ["src/shared/notify/**", "src/shared/realtime/**", "src/shared/monitoring/**"], "rules": { "no-restricted-imports": "off" } },
     { "files": ["scripts/**"], "rules": { "no-console": "off" } }
   ],
   "ignorePatterns": ["dist", "public/mockServiceWorker.js", "src/shared/api/schema.d.ts"]

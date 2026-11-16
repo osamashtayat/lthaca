@@ -1,11 +1,13 @@
 import { useCallback, useState } from 'react'
 import { Outlet } from 'react-router'
 import { Toaster } from '@/shared/notify'
+import { ErrorTrackingIdentity } from '../ErrorTrackingIdentity'
 import { AppFooter } from './AppFooter'
 import { AppHeader } from './AppHeader'
 import { MenuSheet } from './MenuSheet'
 
-/** Page frame for every screen: header, the ☰ menu, the page outlet, the TMDB attribution footer and the toaster. */
+/** Page frame for every screen: header, the ☰ menu, the page outlet, the TMDB attribution footer, the toaster and who is
+ * signed in for error reports. */
 export function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false)
   const closeMenu = useCallback(() => setMenuOpen(false), [])
@@ -19,6 +21,7 @@ export function AppShell() {
       </main>
       <AppFooter />
       <Toaster />
+      <ErrorTrackingIdentity />
     </>
   )
 }

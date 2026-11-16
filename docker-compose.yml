@@ -90,6 +90,9 @@ services:
       context: .
       dockerfile: src/frontend/Dockerfile
       target: web
+      args:
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_SENTRY_RELEASE: ${VITE_SENTRY_RELEASE:-}
     restart: unless-stopped
     logging: *logging
     ports:

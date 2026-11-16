@@ -7,6 +7,10 @@ COPY src/frontend/package.json src/frontend/package-lock.json ./
 RUN npm ci
 COPY contracts/ /repo/contracts/
 COPY src/frontend/ ./
+# Error tracking (ADR-0028): baked into the bundle at build time; empty = off.
+ARG VITE_SENTRY_DSN=""
+ARG VITE_SENTRY_RELEASE=""
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN VITE_SENTRY_RELEASE=$VITE_SENTRY_RELEASE
 RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine AS web

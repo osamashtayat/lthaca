@@ -13,6 +13,9 @@ src/shared/realtime/ events.ts (from contracts/realtime-events.json), roomHub.ts
 src/shared/ui/      the UI kit (add shared pieces here, not page-local copies): Button, IconButton, Chip/ToggleChip,
                     SegmentedControl, StubRating, TicketCard, Poster, Sheet, MonoLabel, TextField + Wordmark, icons, LoadingState, ErrorState
 src/shared/notify/  notify.ts (toasts), Toaster.tsx — the only files importing sonner
+src/shared/monitoring/ the only files importing @sentry/react (lint error elsewhere; ADR-0028): init.ts (side-effect
+                    import, must stay FIRST in main.tsx), errorTracking.ts (init, scrubbing, user, reportError, traced
+                    router), lazyIntegrations.ts (tracing, its own chunk loaded when idle; keep it lazy), CrashBoundary
 src/shared/styles/  tokens.css (design tokens), global.css (base styles)
 src/mocks/          MSW mock API for the dev server and Vitest (ADR-0020); src/test/setup.ts starts it in Vitest
 src/features/<f>/   api/ (hooks) · components/ · pages/ · types.ts · index.ts (public surface)
@@ -74,6 +77,21 @@ Realtime stays off while mocks answer (`REALTIME_ENABLED`); test event reactions
 
 ## Toasts
 - `notify.success / info / error / apiError`. Errors persist until dismissed. Never import `sonner` (lint error).
+
+## Errors and crashes (Sentry, ADR-0028)
+- Sentry starts in `src/shared/monitoring/init.ts`, the first import of `main.tsx` (before the router exists). It is off
+  without `VITE_SENTRY_DSN` (build-time) and always off in Vitest, so tests and mocks send nothing.
+- What is sent: unhandled errors, every error React catches (`reactErrorHandlers` on `createRoot`), failed route loads
+  (`RouteErrorPage` → `reportError`), and page-load and navigation traces named by route (`createTracedBrowserRouter`).
+  Nothing personal: no cookies, bodies, query strings (search text, reset tokens), IPs or user fields; the user is the
+  internal id and kind (`app/ErrorTrackingIdentity`). No Session Replay: its recorder keeps full URLs we can't scrub.
+- Bundle: with a DSN, error capture adds ~39 KB gzipped to the first load; tracing loads later in its own chunk.
+  Without a DSN the SDK is dropped from the build.
+- A crash never leaves a blank page: the root route's `errorElement` (`RouteErrorPage`) and `CrashBoundary` around the
+  router show `CrashPage` (Reload, back to tonight). A thrown 404 shows "not found". Expected API failures are still
+  `ErrorState` / `notify.apiError`, not crashes.
+- To check it: `VITE_SENTRY_DSN=… npm run dev`, then open `/dev/crash` (dev server only).
+- Never call Sentry from a feature; let errors throw or use the existing error states.
 
 ## Design reference
 The visual design is the owner's Claude design canvas **"Ithaca — Design Exploration"**:
