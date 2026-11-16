@@ -23,9 +23,10 @@ public sealed record RoomDto(
 
 /// <summary>
 /// <c>PUT /api/rooms/{code}/mood</c>: the caller, now ready. <see cref="TextIgnored"/> is true when their text wasn't a mood,
-/// so only their chips were used; it is only ever sent to that member (ADR-0022).
+/// so only their chips were used; it is only ever sent to that member (ADR-0022). <see cref="TextUnavailable"/> is also true
+/// when that was because we couldn't read the text right now (AI failure or the daily AI budget; BE-19).
 /// </summary>
-public sealed record RoomMoodDto(RoomMemberDto Member, bool TextIgnored);
+public sealed record RoomMoodDto(RoomMemberDto Member, bool TextIgnored, bool TextUnavailable);
 
 /// <summary>What anyone with the link sees before joining.</summary>
 public sealed record RoomPreviewDto(

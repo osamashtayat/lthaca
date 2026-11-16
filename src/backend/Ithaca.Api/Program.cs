@@ -3,6 +3,7 @@ using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
 using Ithaca.Api.Hubs;
 using Ithaca.Api.OpenApi;
+using Ithaca.Api.RateLimiting;
 using Ithaca.Application;
 using Ithaca.Application.Realtime;
 using Ithaca.Infrastructure;
@@ -39,6 +40,7 @@ builder.Services.ConfigureHttpJsonOptions(options => JsonSetup.Configure(options
 builder.Services.AddIthacaProblemDetails();
 builder.Services.AddIthacaOpenApi();
 builder.Services.AddIthacaAuth(builder.Environment);
+builder.Services.AddIthacaRateLimits(builder.Configuration);
 
 // Layer registrations: one extension method per layer (docs/backend-conventions.md).
 builder.Services.AddApplication();
@@ -67,9 +69,11 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseForwardedHeaders(); // client IP from a trusted proxy, for per-IP rate limits
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
+app.UseRateLimiter(); // after authentication: limits count per person when there's a session
 app.UseAuthorization();
 
 app.MapControllers();

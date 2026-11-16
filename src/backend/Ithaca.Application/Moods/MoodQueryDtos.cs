@@ -11,6 +11,7 @@ public static class MoodQueryDtos
         return new MoodQueryDto(
             mood.Id, mood.Moods, mood.MaxRuntime, mood.Language, mood.Text,
             new MoodFiltersDto(mood.IncludeGenres, mood.ExcludeGenres, mood.MaxRuntimeMinutes, mood.MinReleaseYear, mood.MaxReleaseYear, mood.Keywords),
-            mood.TextIgnored);
+            mood.TextIgnored,
+            mood.TextUnavailable);
     }
 }

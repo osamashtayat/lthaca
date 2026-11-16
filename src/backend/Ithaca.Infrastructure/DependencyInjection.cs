@@ -65,6 +65,7 @@ public static class DependencyInjection
         services.AddValidatedOptions<AiOptions>(configuration)
             .Validate(o => o.LlmProvider is LlmProvider.Fake or LlmProvider.Anthropic, "Ai:LlmProvider: only 'Fake' and 'Anthropic' are implemented.")
             .Validate(o => o.LlmProvider != LlmProvider.Anthropic || !string.IsNullOrWhiteSpace(o.ApiKey), "Ai:ApiKey is required when Ai:LlmProvider is 'Anthropic' (user-secrets or Ai__ApiKey).")
+            .Validate(o => o.LlmProvider != LlmProvider.Anthropic || o.Prices.Count > 0, "Ai:Prices is required when Ai:LlmProvider is 'Anthropic': the daily AI budget prices each reply by its tokens.")
             .Validate(o => o.EmbeddingProvider is EmbeddingProvider.Fake or EmbeddingProvider.Voyage, "Ai:EmbeddingProvider: only 'Fake' and 'Voyage' are implemented.")
             .Validate(o => o.EmbeddingProvider != EmbeddingProvider.Voyage || !string.IsNullOrWhiteSpace(o.EmbeddingApiKey), "Ai:EmbeddingApiKey is required when Ai:EmbeddingProvider is 'Voyage' (user-secrets or Ai__EmbeddingApiKey).");
         services.AddValidatedOptions<TmdbOptions>(configuration)

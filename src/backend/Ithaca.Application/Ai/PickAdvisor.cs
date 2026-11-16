@@ -16,10 +16,11 @@ namespace Ithaca.Application.Ai;
 /// <item>Every returned <c>tmdbId</c> must be one we sent; others and repeats are dropped. Reasons are cleaned by
 /// <see cref="PickReason.Clean"/>.</item>
 /// <item>The advice is optional: any failure (provider, refusal, invalid reply, timeout) gives null and a warning with
-/// the prompt and error code only, and the caller shows its picks without reasons.</item>
+/// the prompt and error code only, and the caller shows its picks without reasons. So does a spent daily budget
+/// (<see cref="AiBudget"/>).</item>
 /// </list>
 /// </summary>
-public sealed partial class PickAdvisor(IAppDbContext db, ILlmClient llm, IPromptLibrary prompts, TimeProvider time, ILogger<PickAdvisor> logger)
+public sealed partial class PickAdvisor(IAppDbContext db, AiBudget llm, IPromptLibrary prompts, TimeProvider time, ILogger<PickAdvisor> logger)
 {
     /// <summary>A pick page waits for this at most; afterwards it shows the picks without reasons.</summary>
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(20);

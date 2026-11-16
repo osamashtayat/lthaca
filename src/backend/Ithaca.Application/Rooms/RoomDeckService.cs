@@ -103,7 +103,7 @@ public sealed class RoomDeckService(
         }
 
         var me = (await reader.MembersAsync(roomId, room.Mode, ct)).Single(m => m.Id == memberId);
-        return new RoomMoodDto(me, mood.TextIgnored);
+        return new RoomMoodDto(me, mood.TextIgnored, mood.TextUnavailable);
     }
 
     /// <summary>Host only, from the lobby: deals the shared deck and starts swiping. Members need not be ready.</summary>

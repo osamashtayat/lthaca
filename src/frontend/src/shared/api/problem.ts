@@ -39,6 +39,8 @@ export const PROBLEM_MESSAGES = {
   'room.invalid_state': 'The room has moved on. Refresh to catch up.',
   'room.no_result': "There's no result yet. Keep swiping.",
   'mood.unclear': 'We couldn\'t find a mood in that. Try something like "funny and under 2 hours", or tap a mood above.',
+  'mood.text_unavailable': "Mood text isn't available right now. Pick a few moods instead.",
+  'rate.limited': "You're going a bit fast. Wait a moment, then try again.",
   'ai.invalid_output': "We couldn't come up with picks this time. Try again.",
   'ai.unavailable': 'Our movie brain is taking a break. Try again in a minute.',
   'tmdb.unavailable': "We can't load film details right now. Try again in a moment.",

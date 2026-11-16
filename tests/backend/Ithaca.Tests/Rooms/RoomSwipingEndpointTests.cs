@@ -238,6 +238,38 @@ public sealed class RoomSwipingEndpointTests(PostgresFixture postgres) : IAsyncL
         }
     }
 
+    [Theory]
+    [InlineData("refused")]
+    [InlineData("invalid")]
+    [InlineData("unavailable")]
+    [InlineData("garbage")]
+    public async Task MoodStep_WhenTheAiFails_UsesTheChips_OrAsksForMoodsWithoutThem(string failure)
+    {
+        var (host, guest, code) = await RoomWithGuestAsync("mood");
+        using var _h = host;
+        using var _g = guest;
+        _llm.Failure = failure;
+        try
+        {
+            using var noChips = await PutMoodAsync(guest, code, text: "something silly");
+            noChips.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity, "BE-19: never an ai.* error for mood text");
+            (await ProblemCodeAsync(noChips)).ShouldBe("mood.text_unavailable");
+            var room = await (await guest.GetAsync(new Uri($"/api/rooms/{code}", UriKind.Relative), Ct)).Content.ReadFromJsonAsync<JsonElement>(Ct);
+            room.GetProperty("me").GetProperty("isReady").GetBoolean().ShouldBeFalse("nothing changes");
+
+            using var chips = await PutMoodAsync(guest, code, moods: ["laugh"], text: "something silly");
+            chips.StatusCode.ShouldBe(HttpStatusCode.OK);
+            var body = await chips.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            body.GetProperty("textIgnored").GetBoolean().ShouldBeTrue();
+            body.GetProperty("textUnavailable").GetBoolean().ShouldBeTrue();
+            body.GetProperty("member").GetProperty("isReady").GetBoolean().ShouldBeTrue();
+        }
+        finally
+        {
+            _llm.Failure = null;
+        }
+    }
+
     [Fact]
     public async Task MoodStep_KeepsNoText_OneMoodPerMember_AndMoodsGoWithTheRoom()
     {

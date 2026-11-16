@@ -47,16 +47,17 @@ internal sealed partial class AnthropicLlmClient(AnthropicClient client, IOption
         }
 
         var text = string.Concat(message.Content.Select(b => b.TryPickText(out var block) ? block.Text : ""));
-        return MapReply(request.Prompt.Id, stopReason, text, message.Model.ToString());
+        var usage = new LlmUsage(message.Usage.InputTokens, message.Usage.OutputTokens);
+        return MapReply(request.Prompt.Id, stopReason, text, message.Model.ToString(), usage);
     }
 
     /// <summary>Stop reason + text → result. Separate so every outcome is unit-tested without calling the API.</summary>
-    internal static Result<LlmResponse> MapReply(PromptId prompt, string? stopReason, string text, string model) => stopReason switch
+    internal static Result<LlmResponse> MapReply(PromptId prompt, string? stopReason, string text, string model, LlmUsage? usage = null) => stopReason switch
     {
         "refusal" => AiErrors.Refused,
         "max_tokens" => AiErrors.InvalidOutput(prompt, "a truncated reply (max_tokens)"),
         _ when string.IsNullOrWhiteSpace(text) => AiErrors.InvalidOutput(prompt, "no text"),
-        _ => new LlmResponse(text, prompt, model),
+        _ => new LlmResponse(text, prompt, model, usage),
     };
 
     internal static MessageCreateParams BuildParameters(LlmRequest request, string model, AiOptions settings)

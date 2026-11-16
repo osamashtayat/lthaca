@@ -6,7 +6,8 @@ namespace Ithaca.Domain.Moods;
 /// <summary>
 /// A mood request (glossary: <c>MoodQuery</c>): the tapped moods, runtime and language as given, the free text, and the
 /// filters we derived from them (chips by <see cref="MoodChips"/>, text by <c>mood-parse</c>, validated against our genres).
-/// <see cref="TextIgnored"/>: the text wasn't a mood, so only the chips were used (ADR-0022). Owned by a solo deck, or by a
+/// <see cref="TextIgnored"/>: the text wasn't used, so only the chips were (ADR-0022); <see cref="TextUnavailable"/> says it
+/// wasn't read at all because the AI failed or its daily budget was used up (BE-19). Owned by a solo deck, or by a
 /// room member's mood step (<see cref="RoomMemberId"/>; a guest's has no user), which keeps no text (issue #51).
 /// </summary>
 public sealed class MoodQuery
@@ -65,6 +66,9 @@ public sealed class MoodQuery
 
     public bool TextIgnored { get; private set; }
 
+    /// <summary>The text couldn't be read (AI failure or budget), so only the chips were used; implies <see cref="TextIgnored"/>.</summary>
+    public bool TextUnavailable { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     /// <summary>The room member whose mood step this is; null for a solo deck's mood. Deleted with the member.</summary>
@@ -107,7 +111,7 @@ public sealed class MoodQuery
     /// </summary>
     public void SetFilters(
         IEnumerable<string> includeGenres, IEnumerable<string> excludeGenres, int? maxRuntimeMinutes, int? minReleaseYear, int? maxReleaseYear,
-        IEnumerable<string> keywords, bool textIgnored)
+        IEnumerable<string> keywords, bool textIgnored, bool textUnavailable = false)
     {
         ArgumentNullException.ThrowIfNull(includeGenres);
         ArgumentNullException.ThrowIfNull(excludeGenres);
@@ -124,7 +128,8 @@ public sealed class MoodQuery
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(MaxKeywords)
             .ToArray();
-        TextIgnored = textIgnored;
+        TextIgnored = textIgnored || textUnavailable;
+        TextUnavailable = textUnavailable;
     }
 
     /// <summary>
