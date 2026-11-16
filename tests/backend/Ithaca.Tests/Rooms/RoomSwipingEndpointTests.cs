@@ -459,7 +459,7 @@ public sealed class RoomSwipingEndpointTests(PostgresFixture postgres) : IAsyncL
 
             foreach (var response in responses)
             {
-                response.StatusCode.ShouldBeOneOf([HttpStatusCode.NoContent, HttpStatusCode.Conflict], $"run {run}: {await response.Content.ReadAsStringAsync(Ct)}");
+                response.StatusCode.ShouldBeOneOf([HttpStatusCode.NoContent, HttpStatusCode.Conflict], $"run {run}: {await response.Content.ReadAsStringAsync(Ct)}{_base.ServerErrors.Describe()}");
                 if (response.StatusCode == HttpStatusCode.Conflict)
                 {
                     (await ProblemCodeAsync(response)).ShouldBe("room.already_voted");
