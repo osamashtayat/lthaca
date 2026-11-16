@@ -208,7 +208,7 @@ lint, test, build.
 - **Tests:** stub handler: request shape, batching, 429 back-off, dimension check, failure → Result; sync with the Fake.
 - **Docs:** docs/ai.md (embeddings, keys, provider table).
 
-### BE-13 — AI picks: ranking and reasons from Wikidata · `Todo`
+### BE-13 — AI picks: ranking and reasons from Wikidata · `In progress`
 - **Objective:** better top 3 / compromise order and a one-line reason per pick, without any TMDB text reaching the LLM.
 - **Deps:** BE-03, BE-08 (BE-12 for rooms). **Modules:** `Application/Decks`, `Application/Rooms`, `Application/Ai`,
   `prompts/`, `evals/cases/`.
