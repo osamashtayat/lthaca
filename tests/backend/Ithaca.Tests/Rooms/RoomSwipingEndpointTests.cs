@@ -298,8 +298,8 @@ public sealed class RoomSwipingEndpointTests(PostgresFixture postgres) : IAsyncL
         var everything = DeckFilter.None;
         var noBad = DeckFilter.ForRoom([], [HardNo.Horror, HardNo.Gore, HardNo.Musicals, HardNo.SadEndings, HardNo.Subtitles]);
 
-        var all = await dealer.DealAsync(Guid.NewGuid(), 0, Deck.MaxItems, [everything], null, [], null, DateTimeOffset.UtcNow, Ct);
-        var filtered = await dealer.DealAsync(Guid.NewGuid(), 0, Deck.MaxItems, [noBad], null, [], null, DateTimeOffset.UtcNow, Ct);
+        var all = await dealer.DealAsync(Guid.NewGuid(), 0, Deck.MaxItems, [everything], null, [], null, null, DateTimeOffset.UtcNow, Ct);
+        var filtered = await dealer.DealAsync(Guid.NewGuid(), 0, Deck.MaxItems, [noBad], null, [], null, null, DateTimeOffset.UtcNow, Ct);
 
         badIds.ShouldAllBe(id => all.Any(i => i.FilmId == id), "without hard nos, every bad film is a candidate");
         filtered.Select(i => i.FilmId).ShouldNotContain(id => badIds.Contains(id));

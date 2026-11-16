@@ -13,15 +13,10 @@ namespace Ithaca.Application.Rooms;
 public sealed class RoomReader(IAppDbContext db)
 {
     /// <summary>
-    /// The readiness rule: in a just-swipe room everyone is ready; in a mood room a member is ready once they answered the
-    /// mood step; group taste is BE-14's (nobody ready yet).
+    /// The readiness rule: in a mood room a member is ready once they answered the mood step; in just-swipe and taste rooms
+    /// (no lobby step; api-contract.md §12) everyone is ready.
     /// </summary>
-    public static bool IsReady(RoomMode mode, bool answeredMood) => mode switch
-    {
-        RoomMode.JustSwipe => true,
-        RoomMode.Mood => answeredMood,
-        _ => false,
-    };
+    public static bool IsReady(RoomMode mode, bool answeredMood) => mode != RoomMode.Mood || answeredMood;
 
     /// <summary>The cards of the room's shared deck (none before the host starts).</summary>
     public IQueryable<DeckItem> DeckItemsOf(Guid roomId) =>

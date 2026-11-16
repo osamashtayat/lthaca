@@ -2,6 +2,7 @@ using Ithaca.Application.Common;
 using Ithaca.Domain.Decks;
 using Ithaca.Domain.Films;
 using Ithaca.Domain.Moods;
+using Ithaca.Domain.Taste;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ithaca.Application.Decks;
@@ -21,7 +22,8 @@ public sealed class DeckDealer(IAppDbContext db)
     /// Adds up to <paramref name="count"/> items at positions after <paramref name="dealt"/>. Tries <paramref name="filters"/>
     /// in order, each topping up what the previous one couldn't fill (a room falls back to the sampler).
     /// <paramref name="excludedFilms"/> are never dealt (a solo user's seen films). Vectors are used only from
-    /// <paramref name="embeddingModel"/>.
+    /// <paramref name="embeddingModel"/>. With a <paramref name="taste"/> (decks by taste, BE-14) the picks lean towards it;
+    /// pass its model as <paramref name="embeddingModel"/>.
     /// </summary>
     public async Task<List<DeckItem>> DealAsync(
         Guid deckId,
@@ -31,6 +33,7 @@ public sealed class DeckDealer(IAppDbContext db)
         IQueryable<Guid>? excludedFilms,
         IReadOnlyList<DeckSignal> signals,
         string? embeddingModel,
+        TasteProfile? taste,
         DateTimeOffset now,
         CancellationToken ct)
     {
@@ -57,7 +60,7 @@ public sealed class DeckDealer(IAppDbContext db)
                     f.Id, f.Genres, f.ReleaseYear, f.RuntimeMinutes, f.Popularity ?? 0,
                     embeddingModel != null && f.EmbeddingModel == embeddingModel ? f.Embedding : null))
                 .ToListAsync(ct);
-            picked.AddRange(DeckSampler.Pick(candidates, signals, count - picked.Count, Random.Shared));
+            picked.AddRange(DeckSampler.Pick(candidates, signals, count - picked.Count, Random.Shared, taste));
         }
 
         var items = picked.Select((filmId, i) => DeckItem.Create(deckId, filmId, dealt + i + 1, now)).ToList();

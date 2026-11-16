@@ -1,6 +1,5 @@
 using Ithaca.Api.Auth;
 using Ithaca.Api.Errors;
-using Ithaca.Api.OpenApi;
 using Ithaca.Application.Taste;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +16,6 @@ public sealed class TasteController(TasteService taste) : ControllerBase
     [HttpGet]
     [ProducesResponseType<TasteDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
-    [ContractStub]
     public async Task<ActionResult<TasteDto>> Get(CancellationToken ct) =>
         this.ToActionResult(await taste.GetAsync(ct));
 }

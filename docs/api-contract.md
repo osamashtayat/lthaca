@@ -385,8 +385,7 @@ Rules (all in services; see docs/realtime.md for when each event is published):
   up to 30 cards; `deckExtended` carries the first new position. A room deck at 30 doesn't grow; ending a room is BE-12.
 - **Progress:** present members, host first, with how many cards each voted on; `deckSize` 0 in the lobby.
 - **Races:** rooms carry an optimistic concurrency token (Postgres `xmin`), so a start racing a close or the last member
-  leaving can't reopen the room: the close wins and the start answers 409 `room.invalid_state`. Start on a `taste` room
-  stays 501 until BE-14.
+  leaving can't reopen the room: the close wins and the start answers 409 `room.invalid_state`. Taste rooms: §12 (BE-14).
 - **Mood retention** (owner, issue #51): a room mood keeps no free text (only chips, runtime and the filters derived
   from it, plus `textIgnored`) and belongs to its member: deleting the member, guest or room deletes it.
 
@@ -520,7 +519,7 @@ The stubs follow this file exactly. Names the shapes above leave implicit, now f
 | A8 | Rating implies seen? Liked vs rating? | **Decided:** rating ⇒ seen; liked is a separate flag |
 | A9 | "Watching" shelf and "Keep watching · 42 min left" | **Decided: dropped.** No Watching state, shelf or Tonight row |
 | A10 | Room codes `POP-428` vs the board's share link `ithaca.app/r/pop-428` | Links use the existing route `/rooms/POP-428`; a `/r/:code` short link is optional later |
-| A11 | Group taste ("Blend your histories") with guests who have no history | ⚠ Assumed in §12 (BE-14a): the host must be ready; members without history add no taste but their seen films are still skipped |
+| A11 | Group taste ("Blend your histories") with guests who have no history | ⚠ Assumed in §12 (BE-14a), built so by BE-14: the host must be ready; members without history add no taste; films any present user has seen are skipped (guests have no library, so they add none) |
 | A12 | The glossary has no names for a solo deck's parent record or a solo swipe (`Vote` is a room member's) | **Proposed by BE-08:** `Deck` (table `decks`) and `Swipe` (table `swipes`), in the glossary; owner to confirm |
 | A13 | Room mood has no `language` (solo mood does); is it stored as a `MoodQuery`? | No language in rooms; stored per member as a `MoodQuery` |
 | A14 | ADR-0019's "unavailable" films (TMDB 404) have no flag in `FilmDto` | Add `isAvailable` additively in BE-05 if screens need it |
@@ -567,6 +566,26 @@ Rules (BE-14 builds them; until then the three rows answer 501 `server.not_imple
 - Check order once built: input validation (400: `mood` with a taste deck, a blank room name) before readiness (422).
 - The board's "Because you loved …" lines under the first cards are not in this contract (no field yet); the first
   cards are simply the deck's first items.
+
+**As built (BE-14):** the three rows are live (no 501 left in §12).
+- **Signals and counts:** `signalCount` = library rows liked (a seen + "loved it" swipe sets liked) or rated ≥ 3.5;
+  `loggedCount` = rows seen or rated. `signalsNeeded` is `Taste:SignalsNeeded` (default 10).
+- **`TasteProfile`** (computed per request, not stored): the user's 1,000 most recently changed liked or rated films with
+  a vector, weighted on the half-star scale (ADR-0024): liked +1, plus (rating − 3) / 2 clamped to ±1 (5 → +1, 3 → 0,
+  1 → −1); the weighted sum of their film vectors (one model: the one most of them share), scaled to unit length. Only
+  film vectors are used (Wikidata-based, ADR-0017); no text is embedded, so taste makes no AI call.
+- **Receipt:** `topGenres` share = a genre's mentions among the positive-signal films' genres ÷ all their genre mentions
+  (a film with two genres counts once for each), rounded, 1–100, biggest first then by name. `notForYou`: genres in at least
+  2 turned-down films (rated ≤ 2 and not liked, or a solo left swipe or "seen — not for me", latest 500 swipes) whose share
+  of the turned-down films is larger than of the positive ones, never a top genre; biggest difference first.
+- **Deck by taste:** as "Just swipe" (§5 as built: batches of 10, the 500 most popular eligible films, 70% fit / 30%
+  sampler, seen films skipped, swipes and top 3 unchanged) except that every batch, the first included, adds each
+  candidate's closeness to the profile (cosine, scaled 0–1 across the candidates; ×1.5) to its fit. Films without a vector
+  of the profile's model get no closeness. A ready user whose films have no vectors yet gets a plain "Just swipe" order.
+- **Group taste:** everyone is ready in the lobby (as in `justSwipe` rooms). At start and at each extension the deck leans
+  towards the blend of the present users' profiles (each member counts the same; members without a profile, guests
+  included, add nothing) and skips every film a present user has seen. Hard nos still apply (there is no lobby step to
+  set them in a taste room). The host's readiness is checked only at creation.
 
 ## 13. Import (Letterboxd)
 

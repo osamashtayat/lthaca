@@ -301,7 +301,7 @@ lint, test, build.
 - **Scope:** in: as BE-01, for §12. Out: logic.
 - **Acceptance:** §12 endpoints in `openapi.json`, answering 501. **Tests:** stub slice test.
 
-### BE-14 — Taste profile and decks by taste · `In progress`
+### BE-14 — Taste profile and decks by taste · `Done` (PR #61)
 - **Objective:** a `TasteProfile` from what the user liked and rated, and decks/rooms built on it.
 - **Deps:** BE-14a, BE-05, BE-08. **Modules:** `Domain/Taste`, `Application/Taste`, `Application/Decks`, `Application/Rooms`.
 - **Contract:** §12.

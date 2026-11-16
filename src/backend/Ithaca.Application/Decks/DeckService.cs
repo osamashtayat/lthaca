@@ -2,10 +2,12 @@ using Ithaca.Application.Auth;
 using Ithaca.Application.Common;
 using Ithaca.Application.Films;
 using Ithaca.Application.Moods;
+using Ithaca.Application.Taste;
 using Ithaca.Domain.Decks;
 using Ithaca.Domain.Films;
 using Ithaca.Domain.Library;
 using Ithaca.Domain.Moods;
+using Ithaca.Domain.Taste;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ithaca.Application.Decks;
@@ -14,10 +16,13 @@ namespace Ithaca.Application.Decks;
 /// Solo decks and swipes (api-contract.md §5), for the signed-in user from <see cref="ICurrentActor"/>; another user's deck
 /// is <c>deck.not_found</c>. "Just swipe" (BE-08): the first batch is the <see cref="DeckSampler"/>'s varied sampler; later
 /// batches adapt to this deck's swipes and the user's library. "By mood" (BE-09): the <see cref="MoodInterpreter"/> turns the
-/// input into a <see cref="MoodQuery"/>; its filters narrow every batch, and its genres count as a strong signal. Films come
-/// from our own catalog only (ADR-0003): available, not yet in this deck, not seen by the user.
+/// input into a <see cref="MoodQuery"/>; its filters narrow every batch, and its genres count as a strong signal. "By taste"
+/// (BE-14): like "Just swipe", but every batch leans towards the user's <see cref="TasteProfile"/>; only for users with enough
+/// history (<c>taste.not_ready</c>). Films come from our own catalog only (ADR-0003): available, not yet in this deck, not
+/// seen by the user.
 /// </summary>
-public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInterpreter moods, DeckDealer dealer, DeckItemReader cards, TimeProvider time)
+public sealed class DeckService(
+    IAppDbContext db, ICurrentActor current, MoodInterpreter moods, TasteProfileReader tastes, DeckDealer dealer, DeckItemReader cards, TimeProvider time)
 {
     /// <summary>Most recently changed library rows used as signals.</summary>
     private const int LibrarySignalLimit = 200;
@@ -35,12 +40,8 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
             return AuthErrors.Unauthenticated;
         }
 
-        if (request.Source == DeckSource.Taste)
-        {
-            return ContractStub.NotImplemented; // decks by taste: BE-14 (api-contract.md §12)
-        }
-
         MoodQuery? mood = null;
+        TasteProfile? taste = null;
         switch (request.Source, request.Mood)
         {
             case (DeckSource.Mood, null):
@@ -57,12 +58,20 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
                 break;
             case (_, not null):
                 return Error.Validation("mood", "A mood only goes with a deck by mood.");
+            case (DeckSource.Taste, null):
+                if (!await tastes.IsReadyAsync(userId, ct))
+                {
+                    return TasteErrors.NotReady; // after input validation (§12); nothing is created
+                }
+
+                taste = await tastes.ProfileAsync(userId, ct);
+                break;
         }
 
         var now = time.GetUtcNow();
         var deck = Deck.Create(userId, request.Source, mood?.Id, now);
         db.Decks.Add(deck);
-        await DealAsync(deck.Id, userId, dealt: 0, MoodSignals(mood), mood, now, ct);
+        await DealAsync(deck.Id, userId, dealt: 0, MoodSignals(mood), mood, taste, now, ct);
         await db.SaveChangesAsync(ct);
 
         return await DeckDtoAsync(deck.Id, userId, ct) ?? throw new InvalidOperationException("The deck just created is missing.");
@@ -86,17 +95,18 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
             return AuthErrors.Unauthenticated;
         }
 
-        if (!await OwnsDeckAsync(deckId, userId, ct))
+        if (await SourceOfAsync(deckId, userId, ct) is not { } source)
         {
             return DeckErrors.NotFound;
         }
 
         var mood = await MoodOfAsync(deckId, ct);
+        var taste = source == DeckSource.Taste ? await tastes.ProfileAsync(userId, ct) : null;
         var signals = MoodSignals(mood).Concat(await SignalsAsync(deckId, userId, ct)).ToList();
         for (var attempt = 1; ; attempt++)
         {
             var dealt = await db.DeckItems.CountAsync(i => i.DeckId == deckId, ct);
-            var added = await DealAsync(deckId, userId, dealt, signals, mood, time.GetUtcNow(), ct);
+            var added = await DealAsync(deckId, userId, dealt, signals, mood, taste, time.GetUtcNow(), ct);
             if (added.Count == 0)
             {
                 return Array.Empty<DeckItemDto>();
@@ -231,10 +241,11 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
 
     /// <summary>
     /// Adds up to <see cref="Deck.BatchSize"/> new items (positions after <paramref name="dealt"/>), never past
-    /// <see cref="Deck.MaxItems"/> nor a film the user has seen. Not saved here: the caller saves once.
+    /// <see cref="Deck.MaxItems"/> nor a film the user has seen; leaning towards <paramref name="taste"/> when given. Not saved
+    /// here: the caller saves once.
     /// </summary>
     private Task<List<DeckItem>> DealAsync(
-        Guid deckId, Guid userId, int dealt, IReadOnlyList<SignalRow> signals, MoodQuery? mood, DateTimeOffset now, CancellationToken ct)
+        Guid deckId, Guid userId, int dealt, IReadOnlyList<SignalRow> signals, MoodQuery? mood, TasteProfile? taste, DateTimeOffset now, CancellationToken ct)
     {
         var count = Math.Min(Deck.BatchSize, Deck.MaxItems - dealt);
         if (count <= 0)
@@ -242,11 +253,11 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
             return Task.FromResult(new List<DeckItem>());
         }
 
-        // Vectors from different models are never compared: use the model most signals were embedded with.
-        var model = signals.Where(s => s.Embedding is not null).GroupBy(s => s.EmbeddingModel).MaxBy(g => g.Count())?.Key;
+        // Vectors from different models are never compared: the taste profile's model, else the one most signals were embedded with.
+        var model = taste?.EmbeddingModel ?? signals.Where(s => s.Embedding is not null).GroupBy(s => s.EmbeddingModel).MaxBy(g => g.Count())?.Key;
         var seen = db.UserFilms.Where(u => u.UserId == userId && u.Seen).Select(u => u.FilmId);
         return dealer.DealAsync(
-            deckId, dealt, count, [DeckFilter.FromMood(mood)], seen, signals.Select(s => s.ToDeckSignal(model)).ToList(), model, now, ct);
+            deckId, dealt, count, [DeckFilter.FromMood(mood)], seen, signals.Select(s => s.ToDeckSignal(model)).ToList(), model, taste, now, ct);
     }
 
     /// <summary>This deck's swipes (full weight) and the user's most recent library rows (<see cref="DeckSignals"/>).</summary>
@@ -311,6 +322,10 @@ public sealed class DeckService(IAppDbContext db, ICurrentActor current, MoodInt
             ? Result.Success()
             : DeckErrors.AlreadySwiped;
     }
+
+    /// <summary>The deck's source when it is the user's; null otherwise.</summary>
+    private async Task<DeckSource?> SourceOfAsync(Guid deckId, Guid userId, CancellationToken ct) =>
+        await db.Decks.AsNoTracking().Where(d => d.Id == deckId && d.UserId == userId).Select(d => (DeckSource?)d.Source).SingleOrDefaultAsync(ct);
 
     private Task<bool> OwnsDeckAsync(Guid deckId, Guid userId, CancellationToken ct) =>
         db.Decks.AnyAsync(d => d.Id == deckId && d.UserId == userId, ct);

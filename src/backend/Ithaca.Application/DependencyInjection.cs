@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<RoomResultService>();
         services.AddScoped<RoomMembershipService>();
         services.AddScoped<LibraryService>();
+        services.AddScoped<TasteProfileReader>(); // collaborator of TasteService, DeckService, RoomService and RoomDeckService, not a use-case service
         services.AddScoped<TasteService>();
         services.AddScoped<ProfileService>();
         services.AddScoped<PasswordResetService>();
