@@ -4,13 +4,13 @@ export type LegalItem = { title: string; body: ReactNode }
 
 /**
  * Shared layout for the Terms and Privacy pages: a title, "Last updated" and a numbered list. The texts are the owner's
- * L5 texts (docs/backlog.md); the [placeholders] stay visible until the owner fills them before launch.
+ * L5 texts (docs/backlog.md); the owner filled the details in on 2026-11-16.
  */
 export function LegalPage({ title, items }: { title: string; items: LegalItem[] }) {
   return (
     <article className="mx-auto flex w-full max-w-md flex-col gap-4 pb-6">
       <h1 className="text-4xl font-extrabold tracking-tight">{title}</h1>
-      <p className="font-mono text-xs text-ink-muted">Last updated: [date]</p>
+      <p className="font-mono text-xs text-ink-muted">Last updated: 16 November 2026</p>
       <ol className="flex flex-col gap-4">
         {items.map((item, i) => (
           <li key={item.title} className="flex flex-col gap-1">

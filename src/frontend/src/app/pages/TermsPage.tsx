@@ -3,7 +3,7 @@ import { LegalPage, type LegalItem } from './LegalPage'
 const items: LegalItem[] = [
   {
     title: 'What Ithaca is.',
-    body: <p>A free site that helps you pick a film, alone or with friends. Run by [your name or company].</p>,
+    body: <p>A free site that helps you pick a film, alone or with friends. Run by osama.</p>,
   },
   {
     title: 'Accounts.',
@@ -34,7 +34,7 @@ const items: LegalItem[] = [
     title: 'Changes.',
     body: <p>We may update these terms. If you keep using Ithaca, you accept the new version.</p>,
   },
-  { title: 'Contact.', body: <p>[email]</p> },
+  { title: 'Contact.', body: <p>hello@ithacamovies.com</p> },
 ]
 
 /** `/terms`: the Terms of Use (L5). */
