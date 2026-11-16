@@ -765,7 +765,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   `textIgnored` with chips or a clear message without.
 - **Tests:** limiter slice tests with `FakeTimeProvider`; budget switch.
 
-### BE-18a — Password reset contract and stubs · `Todo`
+### BE-18a — Password reset contract and stubs · `Done` (PR #59)
 - **Objective:** unblock FE-16. **Deps:** BE-02 (the contract doesn't depend on the provider; L4 is only BE-18's). **Modules:** `docs/api-contract.md` (§4), DTOs, stubs, contracts.
 - **Contract:** writes `POST /api/auth/forgot-password` (always 204, never reveals whether the email exists) and
   `POST /api/auth/reset-password` (token + new password).

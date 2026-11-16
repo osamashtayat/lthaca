@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<LibraryService>();
         services.AddScoped<TasteService>();
         services.AddScoped<ProfileService>();
+        services.AddScoped<PasswordResetService>();
         services.AddScoped<LetterboxdExportReader>(); // collaborator of ImportService only, not a use-case service
         services.AddScoped<ImportFilmMatcher>(); // collaborator of ImportService only, not a use-case service
         services.AddScoped<ImportService>();
