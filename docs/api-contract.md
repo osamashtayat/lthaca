@@ -390,8 +390,8 @@ Rules (all in services; see docs/realtime.md for when each event is published):
   rest fill up in our order with `reason: null`. Ranked on every `GET …/top` (nothing stored), so a new swipe can change it.
 - **Room result:** the picks and their order stay exactly as §6 decides (votes, then popularity); the AI only adds
   `reason` (`explain-pick.v2`, given each pick's Wikidata facts and its yes / no / seen **counts**, never who voted what,
-  anyone's mood or hard nos). Written on the first read of the result (or `finish`) and stored on the room, so every
-  member sees the same reasons; picks without facts get `null`.
+  anyone's mood or hard nos). Written on the first read of `GET …/result` and stored on the room, so every member sees
+  the same reasons; `finish` returns the stored reasons, or `null` before that first read; picks without facts get `null`.
 - **Failures:** provider down, refusal, invalid reply or a 20 s timeout → the same picks with `reason: null` and a 200,
   never an error. A room then stores nothing, so a later read tries again.
 

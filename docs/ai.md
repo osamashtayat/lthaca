@@ -103,9 +103,12 @@ Reasons under picks, and the order of the solo top 3. `PickAdvisor` (Application
   with facts go to `rank-candidates.v2` (`{{audience}}` = "one person", `{{limit}}` = 3) → its picks first, the rest of
   ours fill up with `reason: null`. Ranked on every request; nothing stored (owner, 2026-11-16).
 - **Room result:** the votes decide the picks and their order (api-contract.md §6); `explain-pick.v2` (`{{audience}}` =
-  "a group of N friends") only writes a reason per pick. `RoomPickExplainer` does it on the first read of the result (or
-  `finish`) and stores it in `rooms.result_reasons` (aligned with the picks, null where none); racing readers are settled
-  by the room's `xmin`, and everyone sees the stored reasons (owner, 2026-11-16).
+  "a group of N friends") only writes a reason per pick. `RoomPickExplainer` does it on the first read of
+  `GET …/result` (never in `finish`, which returns stored reasons or nulls without waiting) and stores it in
+  `rooms.result_reasons` (aligned with the picks, null where none; owner, 2026-11-16). First reads that race (everyone
+  refetches on `roomMatched`) may each call the model; the room's `xmin` keeps only the first store, and every reader
+  shows the stored reasons (a reader that can't store or see a winner shows none). A single-flight per room would cut the
+  duplicate calls if cost needs it.
 - **Validation:** ids we didn't send and repeats are dropped; a reason is trimmed and dropped when empty or longer than
   `PickReason.MaxLength` (200).
 - **Failures never fail the page:** provider down, refusal, invalid reply, or no answer within 20 s → the same picks

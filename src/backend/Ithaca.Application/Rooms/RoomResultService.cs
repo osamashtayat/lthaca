@@ -16,7 +16,8 @@ public sealed class RoomResultService(IAppDbContext db, RoomAccess access, RoomR
 {
     /// <summary>
     /// Host only. While swiping: decides now (the match if there is one, else the best compromise). Once decided: the same
-    /// result again. In the lobby or once closed: <c>room.invalid_state</c>.
+    /// result again. In the lobby or once closed: <c>room.invalid_state</c>. It never waits for the AI: the reasons come
+    /// with the stored ones, or null until the first read of the result writes them (owner, 2026-11-16).
     /// </summary>
     public async Task<Result<RoomResultDto>> FinishAsync(string code, CancellationToken ct)
     {
@@ -33,7 +34,7 @@ public sealed class RoomResultService(IAppDbContext db, RoomAccess access, RoomR
         }
 
         // Decided here, by a concurrent vote, or earlier; a room closed meanwhile (or in the lobby) has nothing to show.
-        return await StatusAsync(roomId, ct) == RoomStatus.Result && await ResultAsync(roomId, ct) is { } result
+        return await StatusAsync(roomId, ct) == RoomStatus.Result && await ResultAsync(roomId, explain: false, ct) is { } result
             ? result
             : RoomErrors.InvalidState;
     }
@@ -47,14 +48,17 @@ public sealed class RoomResultService(IAppDbContext db, RoomAccess access, RoomR
             return membership.Error;
         }
 
-        return await ResultAsync(membership.Value.RoomId, ct) is { } result ? result : RoomErrors.NoResult;
+        return await ResultAsync(membership.Value.RoomId, explain: true, ct) is { } result ? result : RoomErrors.NoResult;
     }
 
     private Task<RoomStatus> StatusAsync(Guid roomId, CancellationToken ct) =>
         db.Rooms.AsNoTracking().Where(r => r.Id == roomId).Select(r => r.Status).SingleAsync(ct);
 
-    /// <summary>The stored result with each pick's film and votes, or null when the room isn't decided.</summary>
-    private async Task<RoomResultDto?> ResultAsync(Guid roomId, CancellationToken ct)
+    /// <summary>
+    /// The stored result with each pick's film and votes, or null when the room isn't decided. With
+    /// <paramref name="explain"/>, missing reasons are written now (<see cref="RoomPickExplainer"/>); without, they stay null.
+    /// </summary>
+    private async Task<RoomResultDto?> ResultAsync(Guid roomId, bool explain, CancellationToken ct)
     {
         var room = await db.Rooms.AsNoTracking()
             .Where(r => r.Id == roomId)
@@ -90,7 +94,12 @@ public sealed class RoomResultService(IAppDbContext db, RoomAccess access, RoomR
                 return new RoomPickDto(i + 1, films[filmOf[itemId]], yes.Count, noCount, yes, seen, null);
             })
             .ToList();
-        var reasons = await explainer.ReasonsAsync(roomId, room.ResultReasons, kind, members.Length, dtos, ct);
+        IReadOnlyList<string?> reasons = room.ResultReasons ?? new string?[dtos.Count];
+        if (explain && room.ResultReasons is null)
+        {
+            reasons = await explainer.ReasonsAsync(roomId, kind, members.Length, dtos, ct);
+        }
+
         return new RoomResultDto(kind, dtos.Select((p, i) => p with { Reason = reasons[i] }).ToList(), members.Length, decidedAt);
     }
 }

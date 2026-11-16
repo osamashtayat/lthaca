@@ -264,15 +264,18 @@ public sealed class DeckService(
             .Where(x => x.Swipe.Direction != SwipeDirection.Right)
             .Join(db.FilmFacts.AsNoTracking(), x => x.Film.Id, ff => ff.FilmId, (x, ff) => new { x.Swipe.Direction, x.Swipe.SeenVerdict, ff.Genres })
             .ToListAsync(ct);
+        var swipedFilms = SwipesOf(deckId).Select(x => x.Film.Id);
         var library = await db.UserFilms.AsNoTracking()
-            .Where(u => u.UserId == userId && (u.Liked || u.RatingHalfStars != null))
+            .Where(u => u.UserId == userId && (u.Liked || u.RatingHalfStars != null) && !swipedFilms.Contains(u.FilmId))
             .OrderByDescending(u => u.UpdatedAt)
             .Take(LibrarySignalLimit)
             .Join(db.FilmFacts.AsNoTracking(), u => u.FilmId, ff => ff.FilmId, (u, ff) => new { u.Liked, u.RatingHalfStars, ff.Genres })
             .ToListAsync(ct);
 
-        var loved = swiped.Where(s => DeckSignals.OfSwipe(s.Direction, s.SeenVerdict) > 1).Select(s => s.Genres)
-            .Concat(library.Where(l => DeckSignals.OfLibrary(l.Liked, false, UserFilm.ToRating(l.RatingHalfStars)) > 0).Select(l => l.Genres));
+        // Loved: a seen + loved swipe (stronger than a plain yes) or a liked / high-rated library row (watchlist left out: not
+        // seen yet). Disliked: any negative swipe. The weights are DeckSignals'; this only picks rows by their sign.
+        var loved = swiped.Where(s => DeckSignals.OfSwipe(s.Direction, s.SeenVerdict) > DeckSignals.OfSwipe(SwipeDirection.Right, null)).Select(s => s.Genres)
+            .Concat(library.Where(l => DeckSignals.OfLibrary(l.Liked, onWatchlist: false, UserFilm.ToRating(l.RatingHalfStars)) > 0).Select(l => l.Genres));
         var disliked = swiped.Where(s => DeckSignals.OfSwipe(s.Direction, s.SeenVerdict) < 0).Select(s => s.Genres);
         return new SoloTaste(
             mood?.IncludeGenres ?? [], mood?.Keywords ?? [], mood?.MaxRuntimeMinutes, MostFrequent(loved), MostFrequent(disliked));

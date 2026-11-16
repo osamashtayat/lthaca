@@ -224,10 +224,14 @@ public sealed class PickReasonsEndpointTests(PostgresFixture postgres) : IAsyncL
             await VoteOkAsync(host.Client, code, card.Id, "right");
         }
 
-        _llm.Fail("explain-pick", "unavailable");
         using var finish = await host.Client.PostAsync(new Uri($"/api/rooms/{code}/finish", UriKind.Relative), null, Ct);
         finish.StatusCode.ShouldBe(HttpStatusCode.OK, await finish.Content.ReadAsStringAsync(Ct));
-        var failed = await finish.Content.ReadFromJsonAsync<JsonElement>(Ct);
+        var finished = await finish.Content.ReadFromJsonAsync<JsonElement>(Ct);
+        finished.GetProperty("picks").EnumerateArray().ShouldAllBe(p => p.GetProperty("reason").ValueKind == JsonValueKind.Null);
+        _llm.Requests("explain-pick").ShouldBeEmpty("finish never waits for the AI");
+
+        _llm.Fail("explain-pick", "unavailable");
+        var failed = await RoomResultAsync(host.Client, code);
         failed.GetProperty("kind").GetString().ShouldBe("compromise");
         var expectedOrder = new[] { First + 2, First + 5, First + Count - 1 }; // same votes: more popular first (§6)
         failed.GetProperty("picks").EnumerateArray().Select(TmdbId).ShouldBe(expectedOrder);
@@ -244,6 +248,40 @@ public sealed class PickReasonsEndpointTests(PostgresFixture postgres) : IAsyncL
         (await StoredReasonsAsync(code)).ShouldBe([$"Reason {First + 2}.", $"Reason {First + 5}.", null]);
         (await RoomResultAsync(host.Client, code)).GetRawText().ShouldBe(result.GetRawText());
         _llm.Requests("explain-pick").Count.ShouldBe(2, "the failed try and the stored one");
+    }
+
+    [Fact]
+    public async Task RoomResult_FirstReadsRacing_StoreOnce_AndEveryoneSeesTheStoredReasons()
+    {
+        var (code, host, guest) = await MoodRoomAsync();
+        using var _ = host.Client;
+        using var __ = guest.Client;
+        var card = (await RoomDeckAsync(host.Client, code)).First(c => FilmsWithFacts.Contains(c.TmdbId));
+        await VoteOkAsync(host.Client, code, card.Id, "right");
+        await VoteOkAsync(guest.Client, code, card.Id, "right");
+
+        // Both reads reach the model before either stores, each with its own wording.
+        var started = 0;
+        var bothAsked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _llm.ScriptAsync("explain-pick", async request =>
+        {
+            var mine = Interlocked.Increment(ref started);
+            if (mine == 2)
+            {
+                bothAsked.TrySetResult();
+            }
+
+            await bothAsked.Task.WaitAsync(TimeSpan.FromSeconds(10), Ct);
+            return Reply("reasons", Ids(request, "picks"), _ => $"Wording {mine}.");
+        });
+
+        var reads = await Task.WhenAll(RoomResultAsync(host.Client, code), RoomResultAsync(guest.Client, code));
+
+        _llm.Requests("explain-pick").Count.ShouldBe(2, "racing first reads may each ask (documented)");
+        reads[1].GetRawText().ShouldBe(reads[0].GetRawText(), "the loser shows the winner's stored reasons");
+        var shown = reads[0].GetProperty("picks")[0].GetProperty("reason").GetString();
+        shown.ShouldBeOneOf("Wording 1.", "Wording 2.");
+        (await StoredReasonsAsync(code)).ShouldBe([shown]);
     }
 
     private static void ShouldHoldNoTmdbText(LlmRequest request)
@@ -337,28 +375,31 @@ public sealed class PickReasonsEndpointTests(PostgresFixture postgres) : IAsyncL
     /// <summary>Replies per prompt name (scripted JSON or a failure) and records every request.</summary>
     private sealed class PromptScriptedLlm : ILlmClient
     {
-        private readonly ConcurrentDictionary<string, Func<LlmRequest, Result<LlmResponse>>> _replies = new(StringComparer.Ordinal);
+        private readonly ConcurrentDictionary<string, Func<LlmRequest, Task<Result<LlmResponse>>>> _replies = new(StringComparer.Ordinal);
         private readonly ConcurrentQueue<LlmRequest> _requests = new();
 
         public void Script(string prompt, Func<LlmRequest, string> json) =>
-            _replies[prompt] = request => new LlmResponse(json(request), request.Prompt.Id, "scripted");
+            _replies[prompt] = request => Task.FromResult<Result<LlmResponse>>(new LlmResponse(json(request), request.Prompt.Id, "scripted"));
+
+        public void ScriptAsync(string prompt, Func<LlmRequest, Task<string>> json) =>
+            _replies[prompt] = async request => new LlmResponse(await json(request), request.Prompt.Id, "scripted");
 
         public void Fail(string prompt, string failure) =>
-            _replies[prompt] = request => failure switch
+            _replies[prompt] = request => Task.FromResult<Result<LlmResponse>>(failure switch
             {
                 "refused" => AiErrors.Refused,
                 "garbage" => new LlmResponse("not json", request.Prompt.Id, "scripted"),
                 _ => AiErrors.Unavailable,
-            };
+            });
 
         public List<LlmRequest> Requests(string prompt) => [.. _requests.Where(r => r.Prompt.Id.Name == prompt)];
 
         public Task<Result<LlmResponse>> CompleteAsync(LlmRequest request, CancellationToken ct)
         {
             _requests.Enqueue(request);
-            return Task.FromResult(_replies.TryGetValue(request.Prompt.Id.Name, out var reply)
+            return _replies.TryGetValue(request.Prompt.Id.Name, out var reply)
                 ? reply(request)
-                : AiErrors.Unavailable);
+                : Task.FromResult<Result<LlmResponse>>(AiErrors.Unavailable);
         }
     }
 }
