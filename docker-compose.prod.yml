@@ -1,0 +1,105 @@
+# Production stack on the VPS (ADR-0030): db + migrate + api only. The site is on Cloudflare Pages, and a Cloudflare
+# Worker forwards /api and /hubs here, so there is no `web` (nginx) service. See docs/deployment.md.
+#
+# On the server (/opt/ithaca, next to its .env), the deploy job runs:
+#   ITHACA_TAG=<git sha> docker compose -f docker-compose.prod.yml pull
+#   ITHACA_TAG=<git sha> docker compose -f docker-compose.prod.yml up -d --no-build --wait
+# CI smoke test (builds the images on the runner, self-signed certificate):
+#   docker compose -f docker-compose.prod.yml up -d --build --wait
+name: ithaca
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-api-environment: &api-environment
+  ConnectionStrings__Ithaca: "Host=db;Port=5432;Database=${POSTGRES_DB:-ithaca};Username=${POSTGRES_USER:-ithaca};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ithaca}
+      POSTGRES_USER: ${POSTGRES_USER:-ithaca}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    # No published port: only migrate and api reach the database (backups use `docker compose exec db`, OPS-08).
+    volumes:
+      - ithaca-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-shot: applies the EF Core migrations; the new api starts only after it succeeded.
+  migrate:
+    image: ${ITHACA_REGISTRY:-ithaca}/ithaca-migrate:${ITHACA_TAG:-local}
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      target: migrations
+    environment: *api-environment
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    logging: *logging
+
+  api:
+    image: ${ITHACA_REGISTRY:-ithaca}/ithaca-api:${ITHACA_TAG:-local}
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      target: api
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      <<: *api-environment
+      # Production: Secure cookies (ADR-0012/0023), no dev seed, no OpenAPI document.
+      ASPNETCORE_ENVIRONMENT: Production
+      # HTTP 8080 stays inside the container (the healthcheck probes it); HTTPS 8443 is what Cloudflare reaches.
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ASPNETCORE_HTTPS_PORTS: "8443"
+      # Cloudflare origin certificate for "Full (strict)" (ADR-0030 §3), mounted read-only from ITHACA_CERT_DIR.
+      Kestrel__Certificates__Default__Path: /certs/origin.pem
+      Kestrel__Certificates__Default__KeyPath: /certs/origin.key
+      # Providers are required (no Fake default here): a missing line must stop the deploy, not quietly fake AI
+      # replies or skip reset emails. CI sets them to Fake explicitly.
+      Ai__LlmProvider: ${Ai__LlmProvider:?Set Ai__LlmProvider in .env}
+      Ai__LlmModel: ${Ai__LlmModel:-claude-opus-5-5}
+      Ai__ApiKey: ${Ai__ApiKey:-}
+      Ai__EmbeddingProvider: ${Ai__EmbeddingProvider:?Set Ai__EmbeddingProvider in .env}
+      Ai__EmbeddingApiKey: ${Ai__EmbeddingApiKey:-}
+      Tmdb__Client: ${Tmdb__Client:?Set Tmdb__Client in .env}
+      Tmdb__ApiKey: ${Tmdb__ApiKey:-}
+      Wikidata__Client: ${Wikidata__Client:?Set Wikidata__Client in .env}
+      Email__Provider: ${Email__Provider:?Set Email__Provider in .env}
+      Email__ApiKey: ${Email__ApiKey:-}
+      Email__SiteUrl: ${Email__SiteUrl:-https://ithacamovies.com}
+      CatalogSync__Enabled: ${CatalogSync__Enabled:-false}
+      CatalogSync__Pages: ${CatalogSync__Pages:-50}
+      CatalogSync__EmbeddingBatchSize: ${CatalogSync__EmbeddingBatchSize:-100}
+      Sentry__Dsn: ${Sentry__Dsn:-}
+      # The release is the commit being deployed (ADR-0028).
+      Sentry__Release: ithaca-server@${ITHACA_TAG:-local}
+    volumes:
+      - ${ITHACA_CERT_DIR:-/etc/ithaca/certs}:/certs:ro
+    # The public HTTPS port. Docker bypasses ufw, so deploy/server/cloudflare-firewall.sh limits it to Cloudflare.
+    ports:
+      - "${ITHACA_HTTPS_PORT:-443}:8443"
+    healthcheck:
+      test: ["CMD", "dotnet", "Ithaca.Api.dll", "--probe-ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  ithaca-db:

@@ -1,0 +1,17 @@
+# Cloudflare Pages response headers (ADR-0030): what src/frontend/docker/nginx.conf does locally, for production.
+# The deploy workflow copies this file into dist/ before `wrangler pages deploy`.
+# CSP differences from nginx.conf, on purpose: no `ws:` (production is HTTPS only), and the Sentry EU ingest host so the
+# SPA can report errors (ADR-0028; nginx.conf lacks it, issue #86).
+# Pages applies every matching rule and joins repeated headers with a comma, so /assets/* first detaches the
+# site-wide Cache-Control (`! Cache-Control`) before setting its own.
+# Pages serves index.html for unknown paths on its own (SPA fallback, because there is no 404.html).
+
+/*
+  Content-Security-Policy: default-src 'self'; connect-src 'self' wss: https://*.ingest.de.sentry.io; img-src 'self' data: https://image.tmdb.org; style-src 'self' 'unsafe-inline'; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Cache-Control: no-cache
+
+/assets/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable

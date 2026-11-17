@@ -35,4 +35,5 @@ ADRs marked *deviation* record where Ithaca differs from the FlowOps reference p
 | [0027](0027-security-stamp-every-request.md) | The security stamp is checked on every user request, so a password change or account deletion ends other sessions at once |
 | [0028](0028-error-tracking-and-monitoring.md) | Sentry (EU) for errors, logs, traces, cron check-ins and masked error replays; users by internal id only; a readiness check and an uptime monitor (L7) |
 | [0029](0029-taste-readiness-and-film-picker.md) | Taste readiness per mode; a 10–20 film picker for people without history (users: likes; guests: kept in the room) |
-| [0030](0030-hosting-pages-worker-vps.md) | Hosting: the site on Cloudflare Pages, a same-domain Worker forwarding `/api` and `/hubs` to one OVHcloud VPS-2 (Frankfurt) running db, migrate and api; TLS Full (strict) (L1, L2) |
+| [0030](0030-hosting-pages-worker-vps.md) | Hosting: the site on Cloudflare Pages, a same-domain Worker forwarding `/api` and `/hubs` to one VPS (provider superseded by 0031) running db, migrate and api; TLS Full (strict) (L1, L2) |
+| [0031](0031-vps-hostinger-kvm2.md) | VPS provider: Hostinger KVM 2 in a European data centre, because OVH had no VPS-2 in Europe; supersedes ADR-0030 §2 |

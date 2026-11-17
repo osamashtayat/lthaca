@@ -814,7 +814,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 - **Acceptance:** ADR accepted by the owner (records B1, the VPS provider and its region); architecture.md Runtime table
   has a "Production" column.
 
-### OPS-07 — Production deployment · `Todo`
+### OPS-07 — Production deployment · `In progress`
 - **Objective:** the site runs on the domain over HTTPS and every merge to `main` can be deployed safely.
 - **Deps:** OPS-06. **Modules:** `docker-compose.prod.yml` (or override; no `web` service in production),
   `.github/workflows/deploy.yml`, `deploy/cloudflare-worker/`, `docs/`.
@@ -831,6 +831,33 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   antiforgery); a room works across two phones (WebSockets through the Worker); the VPS refuses direct traffic; site and
   API rollbacks were each rehearsed once; a production frontend error shows readable source lines in Sentry.
 - **Tests:** the Docker smoke test against the production compose file in CI.
+- **Owner decision (2026-11-16):** the repo parts land first (production compose file, Worker + test, Pages headers,
+  server setup, deploy workflow, CI smoke, docs/deployment.md); the PR stays open until the owner has done the account
+  steps in docs/deployment.md and the acceptance has been checked on the live domain. Going live also needs BE-22 and
+  BE-23 (backend code, so not in this task).
+
+### BE-22 — Persist the Data Protection keys (issue #64) · `Todo`
+- **Objective:** sessions, antiforgery tokens and reset links survive restarts and deploys.
+- **Deps:** none (must be `Done` before OPS-07 goes live). **Modules:** `Ithaca.Infrastructure` (Identity/DI), a
+  migration, `docker-compose*.yml` only if a volume is chosen.
+- **Contract:** none. **Scope:** in: one of #64's options (recommended there: keys in PostgreSQL, so the OPS-08 dumps
+  cover them), application name `Ithaca`. Out: key encryption at rest (decide with OPS-08 if wanted).
+- **Acceptance:** sign in on the Docker stack, `docker compose restart api` (and a recreate), still signed in; a reset
+  link sent before the restart still works. **Tests:** a slice test that a cookie survives a new host on the same
+  database (or the volume), `Fixes #64`.
+
+### BE-23 — Real client IPs behind Cloudflare (issue #74) · `Todo`
+- **Objective:** per-IP rate limits see each user, not a Cloudflare address.
+- **Deps:** none (must be `Done` before OPS-07 goes live). **Modules:** `Ithaca.Api/RateLimiting`, `appsettings*.json`,
+  `docs/backend-conventions.md`.
+- **Contract:** none. **Scope:** in: production trusts Cloudflare's published ranges for `X-Forwarded-For` (the Worker
+  sets it from `CF-Connecting-IP`, ADR-0030 §1), kept current without a code change (config or a refreshed list);
+  development unchanged. Out: anything in the Worker (OPS-07).
+- **Acceptance:** two clients behind the Worker get separate limits; a spoofed `X-Forwarded-For` from outside
+  Cloudflare is ignored; the `X-Forwarded-For` the live origin actually receives through the Worker was logged once and
+  matches the design (Cloudflare may add its own hop to subrequests); the same holds for requests sent straight to
+  `origin.<domain>` (proxied, bypassing the Worker). **Tests:** `RateLimitSetup` tests for a Cloudflare range and an untrusted address,
+  `Fixes #74`.
 
 ### OPS-08 — Production data: backups, nightly sync, catalog size · `Todo`
 - **Objective:** user data survives a broken server; the catalog is fresh and big enough for good decks.
@@ -963,7 +990,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 ### Launch decisions for the owner
 | Id | Decision | Recommendation |
 |---|---|---|
-| L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker (db, migrate, api), behind Cloudflare.** Provider (2026-11-16): **OVHcloud VPS-2, Frankfurt**. ADR-0030 |
+| L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker (db, migrate, api), behind Cloudflare.** Provider: **Hostinger KVM 2, EU data centre** (2026-11-17, ADR-0031; OVHcloud VPS-2 had no European stock). ADR-0030 |
 | L2 | Where the site runs | **Decided (2026-11-13): Cloudflare Pages + a Worker routing `/api` and `/hubs` to the VPS (B1).** ADR-0030 |
 | L3 | Monthly AI budget (Anthropic + Voyage) | **Decided (2026-11-16): $25 per month.** BE-19 enforces a daily share of it (and falls back to the mood chips when it's reached or the AI fails); OPS-10 sets each provider's dashboard limit at or below it |
 | L4 | Email provider for password reset | **Decided (2026-11-15): Resend**, sending from a subdomain (e.g. `no-reply@mail.<domain>`), SPF/DKIM on Cloudflare DNS. Behind `IEmailSender`, so Postmark stays a one-class swap. The owner creates the account and key (user-secrets locally, `.env` on the VPS). Only BE-18 needs it; BE-18a doesn't |
