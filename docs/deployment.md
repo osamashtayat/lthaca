@@ -1,7 +1,7 @@
 # Deployment (production)
 
 How Ithaca runs in production, how to set it up once, how every merge is deployed, and how to roll back. The decision
-is [ADR-0030](decisions/0030-hosting-pages-worker-vps.md); the backlog task is OPS-07. Backups are OPS-08, monitoring
+is [ADR-0030](decisions/0030-hosting-pages-worker-vps.md) (provider: [ADR-0031](decisions/0031-vps-hostinger-kvm2.md)); the backlog task is OPS-07. Backups are OPS-08, monitoring
 OPS-09.
 
 ```
@@ -9,7 +9,7 @@ phone ──https──▶ Cloudflare ──┬── ithacamovies.com/*        
                               └── ithacamovies.com/api/*, /hubs/* ▶ Worker (deploy/cloudflare-worker)
                                          │ https, Full (strict)
                                          ▼
-                              origin.ithacamovies.com = OVHcloud VPS-2, Frankfurt, port 443 open to Cloudflare only
+                              origin.ithacamovies.com = Hostinger KVM 2, EU (ADR-0031), port 443 open to Cloudflare only
                               docker-compose.prod.yml: db (pgvector) → migrate (one-shot) → api (Kestrel, origin cert)
 ```
 
@@ -39,30 +39,42 @@ keys or passwords.
    Copy each box whole, from the `-----BEGIN` line to the `-----END` line. Keep both files on your computer until step
    3 puts them on the server, then delete the local copies.
 
-### 2. The VPS
-1. In the OVH control panel install **Ubuntu 24.04 LTS** with your own SSH public key. Log in as `ubuntu`.
-2. On your computer, create the key GitHub Actions deploys with (no passphrase; keep the private half only in GitHub):
+### 2. The VPS (Hostinger KVM 2, ADR-0031)
+1. In Hostinger's panel (VPS → OS & Panel) install **plain Ubuntu 24.04** (not a Docker, panel or app template). Set a
+   strong root password (keep it in your password manager) and add your own SSH public key. Leave Hostinger's panel
+   **firewall off**: `setup.sh` sets up the server's own (ADR-0031).
+2. Hostinger starts with `root` only. Create your admin user once (the password it asks for is only for `sudo`):
+   ```bash
+   ssh root@<vps-ip>
+   ```
+   then, on the server:
+   ```bash
+   adduser admin && usermod -aG sudo admin && install -d -m 700 -o admin -g admin /home/admin/.ssh && install -m 600 -o admin -g admin /root/.ssh/authorized_keys /home/admin/.ssh/authorized_keys && exit
+   ```
+   Check that `ssh admin@<vps-ip>` logs you in with your key before going on.
+3. On your computer, create the key GitHub Actions deploys with (no passphrase; keep the private half only in GitHub):
    ```bash
    ssh-keygen -t ed25519 -C ithaca-deploy -N "" -f ithaca-deploy
    ```
-3. Copy `deploy/server/` and `ithaca-deploy.pub` to the server and run the setup (updates, automatic security updates,
-   Docker, the `deploy` user, SSH keys only, ufw, the Cloudflare-only rule for port 443, folders):
+4. Copy `deploy/server/` and `ithaca-deploy.pub` to the server and run the setup (updates, automatic security updates,
+   Docker, the `deploy` user, SSH keys only, root login off, ufw, the Cloudflare-only rule for port 443, folders):
    ```bash
-   scp -r deploy/server ithaca-deploy.pub ubuntu@<vps-ip>:~/
+   scp -r deploy/server ithaca-deploy.pub admin@<vps-ip>:~/
    ```
    ```bash
-   ssh ubuntu@<vps-ip> 'cd ~/server && sudo ./setup.sh ~/ithaca-deploy.pub'
+   ssh -t admin@<vps-ip> 'cd ~/server && sudo ./setup.sh ~/ithaca-deploy.pub'
    ```
-   Before closing that session, check from a second terminal that `ssh ubuntu@<vps-ip>` still works.
+   Before closing that session, check from a second terminal that `ssh admin@<vps-ip>` still works (`root` no longer
+   can).
 
 ### 3. Certificate and secrets on the server
 1. Put `origin.pem` and `origin.key` (step 1) in `/etc/ithaca/certs/`, then run the setup again: it gives both files to
    the container's user (uid 1654) with mode 400. From your computer, in the folder with the two files:
    ```bash
-   scp origin.pem origin.key ubuntu@<vps-ip>:~/
+   scp origin.pem origin.key admin@<vps-ip>:~/
    ```
    ```bash
-   ssh ubuntu@<vps-ip> 'sudo mv ~/origin.pem ~/origin.key /etc/ithaca/certs/ && cd ~/server && sudo ./setup.sh ~/ithaca-deploy.pub'
+   ssh -t admin@<vps-ip> 'sudo mv ~/origin.pem ~/origin.key /etc/ithaca/certs/ && cd ~/server && sudo ./setup.sh ~/ithaca-deploy.pub'
    ```
    Then delete the local `origin.key`.
 2. Create `/opt/ithaca/.env` from `deploy/server/production.env.example` with the real values

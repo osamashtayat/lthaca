@@ -989,7 +989,7 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
 ### Launch decisions for the owner
 | Id | Decision | Recommendation |
 |---|---|---|
-| L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker (db, migrate, api), behind Cloudflare.** Provider (2026-11-16): **OVHcloud VPS-2, Frankfurt**. ADR-0030 |
+| L1 | Where the API and database run | **Decided (2026-11-13): one VPS with Docker (db, migrate, api), behind Cloudflare.** Provider: **Hostinger KVM 2, EU data centre** (2026-11-17, ADR-0031; OVHcloud VPS-2 had no European stock). ADR-0030 |
 | L2 | Where the site runs | **Decided (2026-11-13): Cloudflare Pages + a Worker routing `/api` and `/hubs` to the VPS (B1).** ADR-0030 |
 | L3 | Monthly AI budget (Anthropic + Voyage) | **Decided (2026-11-16): $25 per month.** BE-19 enforces a daily share of it (and falls back to the mood chips when it's reached or the AI fails); OPS-10 sets each provider's dashboard limit at or below it |
 | L4 | Email provider for password reset | **Decided (2026-11-15): Resend**, sending from a subdomain (e.g. `no-reply@mail.<domain>`), SPF/DKIM on Cloudflare DNS. Behind `IEmailSender`, so Postmark stays a one-class swap. The owner creates the account and key (user-secrets locally, `.env` on the VPS). Only BE-18 needs it; BE-18a doesn't |

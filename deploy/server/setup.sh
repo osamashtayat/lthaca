@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-time setup of the production VPS (ADR-0030; docs/deployment.md, step 2). Ubuntu 24.04 LTS, run with sudo by the
-# admin user you log in as (OVH's default `ubuntu` user with your SSH key):
+# admin user you log in as (on Hostinger, the `admin` user from docs/deployment.md step 2, with your SSH key):
 #
 #   sudo ./setup.sh /path/to/ci-deploy-key.pub
 #

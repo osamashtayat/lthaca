@@ -43,7 +43,7 @@ logic (docs/realtime.md). The nightly catalog sync: `CatalogSyncJob` (schedules)
 
 | Piece | Local dev | Docker (`docker compose up --build`) | Production ([ADR-0030](decisions/0030-hosting-pages-worker-vps.md), set up by OPS-07) |
 |---|---|---|---|
-| PostgreSQL 17 + pgvector | `localhost:5433` | service `db` (`pgvector/pgvector:pg17`) | service `db` on the OVHcloud VPS-2 (Frankfurt), port never public; nightly dump off the server (OPS-08) |
+| PostgreSQL 17 + pgvector | `localhost:5433` | service `db` (`pgvector/pgvector:pg17`) | service `db` on the Hostinger KVM 2 VPS (EU, [ADR-0031](decisions/0031-vps-hostinger-kvm2.md)), port never public; nightly dump off the server (OPS-08) |
 | Migrations | `dotnet ef database update` | one-shot `migrate` (EF bundle) before `api` starts | the same `migrate` service on the VPS, before the new `api` starts |
 | API | `http://localhost:5280` | service `api`, port 8080, not published | service `api` on the VPS (`Production`: Secure cookies); HTTPS with a Cloudflare origin certificate (Kestrel or a proxy: OPS-07), open to Cloudflare's IPs only |
 | SPA | Vite `http://localhost:5273` (proxies `/api`, `/hubs`) | service `web` (nginx) `http://localhost:8080` | Cloudflare Pages on `https://ithacamovies.com`; no `web` container |
