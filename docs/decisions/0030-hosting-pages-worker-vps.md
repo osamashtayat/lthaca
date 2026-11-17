@@ -1,7 +1,7 @@
 # ADR-0030: Hosting: Cloudflare Pages for the site, a Worker for `/api` and `/hubs`, the API and database on one OVHcloud VPS
 
-- **Status:** Accepted (owner, 2026-11-16; OPS-06); §2 (the VPS provider) superseded by
-  [ADR-0031](0031-vps-hostinger-kvm2.md) (OVH had no VPS-2 in Europe, 2026-11-17). The owner decided L1, L2 and the provider on 2026-11-13 and
+- **Status:** Accepted (owner, 2026-11-16; OPS-06); §2 (the VPS provider) to be superseded by
+  [ADR-0031](0031-vps-hostinger-kvm2.md) (Proposed; OVH had no VPS-2 in Europe, 2026-11-17). The owner decided L1, L2 and the provider on 2026-11-13 and
   2026-11-16, and confirmed the domain `ithacamovies.com`.
 - **Date:** 2026-11-16
 - **Decides:** L1 and L2 (backlog, Launch decisions) and the VPS provider. Provisioning is OPS-07.

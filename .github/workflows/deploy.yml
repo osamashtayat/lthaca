@@ -22,9 +22,10 @@ on:
 permissions:
   contents: read
 
+# Previews cancel their older run. Production runs build in parallel; only the `deploy` job is serialised (below), so a
+# run waiting for approval doesn't hold up the next build.
 concurrency:
-  # Production deploys queue (never cancelled half-way); previews cancel their older run.
-  group: ${{ github.event_name == 'pull_request' && format('preview-{0}', github.ref) || 'production' }}
+  group: ${{ github.event_name == 'pull_request' && format('preview-{0}', github.ref) || format('run-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -111,6 +112,10 @@ jobs:
           BRANCH: ${{ github.head_ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::warning::CLOUDFLARE_PAGES_TOKEN not set in the preview environment: no preview"
+            exit 0
+          fi
           find dist -name '*.map' -delete
           npx --yes "$WRANGLER" pages deploy dist --project-name "$PAGES_PROJECT" --branch "$BRANCH" --commit-hash "$HEAD_SHA"
 
@@ -152,6 +157,11 @@ jobs:
     timeout-minutes: 25
     # The one manual approval: `production` requires a reviewer and holds the secrets (docs/deployment.md step 5).
     environment: production
+    # One production deploy at a time, never cancelled half-way. GitHub keeps one waiting run: approve or reject a
+    # waiting deploy before dispatching a rollback (docs/deployment.md → Troubleshooting).
+    concurrency:
+      group: production
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: read

@@ -44,15 +44,18 @@ keys or passwords.
    strong root password (keep it in your password manager) and add your own SSH public key. **Don't add a firewall in
    Hostinger's panel** (Security → Firewall; a new VPS has none active, so usually there is nothing to do): `setup.sh`
    sets up the server's own, and a second rule set could silently block Cloudflare (error 522) or SSH (ADR-0031).
-2. Hostinger starts with `root` only. Create your admin user once (the password it asks for is only for `sudo`):
+2. Hostinger starts with `root` only. Create your admin user `ithaca` once (the password it asks for is only for
+   `sudo`; not `admin`, which Ubuntu already uses as a group name):
    ```bash
    ssh root@<vps-ip>
    ```
    then, on the server:
    ```bash
-   adduser admin && usermod -aG sudo admin && install -d -m 700 -o admin -g admin /home/admin/.ssh && install -m 600 -o admin -g admin /root/.ssh/authorized_keys /home/admin/.ssh/authorized_keys && exit
+   adduser ithaca && usermod -aG sudo ithaca && install -d -m 700 -o ithaca -g ithaca /home/ithaca/.ssh && install -m 600 -o ithaca -g ithaca /root/.ssh/authorized_keys /home/ithaca/.ssh/authorized_keys && exit
    ```
-   Check that `ssh admin@<vps-ip>` logs you in with your key before going on.
+   Check that `ssh ithaca@<vps-ip>` logs you in **without** asking for the server password before going on. If it asks,
+   root had no SSH key to copy: run `ssh-copy-id -i ~/.ssh/id_ed25519.pub ithaca@<vps-ip>` from your Mac (create the
+   key first with `ssh-keygen -t ed25519` if you have none). `setup.sh` refuses to run until the key works.
 3. On your computer, create the key GitHub Actions deploys with (no passphrase; keep the private half only in GitHub):
    ```bash
    ssh-keygen -t ed25519 -C ithaca-deploy -N "" -f ithaca-deploy
@@ -60,22 +63,22 @@ keys or passwords.
 4. Copy `deploy/server/` and `ithaca-deploy.pub` to the server and run the setup (updates, automatic security updates,
    Docker, the `deploy` user, SSH keys only, root login off, ufw, the Cloudflare-only rule for port 443, folders):
    ```bash
-   scp -r deploy/server ithaca-deploy.pub admin@<vps-ip>:~/
+   scp -r deploy/server ithaca-deploy.pub ithaca@<vps-ip>:~/
    ```
    ```bash
-   ssh -t admin@<vps-ip> 'cd ~/server && sudo ./setup.sh ~/ithaca-deploy.pub'
+   ssh -t ithaca@<vps-ip> 'cd ~/server && sudo ./setup.sh ~/ithaca-deploy.pub'
    ```
-   Before closing that session, check from a second terminal that `ssh admin@<vps-ip>` still works (`root` no longer
+   Before closing that session, check from a second terminal that `ssh ithaca@<vps-ip>` still works (`root` no longer
    can).
 
 ### 3. Certificate and secrets on the server
 1. Put `origin.pem` and `origin.key` (step 1) in `/etc/ithaca/certs/`, then run the setup again: it gives both files to
    the container's user (uid 1654) with mode 400. From your computer, in the folder with the two files:
    ```bash
-   scp origin.pem origin.key admin@<vps-ip>:~/
+   scp origin.pem origin.key ithaca@<vps-ip>:~/
    ```
    ```bash
-   ssh -t admin@<vps-ip> 'sudo mv ~/origin.pem ~/origin.key /etc/ithaca/certs/ && cd ~/server && sudo ./setup.sh ~/ithaca-deploy.pub'
+   ssh -t ithaca@<vps-ip> 'sudo mv ~/origin.pem ~/origin.key /etc/ithaca/certs/ && cd ~/server && sudo ./setup.sh ~/ithaca-deploy.pub'
    ```
    Then delete the local `origin.key`.
 2. Create `/opt/ithaca/.env` from `deploy/server/production.env.example` with the real values
@@ -101,7 +104,7 @@ keys or passwords.
    | Name | Where | Value |
    |---|---|---|
    | `DEPLOY_SSH_KEY` | environment `production` | the private half of `ithaca-deploy` |
-   | `CLOUDFLARE_API_TOKEN` | environment `production` | API token with Account › Cloudflare Pages: Edit, Account › Workers Scripts: Edit, Zone `ithacamovies.com` › Workers Routes: Edit |
+   | `CLOUDFLARE_API_TOKEN` | environment `production` | API token with Account › Cloudflare Pages: Edit, Account › Workers Scripts: Edit, Zone `ithacamovies.com` › Workers Routes: Edit **and** Zone › Zone: Read (wrangler looks the zone up by name) |
    | `SENTRY_AUTH_TOKEN` | environment `production` | a Sentry organization token (`osama-vz`) for source-map uploads |
    | `CLOUDFLARE_PAGES_TOKEN` | environment `preview` | a second API token with Account › Cloudflare Pages: Edit only (it could still publish to Pages' production branch, so PR authors must be trusted collaborators) |
 
@@ -189,3 +192,8 @@ Steps 2–3 on the new server, restore the latest dump (OPS-08), change the `ori
 - **The deploy stops with "required variable … is missing":** `/opt/ithaca/.env` lacks a provider line; production
   never falls back to the Fake providers.
 - **Everyone signed out after a deploy:** BE-22 (#64) isn't deployed yet.
+- **A manual `docker compose` on the server fails or wants `ithaca/ithaca-api:local`:** the image names exist only in
+  the deploy session. Set them first: `export ITHACA_REGISTRY=ghcr.io/osamashtayat ITHACA_TAG=$(cat DEPLOYED)` in
+  `/opt/ithaca`.
+- **Rollback queued behind a deploy waiting for approval:** production deploys run one at a time; approve or reject the
+  waiting run first.

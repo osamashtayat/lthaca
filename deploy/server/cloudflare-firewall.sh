@@ -41,9 +41,9 @@ match=(-p tcp -m conntrack --ctorigdstport "$PORT" --ctdir ORIGINAL)
 iptables -N DOCKER-USER 2>/dev/null || true
 iptables -I DOCKER-USER -i "$EXT_IF" "${match[@]}" -j "$NEW"
 # Remove every jump to the old chain, including the interface-less one an earlier version of this script added.
-while iptables -S DOCKER-USER | grep -q -- "-j $CHAIN\$"; do
-  old="$(iptables -S DOCKER-USER | grep -- "-j $CHAIN\$" | head -1 | sed 's/^-A DOCKER-USER //')"
-  read -r -a old_rule <<< "$old"
+mapfile -t old_rules < <(iptables -S DOCKER-USER | grep -- "-j $CHAIN\$" || true)
+for old in "${old_rules[@]}"; do
+  read -r -a old_rule <<< "${old#-A DOCKER-USER }"
   iptables -D DOCKER-USER "${old_rule[@]}"
 done
 if iptables -S "$CHAIN" >/dev/null 2>&1; then

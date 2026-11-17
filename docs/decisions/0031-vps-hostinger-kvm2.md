@@ -33,8 +33,8 @@ record, the stack is `docker-compose.prod.yml`, and `deploy/server/setup.sh` tar
 - **Operating system: plain Ubuntu 24.04** (no Docker, panel or app template). `setup.sh` installs Docker itself.
 - **Hostinger's panel firewall stays off**: the server's own ufw and the Cloudflare-only rule (`setup.sh`,
   `cloudflare-firewall.sh`) are the one source of truth; two rule sets would disagree silently.
-- **Login:** Hostinger servers start with `root`. The runbook (docs/deployment.md step 2) first creates an admin user with
-  your SSH key and sudo, then `setup.sh` switches root and password logins off, as before.
+- **Login:** Hostinger servers start with `root`. The runbook (docs/deployment.md step 2) first creates an admin user
+  (`ithaca`) with your SSH key and sudo, then `setup.sh` switches root and password logins off, as before.
 
 ## Consequences
 + The launch isn't blocked on OVH stock; the setup, deploy and firewall work unchanged.
