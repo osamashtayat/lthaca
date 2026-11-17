@@ -23,7 +23,7 @@ grep -q '^ssh-' "$DEPLOY_KEY" || { echo "$DEPLOY_KEY is not an SSH public key" >
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
 apt-get upgrade -yq
-apt-get install -yq ca-certificates curl ufw unattended-upgrades iptables
+apt-get install -yq ca-certificates curl ufw unattended-upgrades iptables iproute2
 
 echo "== automatic security updates"
 cat > /etc/apt/apt.conf.d/20auto-upgrades <<'CONF'

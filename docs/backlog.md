@@ -854,7 +854,8 @@ decision (L1–L8 below); a task whose decision is open stays `Todo`. Known so f
   sets it from `CF-Connecting-IP`, ADR-0030 §1), kept current without a code change (config or a refreshed list);
   development unchanged. Out: anything in the Worker (OPS-07).
 - **Acceptance:** two clients behind the Worker get separate limits; a spoofed `X-Forwarded-For` from outside
-  Cloudflare is ignored. **Tests:** `RateLimitSetup` tests for a Cloudflare range and an untrusted address,
+  Cloudflare is ignored; the `X-Forwarded-For` the live origin actually receives through the Worker was logged once and
+  matches the design (Cloudflare may add its own hop to subrequests). **Tests:** `RateLimitSetup` tests for a Cloudflare range and an untrusted address,
   `Fixes #74`.
 
 ### OPS-08 — Production data: backups, nightly sync, catalog size · `Todo`

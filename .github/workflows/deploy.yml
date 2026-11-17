@@ -1,9 +1,11 @@
-# Production deploy (ADR-0030; docs/deployment.md). Order: API (migrations first) → Worker → site.
-#   push to main        build, then wait for a manual approval (GitHub environment `production`), then deploy
-#   workflow_dispatch   deploy any commit of main again: the rollback (docs/deployment.md → Rollback)
+# Production deploy (ADR-0030; docs/deployment.md).
+#   push to main        build, then ONE manual approval (GitHub environment `production`), then one job deploys the
+#                       API (migrations first) → the Worker → the site
+#   workflow_dispatch   deploy an earlier commit of main again: the rollback (docs/deployment.md → Rollback)
 #   pull_request        a Pages preview of the SPA (UI only: previews have no API, ADR-0030 §1)
-# Every job is skipped until its settings exist (repository variables, docs/deployment.md step 5), so this workflow
-# stays green before the server and Cloudflare are set up.
+# The production secrets (SSH key, Cloudflare token, Sentry token) live in the `production` environment, so only an
+# approved job can use them. Previews use their own Pages-only token in the `preview` environment.
+# Jobs are skipped until their variables exist (docs/deployment.md step 5): the workflow stays green before setup.
 name: Deploy
 
 on:
@@ -28,6 +30,8 @@ concurrency:
 env:
   WRANGLER: wrangler@4.156.0
   SENTRY_CLI: "@sentry/cli@3.8.2"
+  # The VPS through Cloudflare, without the Worker: the same value as ORIGIN in deploy/cloudflare-worker/wrangler.toml.
+  ORIGIN_URL: https://origin.ithacamovies.com
 
 jobs:
   meta:
@@ -60,14 +64,9 @@ jobs:
       run:
         working-directory: src/frontend
     env:
-      SHA: ${{ needs.meta.outputs.sha }}
       # Previews don't report to Sentry; production builds do (ADR-0028).
       VITE_SENTRY_DSN: ${{ github.event_name != 'pull_request' && vars.VITE_SENTRY_DSN || '' }}
       VITE_SENTRY_RELEASE: ithaca-frontend@${{ needs.meta.outputs.sha }}
-      SENTRY_AUTH_TOKEN: ${{ github.event_name != 'pull_request' && secrets.SENTRY_AUTH_TOKEN || '' }}
-      SENTRY_URL: https://de.sentry.io/
-      SENTRY_ORG: osama-vz
-      SENTRY_PROJECT: ithaca-frontend
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,18 +77,12 @@ jobs:
           cache: npm
           cache-dependency-path: src/frontend/package-lock.json
       - run: npm ci
-      # `npm run build` (package.json) with hidden source maps: the bundle has no sourceMappingURL, the maps go to Sentry.
+      # `npm run build` (package.json) plus hidden source maps: the bundle has no sourceMappingURL. The maps stay in
+      # the (private) artifact until the deploy job has sent them to Sentry, and are deleted before anything is served.
       - name: Build (hidden source maps)
         run: npx tsc -b && npx vite build --sourcemap hidden && node scripts/check-no-mocks.mjs
-      - name: Upload source maps to Sentry
-        if: env.SENTRY_AUTH_TOKEN != ''
-        run: |
-          npx --yes "$SENTRY_CLI" sourcemaps inject dist
-          npx --yes "$SENTRY_CLI" sourcemaps upload --release "$VITE_SENTRY_RELEASE" dist
-      - name: Remove the maps, add the Pages headers
-        run: |
-          find dist -name '*.map' -delete
-          cp ../../deploy/pages/_headers dist/_headers
+      - name: Add the Pages headers
+        run: cp ../../deploy/pages/_headers dist/_headers
       - uses: actions/upload-artifact@v4
         with:
           name: site-dist
@@ -102,6 +95,8 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # No reviewers; holds only a Pages-scoped token (docs/deployment.md step 5).
+    environment: preview
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -110,17 +105,19 @@ jobs:
       - name: Deploy the preview
         # Values from the event go through env, never straight into the script (branch names are user input).
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           PAGES_PROJECT: ${{ vars.PAGES_PROJECT }}
           BRANCH: ${{ github.head_ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: npx --yes "$WRANGLER" pages deploy dist --project-name "$PAGES_PROJECT" --branch "$BRANCH" --commit-hash "$HEAD_SHA"
+        run: |
+          find dist -name '*.map' -delete
+          npx --yes "$WRANGLER" pages deploy dist --project-name "$PAGES_PROJECT" --branch "$BRANCH" --commit-hash "$HEAD_SHA"
 
   api-images:
     name: Build and push the API images
     needs: meta
-    if: github.event_name != 'pull_request' && vars.DEPLOY_HOST != ''
+    if: github.event_name != 'pull_request' && vars.DEPLOY_HOST != '' && vars.CLOUDFLARE_ACCOUNT_ID != '' && vars.PAGES_PROJECT != ''
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -128,7 +125,13 @@ jobs:
       packages: write
     env:
       ITHACA_TAG: ${{ needs.meta.outputs.sha }}
+      # Only so the compose file interpolates while building; the server's .env has the real values.
       POSTGRES_PASSWORD: build-only-not-used
+      Ai__LlmProvider: Fake
+      Ai__EmbeddingProvider: Fake
+      Tmdb__Client: Fake
+      Wikidata__Client: Fake
+      Email__Provider: Fake
       GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
@@ -142,12 +145,12 @@ jobs:
           docker compose -f docker-compose.prod.yml build migrate api
           docker compose -f docker-compose.prod.yml push migrate api
 
-  deploy-api:
-    name: Deploy the API (VPS)
-    needs: [meta, api-images]
+  deploy:
+    name: Deploy (API → Worker → site)
+    needs: [meta, site-build, api-images]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    # Manual approval: the `production` environment requires a reviewer (docs/deployment.md step 5).
+    timeout-minutes: 25
+    # The one manual approval: `production` requires a reviewer and holds the secrets (docs/deployment.md step 5).
     environment: production
     permissions:
       contents: read
@@ -156,12 +159,21 @@ jobs:
       SHA: ${{ needs.meta.outputs.sha }}
       HOST: ${{ vars.DEPLOY_HOST }}
       SITE_URL: ${{ vars.SITE_URL }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      PAGES_PROJECT: ${{ vars.PAGES_PROJECT }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.meta.outputs.sha }}
-          sparse-checkout: docker-compose.prod.yml
-          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Worker test
+        working-directory: deploy/cloudflare-worker
+        run: node --test
+
+      # ---- API (VPS) ----
       - name: SSH key and host key
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -170,7 +182,7 @@ jobs:
           install -d -m 700 ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-      - name: Pull, migrate, start (docker compose on the server)
+      - name: "API: pull, migrate, start (docker compose on the server)"
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -185,57 +197,41 @@ jobs:
             trap 'docker logout ghcr.io >/dev/null' EXIT
             docker compose -f docker-compose.prod.yml pull --quiet migrate api
             docker compose -f docker-compose.prod.yml up -d --no-build --wait --wait-timeout 300
-            [ -f DEPLOYED ] && cp DEPLOYED PREVIOUS || true
-            echo '$SHA' > DEPLOYED
+            # Keep the previous commit for a rollback; a re-run of the same commit doesn't overwrite it.
+            if [ \"\$(cat DEPLOYED 2>/dev/null)\" != '$SHA' ]; then [ -f DEPLOYED ] && cp DEPLOYED PREVIOUS; echo '$SHA' > DEPLOYED; fi
             docker compose -f docker-compose.prod.yml ps"
-      - name: Ready through Cloudflare
-        if: vars.SITE_URL != ''
-        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors "$SITE_URL/api/health/ready"
+      # Straight to the origin (Cloudflare → VPS, no Worker, no Pages): an SPA fallback page can't pass this.
+      - name: API ready at the origin
+        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors "$ORIGIN_URL/api/health/ready" | grep -q '"status":"ok"'
 
-  deploy-worker:
-    name: Deploy the Worker
-    needs: [meta, deploy-api]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: production
-    defaults:
-      run:
+      # ---- Worker ----
+      - name: "Worker: wrangler deploy"
         working-directory: deploy/cloudflare-worker
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.meta.outputs.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: node --test
-      - name: wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          SHA: ${{ needs.meta.outputs.sha }}
         run: npx --yes "$WRANGLER" deploy --message "$SHA"
 
-  deploy-site:
-    name: Deploy the site (Pages)
-    needs: [meta, site-build, deploy-worker]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: production
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      PAGES_PROJECT: ${{ vars.PAGES_PROJECT }}
-      SHA: ${{ needs.meta.outputs.sha }}
-      SITE_URL: ${{ vars.SITE_URL }}
-    steps:
+      # ---- Site (Pages) ----
       - uses: actions/download-artifact@v4
         with:
           name: site-dist
           path: dist
-      - name: wrangler pages deploy
+      - name: "Site: source maps to Sentry, then removed"
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_URL: https://de.sentry.io/
+          SENTRY_ORG: osama-vz
+          SENTRY_PROJECT: ithaca-frontend
+        run: |
+          set -euo pipefail
+          if [ -n "$SENTRY_AUTH_TOKEN" ]; then
+            npx --yes "$SENTRY_CLI" sourcemaps inject dist
+            npx --yes "$SENTRY_CLI" sourcemaps upload --release "ithaca-frontend@$SHA" dist
+          else
+            echo "::warning::SENTRY_AUTH_TOKEN not set: no source maps uploaded"
+          fi
+          find dist -name '*.map' -delete
+      - name: "Site: wrangler pages deploy"
         run: npx --yes "$WRANGLER" pages deploy dist --project-name "$PAGES_PROJECT" --branch main --commit-hash "$SHA"
-      - name: Smoke through the domain
+      - name: Smoke through the domain (Pages + Worker)
         if: vars.SITE_URL != ''
         run: |
           set -euo pipefail

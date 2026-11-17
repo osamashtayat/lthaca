@@ -67,15 +67,17 @@ services:
       # Cloudflare origin certificate for "Full (strict)" (ADR-0030 §3), mounted read-only from ITHACA_CERT_DIR.
       Kestrel__Certificates__Default__Path: /certs/origin.pem
       Kestrel__Certificates__Default__KeyPath: /certs/origin.key
-      Ai__LlmProvider: ${Ai__LlmProvider:-Fake}
+      # Providers are required (no Fake default here): a missing line must stop the deploy, not quietly fake AI
+      # replies or skip reset emails. CI sets them to Fake explicitly.
+      Ai__LlmProvider: ${Ai__LlmProvider:?Set Ai__LlmProvider in .env}
       Ai__LlmModel: ${Ai__LlmModel:-claude-opus-5-5}
       Ai__ApiKey: ${Ai__ApiKey:-}
-      Ai__EmbeddingProvider: ${Ai__EmbeddingProvider:-Fake}
+      Ai__EmbeddingProvider: ${Ai__EmbeddingProvider:?Set Ai__EmbeddingProvider in .env}
       Ai__EmbeddingApiKey: ${Ai__EmbeddingApiKey:-}
-      Tmdb__Client: ${Tmdb__Client:-Fake}
+      Tmdb__Client: ${Tmdb__Client:?Set Tmdb__Client in .env}
       Tmdb__ApiKey: ${Tmdb__ApiKey:-}
-      Wikidata__Client: ${Wikidata__Client:-Fake}
-      Email__Provider: ${Email__Provider:-Fake}
+      Wikidata__Client: ${Wikidata__Client:?Set Wikidata__Client in .env}
+      Email__Provider: ${Email__Provider:?Set Email__Provider in .env}
       Email__ApiKey: ${Email__ApiKey:-}
       Email__SiteUrl: ${Email__SiteUrl:-https://ithacamovies.com}
       CatalogSync__Enabled: ${CatalogSync__Enabled:-false}

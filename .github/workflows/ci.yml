@@ -160,6 +160,12 @@ jobs:
       ITHACA_CERT_DIR: ${{ github.workspace }}/ci-certs
       ITHACA_HTTPS_PORT: "8443"
       ITHACA_TAG: ci
+      # The production file requires every provider; CI runs offline on the Fake ones.
+      Ai__LlmProvider: Fake
+      Ai__EmbeddingProvider: Fake
+      Tmdb__Client: Fake
+      Wikidata__Client: Fake
+      Email__Provider: Fake
     steps:
       - uses: actions/checkout@v4
 

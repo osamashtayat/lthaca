@@ -27,7 +27,8 @@ Every step that needs a login, a key or a payment is done by the owner in that p
 keys or passwords.
 
 ### 1. Cloudflare: zone settings and the origin certificate
-1. `ithacamovies.com` → **SSL/TLS → Overview: Full (strict)**. Edge Certificates: **Always Use HTTPS** on, minimum TLS 1.2.
+1. `ithacamovies.com` → **SSL/TLS → Overview: Full (strict)**. Edge Certificates: **Always Use HTTPS** on, minimum
+   TLS 1.2, and **HSTS** on (max-age 6 months, include subdomains) once the site works over HTTPS.
 2. **Network: WebSockets** on.
 3. **SSL/TLS → Origin Server → Create Certificate**: RSA (2048), hostnames `ithacamovies.com` and `*.ithacamovies.com`,
    15 years. Save the certificate as `origin.pem` and the private key as `origin.key` (the key is shown only once).
@@ -66,16 +67,19 @@ keys or passwords.
 
 ### 5. GitHub: approval, secrets, variables
 1. **Settings → Environments → New `production`**: Required reviewers = the owner; Deployment branches = `main` only.
-   This is the manual approval before every production deploy.
-2. **Secrets** (never echoed by the workflow):
+   This is the one manual approval before every production deploy (a single job deploys API, Worker and site).
+2. **Settings → Environments → New `preview`**: no reviewers; it holds only the Pages token for PR previews.
+3. **Secrets** (never echoed by the workflow). The production ones are environment secrets, so only an approved run can
+   use them; a workflow changed on a branch can't reach them.
 
    | Name | Where | Value |
    |---|---|---|
    | `DEPLOY_SSH_KEY` | environment `production` | the private half of `ithaca-deploy` |
-   | `CLOUDFLARE_API_TOKEN` | repository | API token with Account › Cloudflare Pages: Edit, Account › Workers Scripts: Edit, Zone `ithacamovies.com` › Workers Routes: Edit |
-   | `SENTRY_AUTH_TOKEN` | repository | a Sentry organization token (`osama-vz`) for source-map uploads |
+   | `CLOUDFLARE_API_TOKEN` | environment `production` | API token with Account › Cloudflare Pages: Edit, Account › Workers Scripts: Edit, Zone `ithacamovies.com` › Workers Routes: Edit |
+   | `SENTRY_AUTH_TOKEN` | environment `production` | a Sentry organization token (`osama-vz`) for source-map uploads |
+   | `CLOUDFLARE_PAGES_TOKEN` | environment `preview` | a second API token with Account › Cloudflare Pages: Edit only (it could still publish to Pages' production branch, so PR authors must be trusted collaborators) |
 
-3. **Variables** (not secret; each deploy job is skipped until its variables exist):
+4. **Variables** (repository variables, not secret; the deploy is skipped until they exist):
 
    | Name | Value |
    |---|---|
@@ -93,14 +97,20 @@ keys or passwords.
 
 ## Every deploy
 
-1. A merge to `main` starts **Deploy** (`.github/workflows/deploy.yml`): it builds the site (hidden source maps go to
-   Sentry, then are deleted, so they are never served) and the two images (`ithaca-api`, `ithaca-migrate`, tagged with
-   the commit).
-2. The owner approves the `production` environment in the run.
-3. **API:** the compose file is copied to `/opt/ithaca`, the images are pulled, `migrate` runs, then the new `api`
-   starts; the job waits for its health check and then for `/api/health/ready` through Cloudflare. The server keeps the
-   running commit in `/opt/ithaca/DEPLOYED` and the one before in `PREVIOUS`.
-4. **Worker**, then **site** (Pages, production branch `main`), then a smoke check through the domain.
+1. A merge to `main` starts **Deploy** (`.github/workflows/deploy.yml`): it builds the site (with hidden source maps)
+   and the two images (`ithaca-api`, `ithaca-migrate`, tagged with the commit).
+2. The owner approves the `production` environment in the run, once.
+3. One job then deploys, in order:
+   - **API:** the compose file is copied to `/opt/ithaca`, the images are pulled, `migrate` runs, then the new `api`
+     starts; the job waits for its health check and then for `/api/health/ready` at the origin
+     (`origin.ithacamovies.com`, no Worker or Pages involved). The server keeps the running commit in
+     `/opt/ithaca/DEPLOYED` and the one before in `PREVIOUS`.
+   - **Worker** (`wrangler deploy`).
+   - **Site:** the source maps go to Sentry and are deleted, so they are never served; then Pages (production branch
+     `main`) and a smoke check through the domain.
+
+If the API's health check fails after `up`, the new `api` container is left running and the run stops before the Worker
+and site: roll back (below).
 
 Pull requests get a Pages preview of the SPA (UI only: previews on `*.pages.dev` have no API, ADR-0030 §1).
 
@@ -112,7 +122,7 @@ the old API keeps serving for the seconds between `migrate` and the new `api`, a
 | What | How | Time |
 |---|---|---|
 | **Site** | Cloudflare → Pages → `ithaca` → Deployments → an earlier production deployment → **Rollback to this deployment** | seconds |
-| **API** (and everything) | Actions → **Deploy** → Run workflow, `ref` = the commit to go back to (`cat /opt/ithaca/PREVIOUS` on the server), approve | a few minutes |
+| **API** (and everything) | Actions → **Deploy** → Run workflow, `ref` = the commit to go back to (`cat /opt/ithaca/PREVIOUS` on the server), approve. Works for commits from OPS-07 on (they contain `docker-compose.prod.yml` and the Worker) | a few minutes |
 | **Worker** | `npx --yes wrangler@4.156.0 rollback` in `deploy/cloudflare-worker`, or the Run workflow above | seconds |
 
 **A rollback across a migration:** the old API runs against the newer schema, which works when the migration only added
@@ -146,6 +156,10 @@ Steps 2–3 on the new server, restore the latest dump (OPS-08), change the `ori
   Settings → Domains & Routes shows both routes on the `ithacamovies.com` zone.
 - **Cloudflare 525/526:** the origin certificate or SSL mode. The server must present the Cloudflare origin certificate
   on 443 (`/etc/ithaca/certs`, readable by uid 1654) and the zone must be Full (strict).
-- **Cloudflare 522 / timeouts:** the firewall. `sudo iptables -S ITHACA-CLOUDFLARE` lists Cloudflare's ranges;
-  `sudo systemctl restart ithaca-cloudflare-firewall` re-applies them. Docker's published ports bypass ufw by design.
+- **Cloudflare 522 / timeouts:** the firewall. `sudo iptables -S ITHACA-CLOUDFLARE` lists Cloudflare's ranges and
+  `sudo iptables -S DOCKER-USER` shows the jump (inbound on the public interface only, so the containers' own outbound
+  HTTPS isn't affected); `sudo systemctl restart ithaca-cloudflare-firewall` re-applies them. Docker's published ports
+  bypass ufw by design.
+- **The deploy stops with "required variable … is missing":** `/opt/ithaca/.env` lacks a provider line; production
+  never falls back to the Fake providers.
 - **Everyone signed out after a deploy:** BE-22 (#64) isn't deployed yet.

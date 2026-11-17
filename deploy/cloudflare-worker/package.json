@@ -1,5 +1,5 @@
 {
-  "name": "ithaca-api-worker",
+  "name": "ithaca-api-proxy",
   "private": true,
   "type": "module",
   "scripts": {

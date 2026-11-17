@@ -19,18 +19,37 @@ else
   echo "warning: could not fetch Cloudflare's IP list; using $CACHE if present" >&2
 fi
 
-iptables -N "$CHAIN" 2>/dev/null || iptables -F "$CHAIN"
+# Only connections arriving on the public interface. Without `-i`, the rule would also catch the containers' own
+# outbound HTTPS (api → Anthropic, Voyage, TMDB, Resend, Sentry), which DOCKER-USER sees too, and drop it.
+EXT_IF="$(ip route show default | awk '{print $5; exit}')"
+[ -n "$EXT_IF" ] || { echo "error: no default route, can't tell the public interface" >&2; exit 1; }
+
+# Build the new list in a separate chain, switch the jump to it, then swap the names: there is never a moment
+# without the final DROP (re-runs on Docker restarts and the weekly refresh stay closed).
+NEW="$CHAIN-NEW"
+iptables -N "$NEW" 2>/dev/null || iptables -F "$NEW"
 if [ -s "$CACHE" ]; then
   while read -r range; do
     [[ "$range" =~ ^[0-9./]+$ ]] || continue
-    iptables -A "$CHAIN" -s "$range" -j RETURN
+    iptables -A "$NEW" -s "$range" -j RETURN
   done < "$CACHE"
 fi
-iptables -A "$CHAIN" -j DROP
+iptables -A "$NEW" -j DROP
 
-# Match the original destination port (before Docker's DNAT to the container's 8443); add the jump once.
-rule=(-p tcp -m conntrack --ctorigdstport "$PORT" --ctdir ORIGINAL -j "$CHAIN")
+# Match the original destination port (before Docker's DNAT to the container's 8443).
+match=(-p tcp -m conntrack --ctorigdstport "$PORT" --ctdir ORIGINAL)
 iptables -N DOCKER-USER 2>/dev/null || true
-iptables -C DOCKER-USER "${rule[@]}" 2>/dev/null || iptables -I DOCKER-USER "${rule[@]}"
+iptables -I DOCKER-USER -i "$EXT_IF" "${match[@]}" -j "$NEW"
+# Remove every jump to the old chain, including the interface-less one an earlier version of this script added.
+while iptables -S DOCKER-USER | grep -q -- "-j $CHAIN\$"; do
+  old="$(iptables -S DOCKER-USER | grep -- "-j $CHAIN\$" | head -1 | sed 's/^-A DOCKER-USER //')"
+  read -r -a old_rule <<< "$old"
+  iptables -D DOCKER-USER "${old_rule[@]}"
+done
+if iptables -S "$CHAIN" >/dev/null 2>&1; then
+  iptables -F "$CHAIN"
+  iptables -X "$CHAIN"
+fi
+iptables -E "$NEW" "$CHAIN" # renaming keeps the jump pointing at it
 
 echo "Port $PORT: allowed from $(grep -c . "$CACHE" 2>/dev/null || echo 0) Cloudflare ranges, dropped for everyone else."
