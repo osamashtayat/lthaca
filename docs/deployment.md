@@ -31,7 +31,13 @@ keys or passwords.
    TLS 1.2, and **HSTS** on (max-age 6 months, include subdomains) once the site works over HTTPS.
 2. **Network: WebSockets** on.
 3. **SSL/TLS → Origin Server → Create Certificate**: RSA (2048), hostnames `ithacamovies.com` and `*.ithacamovies.com`,
-   15 years. Save the certificate as `origin.pem` and the private key as `origin.key` (the key is shown only once).
+   15 years. Cloudflare then shows two text boxes, not files (key format: PEM):
+   - **Origin Certificate** (starts `-----BEGIN CERTIFICATE-----`): paste it into a plain-text file named `origin.pem`.
+   - **Private Key** (starts `-----BEGIN PRIVATE KEY-----`): paste it into a file named `origin.key`. It is shown only
+     once; if it's lost, revoke the certificate and create a new one. Never paste it into chat, email or the repo.
+
+   Copy each box whole, from the `-----BEGIN` line to the `-----END` line. Keep both files on your computer until step
+   3 puts them on the server, then delete the local copies.
 
 ### 2. The VPS
 1. In the OVH control panel install **Ubuntu 24.04 LTS** with your own SSH public key. Log in as `ubuntu`.
@@ -50,8 +56,15 @@ keys or passwords.
    Before closing that session, check from a second terminal that `ssh ubuntu@<vps-ip>` still works.
 
 ### 3. Certificate and secrets on the server
-1. Copy `origin.pem` and `origin.key` to `/etc/ithaca/certs/`, then run `sudo ./setup.sh ~/ithaca-deploy.pub` again: it
-   gives both files to the container's user (uid 1654) with mode 400.
+1. Put `origin.pem` and `origin.key` (step 1) in `/etc/ithaca/certs/`, then run the setup again: it gives both files to
+   the container's user (uid 1654) with mode 400. From your computer, in the folder with the two files:
+   ```bash
+   scp origin.pem origin.key ubuntu@<vps-ip>:~/
+   ```
+   ```bash
+   ssh ubuntu@<vps-ip> 'sudo mv ~/origin.pem ~/origin.key /etc/ithaca/certs/ && cd ~/server && sudo ./setup.sh ~/ithaca-deploy.pub'
+   ```
+   Then delete the local `origin.key`.
 2. Create `/opt/ithaca/.env` from `deploy/server/production.env.example` with the real values
    (`sudo -u deploy nano /opt/ithaca/.env`, then `sudo chmod 600 /opt/ithaca/.env`).
 
