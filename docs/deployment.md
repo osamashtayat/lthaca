@@ -41,8 +41,9 @@ keys or passwords.
 
 ### 2. The VPS (Hostinger KVM 2, ADR-0031)
 1. In Hostinger's panel (VPS → OS & Panel) install **plain Ubuntu 24.04** (not a Docker, panel or app template). Set a
-   strong root password (keep it in your password manager) and add your own SSH public key. Leave Hostinger's panel
-   **firewall off**: `setup.sh` sets up the server's own (ADR-0031).
+   strong root password (keep it in your password manager) and add your own SSH public key. **Don't add a firewall in
+   Hostinger's panel** (Security → Firewall; a new VPS has none active, so usually there is nothing to do): `setup.sh`
+   sets up the server's own, and a second rule set could silently block Cloudflare (error 522) or SSH (ADR-0031).
 2. Hostinger starts with `root` only. Create your admin user once (the password it asks for is only for `sudo`):
    ```bash
    ssh root@<vps-ip>
