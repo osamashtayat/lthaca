@@ -18,7 +18,7 @@ public sealed class CatalogSyncOptions : IConfigSection
 
     /// <summary>TMDB discover pages to sync (20 films each), most popular first.</summary>
     [Range(1, 500)]
-    public int Pages { get; init; } = 50;
+    public int Pages { get; init; } = 250;
 
     /// <summary>
     /// Films per embedding request (and per save). Voyage allows 1,000 texts per request, but an account without a payment

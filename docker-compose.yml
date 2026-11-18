@@ -68,7 +68,7 @@ services:
       Email__ApiKey: ${Email__ApiKey:-}
       Email__SiteUrl: ${Email__SiteUrl:-http://localhost:8080}
       CatalogSync__Enabled: ${CatalogSync__Enabled:-false}
-      CatalogSync__Pages: ${CatalogSync__Pages:-50}
+      CatalogSync__Pages: ${CatalogSync__Pages:-250}
       CatalogSync__EmbeddingBatchSize: ${CatalogSync__EmbeddingBatchSize:-100}
       # Error tracking (ADR-0028): empty = off. Sentry__Release names the deploy (OPS-07).
       Sentry__Dsn: ${Sentry__Dsn:-}
