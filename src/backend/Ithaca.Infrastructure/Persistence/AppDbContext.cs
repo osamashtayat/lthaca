@@ -8,17 +8,19 @@ using Ithaca.Domain.Moods;
 using Ithaca.Domain.Rooms;
 using Ithaca.Domain.Users;
 using Ithaca.Infrastructure.Identity;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ithaca.Infrastructure.Persistence;
 
 /// <summary>
-/// The single EF Core context, including ASP.NET Core Identity's user tables (no roles: <c>IdentityUserContext</c>).
-/// Entity sets and configurations are added per feature.
+/// The single EF Core context, including ASP.NET Core Identity's user tables (no roles: <c>IdentityUserContext</c>) and
+/// ASP.NET Core Data Protection's key ring (<see cref="IDataProtectionKeyContext"/>, issue #64). Entity sets and
+/// configurations are added per feature.
 /// </summary>
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
-    : IdentityUserContext<ApplicationUser, Guid>(options), IAppDbContext
+    : IdentityUserContext<ApplicationUser, Guid>(options), IAppDbContext, IDataProtectionKeyContext
 {
     /// <summary>The pgvector extension; created by the initial migration (ADR-0002).</summary>
     public const string VectorExtension = "vector";
@@ -52,6 +54,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<ImportItem> ImportItems => Set<ImportItem>();
 
     public DbSet<LetterboxdFilmLink> LetterboxdFilmLinks => Set<LetterboxdFilmLink>();
+
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     IQueryable<UserReadModel> IAppDbContext.Users =>
         Users.AsNoTracking().Select(u => new UserReadModel { Id = u.Id, Email = u.Email!, DisplayName = u.DisplayName, CreatedAt = u.CreatedAt });
